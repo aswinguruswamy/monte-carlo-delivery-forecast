@@ -189,3 +189,18 @@ def test_stack_adr_names_libraries_and_python_versions():
         assert name in text
     for version in REQUIRED_PYTHONS:
         assert f"Python {version}" in text
+
+
+def test_no_tracked_file_matches_a_dataset_checksum():
+    """D08: catches a dataset file even if it is renamed (follow-up from the MCF-7 review)."""
+    import hashlib
+
+    from mcf.data.download import load_manifest
+
+    dataset = {f["sha256"] for f in load_manifest()["files"]}
+    hits = [
+        f
+        for f in tracked_files()
+        if (ROOT / f).is_file() and hashlib.sha256((ROOT / f).read_bytes()).hexdigest() in dataset
+    ]
+    assert hits == []
