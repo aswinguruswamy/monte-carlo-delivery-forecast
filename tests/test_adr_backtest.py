@@ -7,6 +7,8 @@ and is accepted by the PM (CLAUDE.md, "Method before results").
 import re
 from pathlib import Path
 
+import pytest
+
 ADR = Path(__file__).resolve().parents[1] / "docs" / "adr" / "0002-backtest-method.md"
 
 REQUIRED_SECTIONS = [
@@ -35,14 +37,26 @@ def test_adr_has_each_required_section():
     assert missing == []
 
 
-def test_adr_states_pass_band_of_d07():
-    assert "75%" in text() and "95%" in text() and "D07" in text()
-
-
-def test_adr_states_a_fixed_seed_and_run_count():
-    assert re.search(r"Seed:\*\*\s*\d+", text())
-    assert re.search(r"Runs:\*\*\s*[\d,]+", text())
+@pytest.mark.parametrize(
+    "rule",
+    [
+        "*N* = **10, 25 and 50**",  # backlog sizes
+        "a forecast date every 14 days",  # forecast dates
+        "**84 days from day *t* − 83 to day *t***",  # history window
+        "**Runs:** 10,000",
+        "**Seed:** 20261028",
+        "SeedSequence([20261028, p, t.toordinal(), N])",  # per-case stream
+        'method="inverted_cdf"',  # percentile rule
+        "**median** absolute error",  # measure 2
+        "from **75% to 95%**, both ends included (D07)",  # measure 1 band
+        "Equal medians mean measure 2 fails",
+    ],
+)
+def test_adr_fixes_each_method_rule(rule):
+    assert rule in text()
 
 
 def test_adr_is_accepted_with_a_pm_approval_date():
-    assert re.search(r"\*\*Status:\*\* Accepted by the PM on \d{4}-\d{2}-\d{2}", text())
+    status = next(line for line in text().splitlines() if line.startswith("**Status:**"))
+    assert re.search(r"Accepted by the PM on \d{4}-\d{2}-\d{2}", status)
+    assert "proposed" not in status.lower(), "an amendment waits for PM approval"
