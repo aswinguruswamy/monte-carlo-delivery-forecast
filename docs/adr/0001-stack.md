@@ -1,6 +1,6 @@
 # ADR 0001: Stack for MCF
 
-**Status:** Proposed — for PM approval in the MCF-7 review (D20) · **Date:** 2026-10-28 · **Ticket:** MCF-7
+**Status:** Accepted by the PM on 2026-10-28 (D20) · **Date:** 2026-10-28 · **Ticket:** MCF-7
 **Builds on:** D01 (command-line MVP, Streamlit page in v1), D02 (CSV input), D19 (licence policy)
 
 ## Context
