@@ -60,3 +60,14 @@ def test_adr_is_accepted_with_a_pm_approval_date():
     status = next(line for line in text().splitlines() if line.startswith("**Status:**"))
     assert re.search(r"Accepted by the PM on \d{4}-\d{2}-\d{2}", status)
     assert "proposed" not in status.lower(), "an amendment waits for PM approval"
+
+
+# SHA-256 of the accepted ADR (D21.1). A change to the method needs a new
+# decision (Dxx.1, D14); then update this value in the same pull request.
+ACCEPTED_SHA256 = "b8ae61562465fb71ea234a447534af47f12f1e995895dbf0204f6e89b41f603b"
+
+
+def test_accepted_adr_is_unchanged():
+    import hashlib
+
+    assert hashlib.sha256(ADR.read_bytes()).hexdigest() == ACCEPTED_SHA256

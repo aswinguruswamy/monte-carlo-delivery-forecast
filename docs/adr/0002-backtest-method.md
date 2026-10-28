@@ -1,6 +1,6 @@
 # ADR 0002: Back-test method
 
-**Status:** Accepted by the PM on 2026-10-28 (gate G4, D21). Amendment D21.1 proposed on 2026-10-28 after the independent review, before any back-test run. · **Ticket:** MCF-8
+**Status:** Accepted by the PM on 2026-10-28 (gate G4, D21; amended by D21.1 on 2026-10-28, before any back-test run) · **Ticket:** MCF-8
 **Builds on:** D04 (value items), D05 (velocity baseline), D06 (TAWOS extract, all 29 projects, as recorded), D07 (75–95% band), D08 (no data in the repo), R2 (method before results)
 
 ## Context
