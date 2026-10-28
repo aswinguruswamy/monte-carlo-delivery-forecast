@@ -1,0 +1,15 @@
+Monte Carlo Delivery Forecast (MCF)
+Copyright 2026 Aswin Guruswamy
+
+This product is licensed under the Apache License, Version 2.0.
+See the LICENSE file for the full text.
+
+Data
+----
+This repository does not include any dataset files. The back-test uses the
+TAWOS dataset. A download script gets it at a fixed version and checks each
+file with a checksum. Users get the data from its original source and must
+follow its terms. The dataset is cited in the README and CITATION.cff:
+
+- TAWOS: Tawosi, Al-Subaihin, Moussa and Sarro, "A Versatile Dataset of
+  Agile Open Source Software Projects", MSR 2022.
