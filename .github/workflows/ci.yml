@@ -52,5 +52,12 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Dependency scan (pip-audit)
         run: pip-audit --skip-editable
-      - name: Licence scan (pip-licenses)
-        run: pip-licenses --partial-match --fail-on="GPL;AGPL"
+      - name: Licence scan of runtime dependencies (pip-licenses, D19)
+        run: |
+          python -m venv /tmp/runtime
+          /tmp/runtime/bin/pip install --quiet .
+          pip-licenses --python /tmp/runtime/bin/python \
+            --fail-on="${STRONG_COPYLEFT}"
+        env:
+          # Exact licence names (no substring match), so LGPL is allowed.
+          STRONG_COPYLEFT: "GPL-2.0;GPL-2.0-only;GPL-2.0-or-later;GPL-3.0;GPL-3.0-only;GPL-3.0-or-later;AGPL-3.0;AGPL-3.0-only;AGPL-3.0-or-later;GNU General Public License (GPL);GNU General Public License v2 (GPLv2);GNU General Public License v2 or later (GPLv2+);GNU General Public License v3 (GPLv3);GNU General Public License v3 or later (GPLv3+);GNU Affero General Public License v3;GNU Affero General Public License v3 or later (AGPLv3+)"

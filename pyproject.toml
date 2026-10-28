@@ -20,7 +20,8 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.6",
     "pip-audit>=2.7",
-    "pip-licenses>=5.0",
+    "pip-licenses==5.5.5",
+    "pyyaml>=6.0",
 ]
 
 [tool.hatch.version]
