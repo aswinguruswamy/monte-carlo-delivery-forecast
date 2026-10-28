@@ -117,3 +117,10 @@ def test_cli_exit_codes(tmp_path, monkeypatch, capsys):
     (tmp_path / "A.csv").unlink()
     assert dl.main(["--dest", str(tmp_path)]) == 1
     assert "checksum" in capsys.readouterr().err.lower()
+
+
+def test_manifest_holds_metadata_only_no_data_rows():
+    m = dl.load_manifest()
+    assert set(m) == {"source", "files"}
+    for f in m["files"]:
+        assert set(f) == {"name", "sha256", "rows"}

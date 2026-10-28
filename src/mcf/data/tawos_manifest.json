@@ -1,0 +1,154 @@
+{
+  "source": {
+    "repo": "SOLAR-group/SPvsDevelopmentEffort",
+    "commit": "e8ae43b8377a23eb84128108a38e139a7d549c2c",
+    "folder": "Dataset/RQ2 and RQ3"
+  },
+  "files": [
+    {
+      "name": "APIKIT.csv",
+      "sha256": "9e07301fdacf1903c720f5e2c2c2f5b8c92f38bf6df2e1978a7c47313f9a49cb",
+      "rows": 405
+    },
+    {
+      "name": "APSTUD.csv",
+      "sha256": "76adc7daa42ed7cc528a0d898f1e74f077a030f67985e3c6e6aac84b2403777a",
+      "rows": 525
+    },
+    {
+      "name": "BAM.csv",
+      "sha256": "419cfb144ad4ad1f20277ec477e063455bf9a30ad7d728078eaf049e526c6fda",
+      "rows": 422
+    },
+    {
+      "name": "BE.csv",
+      "sha256": "1adce7c4ee2828d7b8c46c9485b198ef4c8342735eaab8f397891fdfa85edf6d",
+      "rows": 356
+    },
+    {
+      "name": "CLOV.csv",
+      "sha256": "f882409cf6eb7f7fc0e77cce070614ab7dd8979650e69d76f84b2aeb976ff6f1",
+      "rows": 215
+    },
+    {
+      "name": "COMPASS.csv",
+      "sha256": "45243ddd68bb7cab4c9cfc705a166f51ccb122720e5dcd400d0446c9e691fc60",
+      "rows": 402
+    },
+    {
+      "name": "CONFSERVER.csv",
+      "sha256": "d435cb46ecd491a74f2c318893a4f1fbc0a89eead73230540153bd5d3b81d7e3",
+      "rows": 484
+    },
+    {
+      "name": "CXX.csv",
+      "sha256": "a7219076aba27abb7362e1f03b948096670896d7db645c20430099406d90f8e6",
+      "rows": 156
+    },
+    {
+      "name": "DAEMON.csv",
+      "sha256": "57d80283f4949528640748a76ebf0405e7d0f2a1536c6f058127bd851fc5b721",
+      "rows": 210
+    },
+    {
+      "name": "DM.csv",
+      "sha256": "34779661dd5f627944bb8fcb533f3028326b7d09bfba35b2d873f06b55124cb2",
+      "rows": 16370
+    },
+    {
+      "name": "DNN.csv",
+      "sha256": "b43bb591fa686badc4dbe6dcc885f34c861662f0eefbb078727140342a3d4d2b",
+      "rows": 1869
+    },
+    {
+      "name": "DURACLOUD.csv",
+      "sha256": "0ba585bcb0895e3bbf4747bd560a4207191d735d2fba7794404962ef123ed17c",
+      "rows": 570
+    },
+    {
+      "name": "EVG.csv",
+      "sha256": "f6cb6ebcc1467eec4254ac268e2c1986edcce7b100b4455214039d42081c3b0a",
+      "rows": 3500
+    },
+    {
+      "name": "FAB.csv",
+      "sha256": "253785a2f8c2d1566696268ac1774991f312fb67d70c435a82290b4ad3694ee8",
+      "rows": 552
+    },
+    {
+      "name": "INDY.csv",
+      "sha256": "5a59321e65f92afad132ba2ee81c0fed6e9d918fa83547d411b970f035dae115",
+      "rows": 547
+    },
+    {
+      "name": "IS.csv",
+      "sha256": "308e9bf546e27b1cc1693875af787214918daa768cadbebcdc74dfa0be98f135",
+      "rows": 632
+    },
+    {
+      "name": "JSWCLOUD.csv",
+      "sha256": "64148251d35d4fc777c98a04e66b0c2b8f24ee39e1ee347c13f67fa31f190c82",
+      "rows": 236
+    },
+    {
+      "name": "JSWSERVER.csv",
+      "sha256": "fe58b91a22fc3dbb8d987481a90ddf55ad4d72debe634fbb0d0d5090251f8fb8",
+      "rows": 250
+    },
+    {
+      "name": "MDL.csv",
+      "sha256": "5080ba2d87007f770efd3841090d372bc2f5f7a87325b973de42f6de8eaee5e4",
+      "rows": 1227
+    },
+    {
+      "name": "MESOS.csv",
+      "sha256": "dbea58e7b3cba78fa9ebafeca4f54bfc491ca08122f80d06eb13661c0348aa7f",
+      "rows": 2634
+    },
+    {
+      "name": "MULE.csv",
+      "sha256": "f8e7a3a0a949d13b90d1ac21059b442363b5165fcf0322528a229421506344ed",
+      "rows": 3042
+    },
+    {
+      "name": "NEXUS.csv",
+      "sha256": "fe53c7b3b6c1840f2c9fc4952490d24570e6ef7bb59f7ef1f5ee4c66f4746239",
+      "rows": 1104
+    },
+    {
+      "name": "SERVER.csv",
+      "sha256": "92402e4a95fdb7f8ccc75e29c1bc8ed017c7055a4a8d12e105bb98127e52407e",
+      "rows": 594
+    },
+    {
+      "name": "STL.csv",
+      "sha256": "076b8fc783a24803b9848584ec93ef113d5dde857ea140eda9d911fec301bc3d",
+      "rows": 839
+    },
+    {
+      "name": "TIDOC.csv",
+      "sha256": "24b48ac98414794d4b376aa4dea7e3d86f0426503c996e3d0d88e32a9381c2ff",
+      "rows": 1167
+    },
+    {
+      "name": "TIMOB.csv",
+      "sha256": "e6a4eea554b91f9233702b7839039a320f96ab0833090da783f3d3e4068f2d5c",
+      "rows": 3471
+    },
+    {
+      "name": "TISTUD.csv",
+      "sha256": "e85d001458b33aaa1027bc902d3b2a4fc6bcd757b3ded1fe3c942bb3de6f70df",
+      "rows": 2683
+    },
+    {
+      "name": "USERGRID.csv",
+      "sha256": "91ad4d528e045361221af437d3d09e97eba0e18e76dc65185c57c20c1ecf8292",
+      "rows": 336
+    },
+    {
+      "name": "XD.csv",
+      "sha256": "1cdba6d1b7a866da90c121921146c96473efbbcb77c7d7befdc337dbf86e8ce6",
+      "rows": 2407
+    }
+  ]
+}

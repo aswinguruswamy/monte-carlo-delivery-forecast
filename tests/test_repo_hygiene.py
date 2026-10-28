@@ -45,6 +45,8 @@ DATA_SUFFIXES = {
 # Small made-up samples are allowed only in these folders, and only when small.
 ALLOWED_DATA_DIRS = ("examples/", "tests/fixtures/", "eval/samples/")
 MAX_SAMPLE_BYTES = 100 * 1024
+# Named metadata files that hold no data rows (file names, checksums, counts only).
+METADATA_FILES = {"src/mcf/data/tawos_manifest.json"}
 REQUIRED_PYTHONS = ["3.11", "3.12"]
 
 
@@ -60,6 +62,8 @@ def dataset_violations(files: list[str], size_of) -> list[str]:
     bad = []
     for f in files:
         if Path(f).suffix.lower() not in DATA_SUFFIXES:
+            continue
+        if f in METADATA_FILES and size_of(f) <= MAX_SAMPLE_BYTES:
             continue
         if not f.startswith(ALLOWED_DATA_DIRS) or size_of(f) > MAX_SAMPLE_BYTES:
             bad.append(f)
