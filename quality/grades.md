@@ -37,3 +37,21 @@ Repeated failures: none (first grade).
 
 Result: pass — no ❌. Ready for Review.
 Repeated failures: item 10 also partly met in MCF-7 (same session, same cause; not a second failure after a fix). Prevention rule already set for MCF-10.
+
+## Ticket MCF-8 — 2026-10-28 — grader: builder pre-check (judgement items also covered by the separate-session independent review)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira transition and brief at 22:49Z; first commit ae3d38d after it | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-8-backtest-adr`; each commit "MCF-8: …" | — |
+| 3 | CI green on the PR | ✅ | PR #9 head checked before merge | — |
+| 4 | PR adds tests | ✅ | `tests/test_adr_backtest.py` (exact rules, approval gate, SHA-256 lock); the failing test was committed first (ae3d38d) | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D21 (struck through) and D21.1 in the Decision Log v8 | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | PR #9 comment: "Changes required" → fixed as D21.1 | — |
+| 8 | Each acceptance criterion met | ✅ | AC1 exact-rule tests; AC2 PM approval date in the status line, before any back-test commit; AC3 approval gate test | — |
+| 9 | README and rule pages match | ✅ | CLAUDE.md "Method before results" matches ADR 0002 | — |
+| 10 | Workflow steps followed | 🟡 | The PM approval was asked for while the independent review was still running; the PM approved D21 before the 3 blockers were known, and D21.1 was needed | Lesson L3: finish the independent review before asking the PM for approval |
+
+Result: pass — no ❌.
+Repeated failures: item 10 partly met in MCF-7, MCF-9 and MCF-8, each time for a different cause. The tests-first cause is fixed (MCF-8 committed the failing test first). New cause → L3.
