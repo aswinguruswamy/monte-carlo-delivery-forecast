@@ -2,6 +2,10 @@ Monte Carlo Delivery Forecast (MCF)
 Copyright 2026 Aswin Guruswamy
 
 This repository includes no dataset files. The back-test uses the TAWOS
-dataset, obtained separately from its original source:
+dataset, obtained separately from its original source and subject to the
+TAWOS terms of use (https://github.com/SOLAR-group/TAWOS):
 Tawosi, Al-Subaihin, Moussa and Sarro, "A Versatile Dataset of Agile Open
-Source Software Projects", MSR 2022.
+Source Software Projects", MSR 2022. https://doi.org/10.1145/3524842.3528029
+Tawosi, Moussa and Sarro, "On the Relationship Between Story Points and
+Development Effort in Agile Open-Source Software", ESEM 2022.
+https://doi.org/10.1145/3544902.3546238

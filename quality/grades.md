@@ -227,3 +227,20 @@ Result: pass — no ❌. Item 5 closes when the PM decides D30.
 | 10 | Workflow steps followed | ✅ | Method fixed before results; failed measure published as failed (R3) | — |
 
 Result: pass — no ❌. Item 5 closes when the PM decides D31.
+
+## Ticket MCF-25 — 2026-10-29 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-25-readme`; each commit "MCF-25: …" | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_docs.py` (13 tests); failing tests committed first, twice | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D04.1, D08, D21.1, D25, D28, D29, D30 (logged) | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: "Approve with changes", no blockers; 6 should-fix and 6 nice-to-have items fixed; CITATION.cff validated with cffconvert | — |
+| 8 | Each acceptance criterion met | ✅ | AC1 install, use, method, limits, results, handover; AC2 CITATION.cff cites MSR and ESEM 2022 (CI test) | — |
+| 9 | README and rule pages match | ✅ | README numbers tested against results/metrics.json; author conditions C2–C4 met | — |
+| 10 | Workflow steps followed | ✅ | Brief with tool check (L8), tests first, review before approval | — |
+
+Result: pass — no ❌.

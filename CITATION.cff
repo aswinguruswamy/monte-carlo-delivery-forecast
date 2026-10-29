@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below, and cite the TAWOS dataset papers."
+title: "Monte Carlo Delivery Forecast (MCF)"
+version: "0.0.1"
+license: Apache-2.0
+authors:
+  - family-names: Guruswamy
+    given-names: Aswin
+repository-code: "https://github.com/aswinguruswamy/monte-carlo-delivery-forecast"
+references:
+  - type: conference-paper
+    title: "A Versatile Dataset of Agile Open Source Software Projects"
+    authors:
+      - family-names: Tawosi
+        given-names: Vali
+      - family-names: Al-Subaihin
+        given-names: Afnan
+      - family-names: Moussa
+        given-names: Rebecca
+      - family-names: Sarro
+        given-names: Federica
+    conference:
+      name: "MSR 2022: 19th International Conference on Mining Software Repositories"
+    year: 2022
+    doi: "10.1145/3524842.3528029"
+  - type: conference-paper
+    title: "On the Relationship Between Story Points and Development Effort in Agile Open-Source Software"
+    authors:
+      - family-names: Tawosi
+        given-names: Vali
+      - family-names: Moussa
+        given-names: Rebecca
+      - family-names: Sarro
+        given-names: Federica
+    conference:
+      name: "ESEM 2022: ACM/IEEE International Symposium on Empirical Software Engineering and Measurement"
+    year: 2022
+    doi: "10.1145/3544902.3546238"
