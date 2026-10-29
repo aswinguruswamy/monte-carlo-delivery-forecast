@@ -159,3 +159,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review finished before the approval request; no back-test run | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-16 — 2026-10-29 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief posted before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-16-cli`; each commit "MCF-16: …" | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_cli.py` (37 tests), load and Monte Carlo regressions; failing tests committed first, twice | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D25 logged; D28 (CLI defaults) proposed, not yet logged | PM to decide D28 at Review |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: "Changes required", 1 blocker (bug share used data after t) and 5 should-fix items — all fixed with regression tests | — |
+| 8 | Each acceptance criterion met | ✅ | AC1 dates and exit 0; AC2 clear errors, exit 1 or 2 (incl. OS errors, date overflow); AC3 --help; D25 both paths; NFR1 100,000 rows end to end ≈ 1 s | — |
+| 9 | README and rule pages match | ✅ | README usage section; D25 wording (empty date only) | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review finished before the approval request; no back-test run | — |
+
+Result: pass — no ❌. Item 5 closes when the PM decides D28.
