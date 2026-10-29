@@ -342,3 +342,12 @@ def test_flag_is_printed(tmp_path, capsys):
     write_cases(hand_cases(), tmp_path / "cases.csv")
     main(["--cases", str(tmp_path / "cases.csv"), "--out", str(tmp_path / "m.json")])
     assert "more than 10% of cases have no forecast" in capsys.readouterr().out
+
+
+# --- separate-chat review fixes (PR #19) -------------------------------------
+
+
+def test_cases_per_size_and_sizes_with_no_case_come_from_the_summaries():
+    m = compute_metrics(hand_cases(), summaries())
+    assert m["by_project"]["A"]["cases_by_n"] == {"10": 2, "25": 1, "50": 0}
+    assert m["summary"]["no_case_sizes"] == [["A", 50], ["B", 50], ["Z", 10], ["Z", 25], ["Z", 50]]

@@ -46,7 +46,10 @@ DATA_SUFFIXES = {
 ALLOWED_DATA_DIRS = ("examples/", "tests/fixtures/", "eval/samples/")
 MAX_SAMPLE_BYTES = 100 * 1024
 # Named metadata files that hold no data rows (file names, checksums, counts only).
-METADATA_FILES = {"src/mcf/data/tawos_manifest.json"}
+METADATA_FILES = {
+    "src/mcf/data/tawos_manifest.json",
+    "results/metrics.json",  # summary numbers only (MCF-19)
+}
 REQUIRED_PYTHONS = ["3.11", "3.12"]
 
 
