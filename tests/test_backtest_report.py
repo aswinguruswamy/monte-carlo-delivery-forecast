@@ -1,0 +1,172 @@
+"""MCF-19 acceptance checks: the back-test report (ADR 0002 What is reported; R3, R5, I1)."""
+
+from __future__ import annotations
+
+import re
+from datetime import date, timedelta
+
+import pytest
+from mcf.backtest.report import ReportError, render_report
+
+from mcf.backtest.metrics import compute_metrics
+from mcf.backtest.run import Case, ProjectSummary
+
+T = date(2020, 1, 1)
+INFO = {
+    "code_commit": "abc1234",
+    "cases_sha256": "1" * 64,
+    "projects_sha256": "2" * 64,
+    "rows_read": 47205,
+    "rows_no_date": 19,
+}
+
+
+def case(project, p, n, hit=True, mc_err=1, v_err=3, no_forecast=False):
+    actual = T + timedelta(days=10)
+    if no_forecast:
+        return Case(project, p, T, n, True, None, None, None, None, actual)
+    d85 = actual if hit else actual - timedelta(days=1)
+    return Case(
+        project,
+        p,
+        T,
+        n,
+        False,
+        actual - timedelta(days=mc_err),
+        d85,
+        actual + timedelta(days=5),
+        actual + timedelta(days=v_err),
+        actual,
+    )
+
+
+def summaries(names=("ALPHA", "BETA", "GAMMA")):
+    return [
+        ProjectSummary(
+            name,
+            p,
+            cases={10: 2, 25: 1, 50: 0},
+            no_forecast={10: 0, 25: 0, 50: 0},
+            short_dates={10: 1, 25: 2, 50: 3},
+        )
+        for p, name in enumerate(names)
+    ]
+
+
+def metrics(hits=4, total=4, mc_err=1, v_err=3, no_forecast=0):
+    cases = [
+        case("ALPHA" if i % 2 else "BETA", i % 2 == 0, 10, hit=i < hits, mc_err=mc_err, v_err=v_err)
+        for i in range(total)
+    ]
+    cases = [
+        Case(c.project, 0 if c.project == "ALPHA" else 1, *list(c.__dict__.values())[2:])
+        for c in cases
+    ]
+    cases += [case("GAMMA", 2, 25, no_forecast=True) for _ in range(no_forecast)]
+    return compute_metrics(cases, summaries())
+
+
+def test_summary_shows_both_measures_with_pass_or_fail():
+    text = render_report(metrics(hits=3, total=4), INFO)  # 75% -> pass; 1 < 3 -> pass
+    assert "| 1. Calibration of the 85% date | 75.0% | 75–95% | **PASS** |" in text
+    assert "| 2. Median absolute error, Monte Carlo 50% vs velocity | 1 d vs 3 d |" in text
+
+
+def test_a_failed_measure_is_shown_as_failed():
+    text = render_report(metrics(hits=1, total=4, mc_err=3, v_err=3), INFO)
+    assert "25.0% | 75–95% | **FAIL** |" in text
+    assert "3 d vs 3 d | Monte Carlo smaller | **FAIL** |" in text
+    assert "did not pass" in text
+
+
+def test_one_row_for_each_project_including_ones_with_no_case():
+    text = render_report(metrics(no_forecast=1), INFO)
+    section = text.split("## Results by project")[1].split("\n## ")[0]
+    rows = [r for r in section.splitlines() if r.startswith("| ") and not r.startswith("| Project")]
+    rows = [r for r in rows if not r.startswith("| ---")]
+    assert [r.split("|")[1].strip() for r in rows] == ["ALPHA", "BETA", "GAMMA"]
+    assert "| GAMMA | 0 | — | — | — | 1 | 6 |" in section
+
+
+def test_one_row_for_each_n():
+    section = (
+        render_report(metrics(), INFO).split("## Results by backlog size")[1].split("\n## ")[0]
+    )
+    for n in ("10", "25", "50"):
+        assert f"\n| {n} |" in section
+
+
+def test_no_forecast_over_10_percent_is_stated_in_the_summary():
+    text = render_report(metrics(no_forecast=1), INFO)  # 1 of 5 = 20%
+    summary = text.split("## Summary")[1].split("\n## ")[0]
+    assert "More than 10% of cases have no forecast" in summary
+    assert "More than 10%" not in render_report(metrics(), INFO)
+
+
+def test_information_only_numbers_are_present_and_labelled():
+    text = render_report(metrics(no_forecast=1), INFO)
+    section = text.split("## Information only")[1].split("\n## ")[0]
+    for label in (
+        "Mean of the per-project calibrations",
+        "Calibration with no-forecast cases as misses",
+        "Bootstrap 95% interval of the calibration",
+        "Bootstrap 95% interval of the error difference",
+        "Calibration of the 50% date",
+        "Calibration of the 95% date",
+        "Mean absolute error",
+        "Bias",
+    ):
+        assert label in section
+    assert "not used for pass or fail" in section
+
+
+def test_limits_are_listed():
+    limits = render_report(metrics(), INFO).split("## Limits")[1].split("\n## ")[0]
+    for words in (
+        "only issues with story points",
+        "resolved as completed",
+        "2-week periods",
+        "whatever its status",
+        "real points of the next N items",
+        "overlap",
+    ):
+        assert words in limits
+
+
+def test_data_terms_and_citations():
+    text = render_report(metrics(), INFO)
+    assert "https://github.com/SOLAR-group/TAWOS" in text
+    assert "individual contributors" in text
+    assert "10.1145/3524842.3528029" in text
+    assert "10.1145/3544902.3546238" in text
+
+
+def test_reproduce_steps_and_checksums():
+    text = render_report(metrics(), INFO)
+    assert "python -m mcf.backtest --data data --out results" in text
+    assert "1" * 64 in text and "2" * 64 in text
+    assert "abc1234" in text
+    assert "47,205 rows" in text and "19 rows" in text
+
+
+def test_no_overclaiming_words():
+    text = render_report(metrics(), INFO).lower()
+    for word in ("proves", "proven", "guarantee", "always correct", "certainly", "will happen"):
+        assert word not in text
+    assert re.search(r"\bcertain\b", text) is None or "not certain" in text
+
+
+def test_report_is_repeatable():
+    assert render_report(metrics(), INFO) == render_report(metrics(), INFO)
+
+
+def test_missing_run_info_is_an_error():
+    with pytest.raises(ReportError, match="cases_sha256"):
+        render_report(metrics(), {k: v for k, v in INFO.items() if k != "cases_sha256"})
+
+
+def test_metrics_without_project_summaries_is_an_error():
+    m = metrics()
+    del m["summary"]["short_dates"]
+    with pytest.raises(ReportError, match="projects.csv"):
+        render_report(m, INFO)
