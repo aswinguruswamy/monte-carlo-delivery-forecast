@@ -51,7 +51,7 @@ def load_manifest() -> dict:
 
 def check_name(name: str) -> None:
     """Reject a file name that could write outside the destination folder."""
-    if not SAFE_NAME.fullmatch(name or "") or Path(name).name != name:
+    if not isinstance(name, str) or not SAFE_NAME.fullmatch(name) or Path(name).name != name:
         raise DownloadError(f"unsafe file name in the manifest: {name!r}")
 
 
@@ -86,7 +86,10 @@ def download(dest: Path, manifest: dict, fetch: Fetch) -> list[Path]:
             if _sha256(target.read_bytes()) == expected:
                 written.append(target)
                 continue
-            target.unlink()  # a bad local file never stays in dest
+            try:
+                target.unlink()  # a bad local file never stays in dest
+            except OSError as exc:
+                raise DownloadError(f"could not remove the bad local file {name}: {exc}") from exc
         url = file_url(manifest["source"], name)
         try:
             data = fetch(url)
