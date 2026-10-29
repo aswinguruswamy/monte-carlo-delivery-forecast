@@ -1,19 +1,23 @@
 """Back-test metrics (ADR 0002 Metrics, Pass rules, Cases with no forecast; D07).
 
 - Calibration p% = share of forecast cases with actual date <= the Monte Carlo
-  p% date. Measure 1 passes if 75% <= calibration of the 85% date <= 95% (D07).
+  p% date. Measure 1 passes if 75% <= calibration of the 85% date <= 95% (D07),
+  compared on exact counts.
 - Error = |forecast date - actual date| in days, for the Monte Carlo 50% date
   and the velocity date. Measure 2 passes only if the Monte Carlo median is
   smaller than the velocity median; equal medians fail.
 - Bias = mean of (forecast - actual) in days; negative = early.
 - Pass metrics use all forecast cases together. No-forecast cases are counted
-  and reported, not scored.
-- Information only: per N and per project rows; the mean of per-project
-  calibrations (projects with at least one forecast case); calibration with
-  no-forecast cases counted as misses; a bootstrap that picks whole projects
-  (2,000 resamples, seed 20261028). Implementation details of the bootstrap,
-  not set in the ADR: the generator is numpy.random.default_rng(20261028), and
-  the 95% interval is the 2.5% and 97.5% quantiles (numpy default method).
+  and reported, not scored. Rows for N = 10, 25 and 50 always appear; with the
+  project summaries, every project appears, with its short-date counts.
+- Information only: the mean of per-project calibrations (projects with at
+  least one forecast case); calibration with no-forecast cases counted as
+  misses; a bootstrap that picks whole projects (2,000 resamples, seed
+  20261028). Details the ADR does not set (proposed D30): only projects with
+  at least one forecast case are resampled; the generator is
+  numpy.random.default_rng(20261028); the 95% interval is the 2.5% and 97.5%
+  quantiles (numpy default method); the median difference is velocity - Monte
+  Carlo (> 0 = Monte Carlo better).
 """
 
 from __future__ import annotations
@@ -22,24 +26,36 @@ import csv
 import json
 from collections.abc import Iterable, Sequence
 from datetime import date
+from fractions import Fraction
 from pathlib import Path
 
 import numpy as np
 
-from mcf.backtest.run import CASE_COLUMNS, Case
+from mcf.backtest.run import CASE_COLUMNS, SIZES, SUMMARY_COLUMNS, Case, ProjectSummary
 
-BAND = (0.75, 0.95)
+BAND = (Fraction(75, 100), Fraction(95, 100))
 BOOTSTRAP_RESAMPLES = 2000
 BOOTSTRAP_SEED = 20261028
-NO_FORECAST_FLAG = 0.10
+NO_FORECAST_FLAG = Fraction(10, 100)
+_RATE_KEYS = (
+    "calibration_50",
+    "calibration_85",
+    "calibration_95",
+    "median_error_mc50",
+    "median_error_velocity",
+    "mean_error_mc50",
+    "mean_error_velocity",
+    "bias_mc50",
+    "bias_velocity",
+)
 
 
 class MetricsError(ValueError):
     """Metrics cannot be calculated from this input."""
 
 
-def calibration_passes(calibration_85: float) -> bool:
-    return BAND[0] <= calibration_85 <= BAND[1]
+def calibration_passes(calibration_85: float | Fraction) -> bool:
+    return BAND[0] <= Fraction(calibration_85) <= BAND[1]
 
 
 def error_passes(median_mc50: float, median_velocity: float) -> bool:
@@ -48,6 +64,19 @@ def error_passes(median_mc50: float, median_velocity: float) -> bool:
 
 def _days(a: date, b: date) -> int:
     return (a - b).days
+
+
+def check_case(c: Case) -> None:
+    dates = (c.mc50, c.mc85, c.mc95, c.velocity)
+    where = f"case {c.project} {c.t} N={c.n}"
+    if c.n not in SIZES:
+        raise MetricsError(f"{where}: N must be one of {SIZES}")
+    if c.actual <= c.t:
+        raise MetricsError(f"{where}: the actual date must be after t")
+    if c.no_forecast and any(d is not None for d in dates):
+        raise MetricsError(f"{where}: a no-forecast case must have no forecast date")
+    if not c.no_forecast and any(d is None for d in dates):
+        raise MetricsError(f"{where}: a forecast case needs all 4 forecast dates")
 
 
 def _arrays(cases: Sequence[Case]) -> dict[str, np.ndarray]:
@@ -62,22 +91,9 @@ def _arrays(cases: Sequence[Case]) -> dict[str, np.ndarray]:
 
 def _group(cases: Sequence[Case]) -> dict:
     scored = [c for c in cases if not c.no_forecast]
-    no_forecast = len(cases) - len(scored)
-    row: dict = {"cases": len(scored), "no_forecast_cases": no_forecast}
+    row: dict = {"cases": len(scored), "no_forecast_cases": len(cases) - len(scored)}
     if not scored:
-        for key in (
-            "calibration_50",
-            "calibration_85",
-            "calibration_95",
-            "median_error_mc50",
-            "median_error_velocity",
-            "mean_error_mc50",
-            "mean_error_velocity",
-            "bias_mc50",
-            "bias_velocity",
-        ):
-            row[key] = None
-        return row
+        return {**row, **dict.fromkeys(_RATE_KEYS)}
     a = _arrays(scored)
     row.update(
         calibration_50=float(a["hit50"].mean()),
@@ -93,9 +109,9 @@ def _group(cases: Sequence[Case]) -> dict:
     return row
 
 
-def _bootstrap(by_project: dict[str, list[Case]]) -> dict:
+def _bootstrap(groups: dict[str, list[Case]]) -> dict:
     per = []
-    for cases in by_project.values():
+    for cases in groups.values():
         scored = [c for c in cases if not c.no_forecast]
         if scored:
             a = _arrays(scored)
@@ -105,11 +121,10 @@ def _bootstrap(by_project: dict[str, list[Case]]) -> dict:
     diff = np.empty(BOOTSTRAP_RESAMPLES)
     for i in range(BOOTSTRAP_RESAMPLES):
         pick = rng.integers(0, len(per), size=len(per))
-        hits = np.concatenate([per[j][0] for j in pick])
-        mc = np.concatenate([per[j][1] for j in pick])
-        v = np.concatenate([per[j][2] for j in pick])
-        calib[i] = hits.mean()
-        diff[i] = np.median(v) - np.median(mc)
+        calib[i] = np.concatenate([per[j][0] for j in pick]).mean()
+        diff[i] = np.median(np.concatenate([per[j][2] for j in pick])) - np.median(
+            np.concatenate([per[j][1] for j in pick])
+        )
     return {
         "resamples": BOOTSTRAP_RESAMPLES,
         "seed": BOOTSTRAP_SEED,
@@ -120,32 +135,60 @@ def _bootstrap(by_project: dict[str, list[Case]]) -> dict:
     }
 
 
-def compute_metrics(cases: Iterable[Case]) -> dict:
+def compute_metrics(
+    cases: Iterable[Case], summaries: Sequence[ProjectSummary] | None = None
+) -> dict:
     cases = list(cases)
     if not cases:
         raise MetricsError("no cases")
+    numbers: dict[str, int] = {}
+    for c in cases:
+        check_case(c)
+        if numbers.setdefault(c.project, c.p) != c.p:
+            raise MetricsError(f"project {c.project} has two numbers: {numbers[c.project]}, {c.p}")
+    if summaries is not None:
+        known = {s.project: s.p for s in summaries}
+        for name, p in numbers.items():
+            if known.get(name) != p:
+                raise MetricsError(f"project {name} (p={p}) is not in the project summaries")
     scored = [c for c in cases if not c.no_forecast]
     if not scored:
         raise MetricsError("no forecast case: every case has no forecast")
 
     summary = _group(cases)
     hits = sum(c.actual <= c.mc85 for c in scored)
+    share = Fraction(summary["no_forecast_cases"], len(cases))
     summary["calibration_85_no_forecast_as_miss"] = hits / len(cases)
-    summary["no_forecast_share"] = summary["no_forecast_cases"] / len(cases)
-    summary["no_forecast_over_10_percent"] = summary["no_forecast_share"] > NO_FORECAST_FLAG
-    summary["measure_1_pass"] = calibration_passes(summary["calibration_85"])
+    summary["no_forecast_share"] = float(share)
+    summary["no_forecast_over_10_percent"] = share > NO_FORECAST_FLAG
+    summary["measure_1_pass"] = calibration_passes(Fraction(hits, len(scored)))
     summary["measure_2_pass"] = error_passes(
         summary["median_error_mc50"], summary["median_error_velocity"]
     )
 
-    by_n: dict[str, dict] = {}
-    for n in sorted({c.n for c in cases}):
-        by_n[str(n)] = _group([c for c in cases if c.n == n])
+    by_n = {str(n): _group([c for c in cases if c.n == n]) for n in SIZES}
 
     groups: dict[str, list[Case]] = {}
-    for c in sorted(cases, key=lambda c: (c.p, c.project)):
-        groups.setdefault(c.project, []).append(c)
-    by_project = {name: {"p": cs[0].p, **_group(cs)} for name, cs in groups.items()}
+    order = (
+        [(s.p, s.project) for s in summaries]
+        if summaries is not None
+        else sorted({(c.p, c.project) for c in cases})
+    )
+    for _, name in sorted(order):
+        groups[name] = []
+    for c in cases:
+        groups[c.project].append(c)
+    by_project = {}
+    for name, cs in groups.items():
+        p = numbers.get(name, next((q for q, n in order if n == name), None))
+        by_project[name] = {"p": p, **_group(cs)}
+    if summaries is not None:
+        for s in summaries:
+            by_project[s.project]["short_dates"] = {str(n): s.short_dates.get(n, 0) for n in SIZES}
+        summary["short_dates"] = {
+            str(n): sum(s.short_dates.get(n, 0) for s in summaries) for n in SIZES
+        }
+    summary["projects"] = len(by_project)
     rates = [r["calibration_85"] for r in by_project.values() if r["calibration_85"] is not None]
     summary["mean_project_calibration_85"] = float(np.mean(rates))
 
@@ -157,39 +200,62 @@ def compute_metrics(cases: Iterable[Case]) -> dict:
     }
 
 
-def load_cases(path: str | Path) -> list[Case]:
-    """Read a cases.csv written by `write_cases`."""
+def _read(path: str | Path, columns: list[str]) -> list[tuple[int, dict]]:
     with Path(path).open(newline="", encoding="utf-8") as fh:
         reader = csv.DictReader(fh)
-        if reader.fieldnames != CASE_COLUMNS:
-            raise MetricsError(
-                f"{path}: expected column(s) {CASE_COLUMNS}, got {reader.fieldnames}"
-            )
+        if reader.fieldnames != columns:
+            raise MetricsError(f"{path}: expected column(s) {columns}, got {reader.fieldnames}")
+        return [(reader.line_num, row) for row in reader]
 
-        def day(text: str) -> date | None:
-            return date.fromisoformat(text) if text else None
 
-        cases = []
-        for row in reader:
-            cases.append(
-                Case(
-                    project=row["project"],
-                    p=int(row["p"]),
-                    t=date.fromisoformat(row["t"]),
-                    n=int(row["n"]),
-                    no_forecast=row["no_forecast"] == "1",
-                    mc50=day(row["mc50"]),
-                    mc85=day(row["mc85"]),
-                    mc95=day(row["mc95"]),
-                    velocity=day(row["velocity"]),
-                    actual=date.fromisoformat(row["actual"]),
-                )
+def load_cases(path: str | Path) -> list[Case]:
+    """Read and check a cases.csv written by `write_cases`."""
+
+    def day(text: str) -> date | None:
+        return date.fromisoformat(text) if text else None
+
+    cases = []
+    for line, row in _read(path, CASE_COLUMNS):
+        try:
+            if row["no_forecast"] not in ("0", "1"):
+                raise MetricsError(f"no_forecast must be 0 or 1, got {row['no_forecast']!r}")
+            c = Case(
+                project=row["project"],
+                p=int(row["p"]),
+                t=date.fromisoformat(row["t"]),
+                n=int(row["n"]),
+                no_forecast=row["no_forecast"] == "1",
+                mc50=day(row["mc50"]),
+                mc85=day(row["mc85"]),
+                mc95=day(row["mc95"]),
+                velocity=day(row["velocity"]),
+                actual=date.fromisoformat(row["actual"]),
             )
+            check_case(c)
+        except (ValueError, TypeError) as exc:
+            raise MetricsError(f"{path}, line {line}: {exc}") from exc
+        cases.append(c)
     return cases
 
 
+def load_summaries(path: str | Path) -> list[ProjectSummary]:
+    """Read a projects.csv written by `write_summaries`."""
+    out: dict[str, ProjectSummary] = {}
+    for line, row in _read(path, SUMMARY_COLUMNS):
+        try:
+            s = out.setdefault(row["project"], ProjectSummary(row["project"], int(row["p"])))
+            n = int(row["n"])
+            s.cases[n] = int(row["cases"])
+            s.no_forecast[n] = int(row["no_forecast"])
+            s.short_dates[n] = int(row["short_dates"])
+        except ValueError as exc:
+            raise MetricsError(f"{path}, line {line}: {exc}") from exc
+    return list(out.values())
+
+
 def write_metrics(metrics: dict, path: str | Path) -> None:
-    Path(path).write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    text = json.dumps(metrics, indent=2, sort_keys=True, allow_nan=False)
+    Path(path).write_text(text + "\n", encoding="utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -200,11 +266,13 @@ def main(argv: list[str] | None = None) -> int:
         prog="python -m mcf.backtest.metrics", description="Back-test metrics (ADR 0002)."
     )
     parser.add_argument("--cases", required=True, type=Path, help="cases.csv from mcf.backtest")
+    parser.add_argument("--projects", type=Path, help="projects.csv from mcf.backtest")
     parser.add_argument("--out", required=True, type=Path, help="metrics.json to write")
     args = parser.parse_args(argv)
     try:
-        metrics = compute_metrics(load_cases(args.cases))
-    except (MetricsError, OSError, ValueError, KeyError) as exc:
+        summaries = load_summaries(args.projects) if args.projects else None
+        metrics = compute_metrics(load_cases(args.cases), summaries)
+    except (MetricsError, OSError) as exc:
         print(f"mcf.backtest.metrics: error: {exc}", file=sys.stderr)
         return 1
     write_metrics(metrics, args.out)
@@ -217,6 +285,8 @@ def main(argv: list[str] | None = None) -> int:
         f"Measure 2 (median error MC {s['median_error_mc50']:.1f} d vs velocity "
         f"{s['median_error_velocity']:.1f} d): {m2}"
     )
+    if s["no_forecast_over_10_percent"]:
+        print(f"Note: more than 10% of cases have no forecast ({s['no_forecast_share']:.1%}).")
     return 0
 
 
