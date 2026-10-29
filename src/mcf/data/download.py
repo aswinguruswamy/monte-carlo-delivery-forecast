@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 import urllib.request
 from collections.abc import Callable
@@ -18,10 +19,19 @@ from importlib import resources
 from pathlib import Path
 from urllib.parse import quote, unquote
 
-__all__ = ["ChecksumError", "DownloadError", "download", "file_url", "load_manifest", "unquote"]
+__all__ = [
+    "ChecksumError",
+    "DownloadError",
+    "check_name",
+    "download",
+    "file_url",
+    "load_manifest",
+    "unquote",
+]
 
 RAW_BASE = "https://raw.githubusercontent.com"
 TIMEOUT_SECONDS = 60
+SAFE_NAME = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9_.-]*\.csv")
 
 Fetch = Callable[[str], bytes]
 
@@ -37,6 +47,12 @@ class ChecksumError(DownloadError):
 def load_manifest() -> dict:
     text = resources.files("mcf.data").joinpath("tawos_manifest.json").read_text("utf-8")
     return json.loads(text)
+
+
+def check_name(name: str) -> None:
+    """Reject a file name that could write outside the destination folder."""
+    if not SAFE_NAME.fullmatch(name or "") or Path(name).name != name:
+        raise DownloadError(f"unsafe file name in the manifest: {name!r}")
 
 
 def file_url(source: dict, name: str) -> str:
@@ -64,10 +80,13 @@ def download(dest: Path, manifest: dict, fetch: Fetch) -> list[Path]:
     written = []
     for entry in manifest["files"]:
         name, expected = entry["name"], entry["sha256"]
+        check_name(name)
         target = dest / name
-        if target.is_file() and _sha256(target.read_bytes()) == expected:
-            written.append(target)
-            continue
+        if target.is_file():
+            if _sha256(target.read_bytes()) == expected:
+                written.append(target)
+                continue
+            target.unlink()  # a bad local file never stays in dest
         url = file_url(manifest["source"], name)
         try:
             data = fetch(url)
@@ -80,8 +99,13 @@ def download(dest: Path, manifest: dict, fetch: Fetch) -> list[Path]:
                 "The source changed; stop and check before using the data."
             )
         tmp = target.with_suffix(target.suffix + ".part")
-        tmp.write_bytes(data)
-        tmp.replace(target)
+        try:
+            tmp.write_bytes(data)
+            tmp.replace(target)
+        except OSError as exc:
+            raise DownloadError(f"could not write {name} to {dest}: {exc}") from exc
+        finally:
+            tmp.unlink(missing_ok=True)
         written.append(target)
     return written
 
