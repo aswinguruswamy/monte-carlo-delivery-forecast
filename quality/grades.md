@@ -167,7 +167,7 @@ Result: pass — no ❌.
 | 1 | In Progress before the first commit | ✅ | Jira In Progress and brief posted before the first commit | — |
 | 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-16-cli`; each commit "MCF-16: …" | — |
 | 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
-| 4 | PR adds tests | ✅ | `tests/test_cli.py` (37 tests), load and Monte Carlo regressions; failing tests committed first, twice | — |
+| 4 | PR adds tests | ✅ | `tests/test_cli.py` (34 tests), load and Monte Carlo regressions; failing tests committed first, twice | — |
 | 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D25 logged; D28 (CLI defaults) proposed, not yet logged | PM to decide D28 at Review |
 | 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
 | 7 | Independent review with a verdict | ✅ | Subagent: "Changes required", 1 blocker (bug share used data after t) and 5 should-fix items — all fixed with regression tests | — |
