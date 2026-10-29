@@ -14,7 +14,15 @@ from datetime import date
 import numpy as np
 
 from mcf.data.load import LoadError, load_issues
-from mcf.data.types import IssueTypeError, sort_types
+from mcf.data.types import (
+    BUG,
+    D04_KIND,
+    NOT_COUNTED,
+    VALUE,
+    IssueTypeError,
+    TypeSummary,
+    sort_types,
+)
 from mcf.forecast.montecarlo import (
     PERCENTILES,
     RUNS,
@@ -116,11 +124,25 @@ def _percent(value: float) -> str:
     return f"{round(value * 100)}%"
 
 
+def _num(value: float) -> str:
+    return f"{value:.1f}" if value >= 0.1 else f"{value:.3g}"
+
+
+def _items(count: int) -> str:
+    return f"{count} value item" + ("" if count == 1 else "s")
+
+
 def forecast(args: argparse.Namespace) -> str:
     issues, load = load_issues(args.file, open_items=True)
+    unknown = sorted({ty for ty in load.open_types if ty not in D04_KIND})
+    if unknown:
+        raise IssueTypeError(
+            f"{load.file}: unknown issue type {unknown[0]!r} on an open row. "
+            "Add it to D04 with a new decision, or fix the data."
+        )
     if issues.empty:
         raise LoadError(f"{load.file}: no done item (all rows are open or have no date)")
-    issues, types = sort_types(issues, load.file)
+    issues, _ = sort_types(issues, load.file)
     ordinals = done_ordinals(issues)
 
     if args.as_of is not None:
@@ -145,22 +167,28 @@ def forecast(args: argparse.Namespace) -> str:
         points, points_note = mean_points * args.backlog, "estimated"
     v_date = velocity_date(t, velocity, points)
 
-    bug_share = types.bug_share
+    in_window = issues["done_day"].map(lambda d: start <= d <= end)
+    kinds = issues.loc[in_window, "kind"]
+    bug_share = TypeSummary(
+        value=int((kinds == VALUE).sum()),
+        bug=int((kinds == BUG).sum()),
+        not_counted=int((kinds == NOT_COUNTED).sum()),
+    ).bug_share
     lines = [
         f"Forecast: the next {args.backlog} value items",
         f"From {t} ({t_note})",
-        f"History: {start} to {end} (84 days), {int(counts.sum())} value items done",
+        f"History: {start} to {end} (84 days), {_items(int(counts.sum()))} done",
         "",
         f"Monte Carlo ({RUNS:,} runs, seed {args.seed}):",
         *(f"  {p}%: {dates[p]}" for p in PERCENTILES),
         "  The 50% date is not certain: half of the runs finish later.",
         "",
-        f"Velocity: {v_date} ({velocity:.1f} points per 2 weeks; "
-        f"{points:.1f} points needed, {points_note})",
+        f"Velocity: {v_date} ({_num(velocity)} points per 2 weeks; "
+        f"{_num(points)} points needed, {points_note})",
         "",
         f"Open items skipped: {load.rows_open}",
         f"Rows with no date (NULL): {load.rows_no_date}",
-        f"Bug share: {_percent(bug_share) if bug_share is not None else 'n/a'}",
+        f"Bug share ({start} to {end}): {_percent(bug_share) if bug_share is not None else 'n/a'}",
     ]
     return "\n".join(lines)
 

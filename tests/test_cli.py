@@ -116,7 +116,7 @@ def test_open_items_are_skipped_and_counted(tmp_path, capsys):
 def test_bug_share_shows(tmp_path, capsys):
     p = write(tmp_path, [f"S-1,Story,{T},1", f"S-2,Story,{T},1", f"B-1,Bug,{T},"])
     _, out, _ = run(capsys, "forecast", str(p), "--backlog", "1")
-    assert "Bug share: 33%" in out
+    assert f"Bug share ({T - timedelta(days=83)} to {T}): 33%" in out
 
 
 # --- AC2: bad input gives a clear error and a non-zero exit code ------------
