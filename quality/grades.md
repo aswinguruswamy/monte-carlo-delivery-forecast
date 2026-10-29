@@ -244,3 +244,20 @@ Result: pass — no ❌. Item 5 closes when the PM decides D31.
 | 10 | Workflow steps followed | ✅ | Brief with tool check (L8), tests first, review before approval | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-21 — 2026-10-29 — grader: builder pre-check (judgement items also covered by the subagent review and re-check, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-21-explain`; each commit "MCF-21: …" | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_explain.py` (39 tests) + CLI fixture made from main; failing tests committed first, three times | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | NFR3, NFR8, C2 covered; D32 (stdlib HTTP, model, key) proposed | PM to decide D32 at Review |
+| 6 | AI ticket evaluation | ✅ | AI checklist in the review: data minimisation (only report numbers and dates), injection rule, secret handling (no redirects, key out of errors and frames), stop reason, prompt version. Evaluation set is MCF-23 | — |
+| 7 | Independent review with a verdict | ✅ | Review: "Request changes", 2 blockers (key leak by redirect; Claude had to round numbers) + 6 should-fix → fixed; re-check: "Approve", live redirect probe and 21-case CLI byte comparison | — |
+| 8 | Each acceptance criterion met | ✅ | AC1 prompt holds only counts and dates (secret-key test); AC2 no test calls the paid API (fake transport, socket block) | — |
+| 9 | README and rule pages match | ✅ | CLAUDE.md AI rules 1 and 3 | — |
+| 10 | Workflow steps followed | ✅ | Brief with tool check (L8), tests first, review and re-check before approval | — |
+
+Result: pass — no ❌. Item 5 closes when the PM decides D32.

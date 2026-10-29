@@ -74,6 +74,10 @@ class ForecastFacts:
                 raise ValueError(f"{f.name}: must be finite, got {value!r}")
             if expected in (int, float) and value < 0:
                 raise ValueError(f"{f.name}: must be 0 or more, got {value!r}")
+        if self.backlog < 1 or self.runs < 1:
+            raise ValueError("backlog and runs must be 1 or more")
+        if self.bug_share_percent is not None and self.bug_share_percent > 100:
+            raise ValueError("bug_share_percent must be at most 100")
         if not self.mc50 <= self.mc85 <= self.mc95:
             raise ValueError("the dates must be in order: 50% <= 85% <= 95%")
         if not self.window_start <= self.window_end == self.t:
