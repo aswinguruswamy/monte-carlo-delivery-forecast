@@ -103,4 +103,9 @@ def forecast_dates(
 ) -> dict[int, date]:
     """Return the p% date (t + k days) for each percentile."""
     days = simulate_days(daily_counts, n, rng, runs)
-    return {p: t + timedelta(days=percentile_days(days, p)) for p in percentiles}
+    try:
+        return {p: t + timedelta(days=percentile_days(days, p)) for p in percentiles}
+    except OverflowError as exc:
+        raise MonteCarloError(
+            f"no date: the forecast falls after the last calendar date ({exc})"
+        ) from exc

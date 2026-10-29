@@ -13,6 +13,14 @@ ruff check . && ruff format --check .
 pytest
 ```
 
+## Forecast from your own CSV
+
+```bash
+mcf forecast team.csv --backlog 40
+```
+
+The CSV needs the columns `Issue_Key`, `Type`, `Resolution_Date` and `Story_Point`. An empty `Resolution_Date` means an open item: it is skipped and counted (D25). Options (D28): `--as-of YYYY-MM-DD` (day t, default: the last done day in the file; items done after it are not used), `--backlog-points P` (for the velocity date; default: an estimate), `--seed S`. Run `mcf forecast --help` for details. The 50% date is not certain: half of the runs finish later.
+
 ## Get the data
 
 ```bash

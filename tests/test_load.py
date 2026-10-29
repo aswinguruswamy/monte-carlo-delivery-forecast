@@ -211,3 +211,64 @@ def test_all_null_file_keeps_the_column_types(tmp_path):
     assert report.rows_kept == 0
     assert list(issues.columns) == ["issue_key", "type", "done_day", "story_point"]
     assert issues["issue_key"].dtype == object and issues["story_point"].dtype == float
+
+
+# --- D25: open items in a user CSV (CLI path only) -------------------------
+
+
+@pytest.mark.parametrize("value", [""])
+def test_open_items_mode_skips_and_counts_empty_dates(tmp_path, value):
+    p = write(
+        tmp_path,
+        f"P-1,Story,Done,2020-01-01,1\nP-2,Story,Open,{value},2\nP-3,Bug,Done,NULL,1\n",
+    )
+    issues, report = load_issues(p, open_items=True)
+    assert issues["issue_key"].tolist() == ["P-1"]
+    assert (report.rows_read, report.rows_no_date, report.rows_open) == (3, 1, 1)
+    assert report.rows_kept == 1
+
+
+def test_back_test_path_still_rejects_empty_dates_by_default(tmp_path):
+    p = write(tmp_path, "P-1,Story,Done,2020-01-01,1\nP-2,Story,Open,,2\n")
+    with pytest.raises(LoadError, match="bad Resolution_Date"):
+        load_issues(p)
+    assert (
+        load_issues(write(tmp_path, "P-1,Story,Done,2020-01-01,1\n", name="Q.csv"))[1].rows_open
+        == 0
+    )
+
+
+def test_open_items_mode_still_rejects_a_bad_date(tmp_path):
+    p = write(tmp_path, "P-1,Story,Done,2020-13-01,1\n")
+    with pytest.raises(LoadError, match="bad Resolution_Date"):
+        load_issues(p, open_items=True)
+
+
+def test_open_items_is_keyword_only(tmp_path):
+    p = write(tmp_path, "P-1,Story,Done,2020-01-01,1\n")
+    with pytest.raises(TypeError):
+        load_issues(p, True)  # noqa: FBT003
+
+
+def test_open_items_mode_reports_open_types_and_checks_points(tmp_path):
+    p = write(tmp_path, "P-1,Story,Done,2020-01-01,1\nP-2,Spike,Open,,2\n")
+    assert load_issues(p, open_items=True)[1].open_types == ("Spike",)
+    bad = write(tmp_path, "P-1,Story,Open,,x\n", name="B.csv")
+    with pytest.raises(LoadError, match="bad Story_Point"):
+        load_issues(bad, open_items=True)
+
+
+def test_os_error_is_a_load_error(tmp_path, monkeypatch):
+    p = write(tmp_path, "P-1,Story,Done,2020-01-01,1\n")
+
+    def deny(*args, **kwargs):
+        raise PermissionError("Permission denied")
+
+    monkeypatch.setattr(Path, "open", deny)
+    with pytest.raises(LoadError, match="cannot read"):
+        load_issues(p)
+
+
+def test_a_folder_is_not_a_file(tmp_path):
+    with pytest.raises(LoadError, match="not a file"):
+        load_issues(tmp_path)

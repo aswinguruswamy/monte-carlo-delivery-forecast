@@ -240,3 +240,8 @@ def test_bad_count_types_are_an_error(counts):
 def test_percentile_of_no_runs_is_an_error():
     with pytest.raises(MonteCarloError, match="no runs"):
         percentile_days(np.array([], dtype=np.int64), 50)
+
+
+def test_date_past_the_last_calendar_day_is_a_monte_carlo_error():
+    with pytest.raises(MonteCarloError, match="date"):
+        forecast_dates(date(9999, 12, 30), np.full(84, 1), 5, rng(), runs=10)
