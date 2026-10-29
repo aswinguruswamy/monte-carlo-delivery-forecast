@@ -13,7 +13,7 @@ from datetime import date
 
 import numpy as np
 
-from mcf.data.load import LoadError, load_issues
+from mcf.data.load import LoadError, LoadReport, load_issues
 from mcf.data.types import (
     BUG,
     D04_KIND,
@@ -31,7 +31,7 @@ from mcf.forecast.montecarlo import (
 )
 from mcf.forecast.throughput import ThroughputError, counts_from_ordinals, done_ordinals, window
 from mcf.forecast.velocity import VelocityError, velocity_date, window_velocity
-from mcf.result import ForecastFacts
+from mcf.result import ForecastFacts, report_number, report_percent
 
 
 def _positive_int(text: str) -> int:
@@ -137,7 +137,7 @@ def compute(args: argparse.Namespace) -> ForecastFacts:
     return _compute_with_load(args)[0]
 
 
-def _compute_with_load(args: argparse.Namespace):
+def _compute_with_load(args: argparse.Namespace) -> tuple[ForecastFacts, LoadReport]:
     issues, load = load_issues(args.file, open_items=True)
     unknown = sorted({ty for ty in load.open_types if ty not in D04_KIND})
     if unknown:
@@ -190,12 +190,12 @@ def _compute_with_load(args: argparse.Namespace):
         mc95=dates[95],
         runs=RUNS,
         velocity_date=v_date,
-        velocity_per_sprint=float(velocity),
-        points_needed=float(points),
+        velocity_per_sprint=report_number(float(velocity)),
+        points_needed=report_number(float(points)),
         points_estimated=args.backlog_points is None,
         open_items=load.rows_open,
         rows_no_date=load.rows_no_date,
-        bug_share=bug_share,
+        bug_share_percent=None if bug_share is None else report_percent(bug_share),
     ), load
 
 
@@ -203,7 +203,7 @@ def forecast(args: argparse.Namespace) -> str:
     f, _ = _compute_with_load(args)
     t_note = "--as-of" if args.as_of is not None else "last done day in the file"
     points_note = "estimated" if f.points_estimated else "given"
-    share = _percent(f.bug_share) if f.bug_share is not None else "n/a"
+    share = f"{f.bug_share_percent}%" if f.bug_share_percent is not None else "n/a"
     lines = [
         f"Forecast: the next {f.backlog} value items",
         f"From {f.t} ({t_note})",

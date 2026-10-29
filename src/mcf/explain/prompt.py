@@ -13,6 +13,7 @@ from datetime import date
 
 from mcf.result import ForecastFacts
 
+PROMPT_VERSION = "1"
 ALLOWED_FIELDS = tuple(f.name for f in fields(ForecastFacts))
 
 SYSTEM = """You explain a delivery forecast to a project sponsor in plain English.
@@ -33,5 +34,10 @@ def _value(v):
 def build_prompt(facts: ForecastFacts) -> dict:
     """Return the system text and the user message for the Messages API."""
     data = {k: _value(v) for k, v in asdict(facts).items()}
-    content = "Explain this forecast.\nDATA:\n" + json.dumps(data, indent=2, sort_keys=True)
-    return {"system": SYSTEM, "messages": [{"role": "user", "content": content}]}
+    text = json.dumps(data, indent=2, sort_keys=True, allow_nan=False)
+    content = "Explain this forecast.\nDATA:\n" + text
+    return {
+        "version": PROMPT_VERSION,
+        "system": SYSTEM,
+        "messages": [{"role": "user", "content": content}],
+    }

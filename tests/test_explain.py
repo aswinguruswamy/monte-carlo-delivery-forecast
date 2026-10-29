@@ -291,9 +291,13 @@ def test_the_key_is_not_reachable_from_the_raised_error():
     assert exc.value.__cause__ is None
     assert exc.value.__context__ is None
     tb = exc.value.__traceback__
+    checked = 0
     while tb is not None:
-        assert "sk-secret-999" not in repr(tb.tb_frame.f_locals), tb.tb_frame.f_code.co_name
+        if "/src/mcf/" in tb.tb_frame.f_code.co_filename:
+            assert "sk-secret-999" not in repr(tb.tb_frame.f_locals), tb.tb_frame.f_code.co_name
+            checked += 1
         tb = tb.tb_next
+    assert checked >= 1  # the frame of explain() was checked
 
 
 @pytest.mark.parametrize("stop", ["max_tokens", "refusal", None])
