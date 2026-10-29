@@ -13,6 +13,14 @@ ruff check . && ruff format --check .
 pytest
 ```
 
+## Get the data
+
+```bash
+python -m mcf.data.download --dest data
+```
+
+This gets the 29 TAWOS files (47,205 rows) at a fixed commit and checks each file with SHA-256. The data is not stored in this repository (D08). If a file does not match, the script stops.
+
 Copy `.env.example` to `.env` for local secrets. Never commit `.env`.
 
 ## Project documents

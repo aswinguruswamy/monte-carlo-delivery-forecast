@@ -1,0 +1,179 @@
+"""MCF-10 acceptance checks: download the TAWOS extract with checksums (D06, D08).
+
+No test uses the network: each test passes a fake fetcher.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import re
+
+import pytest
+
+from mcf.data import download as dl
+
+
+def sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def fake_manifest(files: dict[str, bytes]) -> dict:
+    return {
+        "source": {
+            "repo": "SOLAR-group/SPvsDevelopmentEffort",
+            "commit": "e8ae43b",
+            "folder": "Dataset/RQ2 and RQ3",
+        },
+        "files": [{"name": n, "sha256": sha(b), "rows": 1} for n, b in files.items()],
+    }
+
+
+def fetcher_for(files: dict[str, bytes], calls: list[str] | None = None):
+    def fetch(url: str) -> bytes:
+        if calls is not None:
+            calls.append(url)
+        name = dl.unquote(url.rsplit("/", 1)[1])
+        return files[name]
+
+    return fetch
+
+
+# --- the real manifest (AC1) -------------------------------------------------
+
+
+def test_manifest_pins_the_source_and_29_files_with_47205_rows():
+    m = dl.load_manifest()
+    assert m["source"]["repo"] == "SOLAR-group/SPvsDevelopmentEffort"
+    assert m["source"]["commit"] == "e8ae43b8377a23eb84128108a38e139a7d549c2c"
+    assert m["source"]["folder"] == "Dataset/RQ2 and RQ3"
+    assert len(m["files"]) == 29
+    assert len({f["name"] for f in m["files"]}) == 29
+    assert sum(f["rows"] for f in m["files"]) == 47_205
+    for f in m["files"]:
+        assert f["name"].endswith(".csv")
+        assert re.fullmatch(r"[0-9a-f]{64}", f["sha256"])
+
+
+def test_url_uses_the_fixed_commit_and_escapes_spaces():
+    url = dl.file_url(dl.load_manifest()["source"], "MESOS.csv")
+    assert url.startswith(
+        "https://raw.githubusercontent.com/SOLAR-group/SPvsDevelopmentEffort/e8ae43b"
+    )
+    assert url.endswith("/Dataset/RQ2%20and%20RQ3/MESOS.csv")
+
+
+# --- download behaviour (AC1, AC2) -------------------------------------------
+
+
+def test_download_writes_each_file_when_checksums_match(tmp_path):
+    files = {"A.csv": b"x\n1\n", "B.csv": b"x\n2\n"}
+    written = dl.download(tmp_path, fake_manifest(files), fetcher_for(files))
+    assert sorted(p.name for p in written) == ["A.csv", "B.csv"]
+    assert (tmp_path / "A.csv").read_bytes() == files["A.csv"]
+
+
+def test_changed_file_stops_with_error_and_leaves_no_bad_file(tmp_path):
+    good = {"A.csv": b"x\n1\n"}
+    changed = {"A.csv": b"x\n999\n"}
+    with pytest.raises(dl.ChecksumError, match="A.csv"):
+        dl.download(tmp_path, fake_manifest(good), fetcher_for(changed))
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_fetch_failure_stops_with_a_clear_error(tmp_path):
+    def broken(url: str) -> bytes:
+        raise OSError("connection refused")
+
+    with pytest.raises(dl.DownloadError, match="A.csv.*connection refused"):
+        dl.download(tmp_path, fake_manifest({"A.csv": b"x"}), broken)
+
+
+def test_good_local_file_is_not_downloaded_again(tmp_path):
+    files = {"A.csv": b"x\n1\n"}
+    (tmp_path / "A.csv").write_bytes(files["A.csv"])
+    calls: list[str] = []
+    dl.download(tmp_path, fake_manifest(files), fetcher_for(files, calls))
+    assert calls == []
+
+
+def test_bad_local_file_is_replaced(tmp_path):
+    files = {"A.csv": b"x\n1\n"}
+    (tmp_path / "A.csv").write_bytes(b"tampered")
+    dl.download(tmp_path, fake_manifest(files), fetcher_for(files))
+    assert (tmp_path / "A.csv").read_bytes() == files["A.csv"]
+
+
+# --- command line ------------------------------------------------------------
+
+
+def test_cli_exit_codes(tmp_path, monkeypatch, capsys):
+    files = {"A.csv": b"x\n1\n"}
+    monkeypatch.setattr(dl, "load_manifest", lambda: fake_manifest(files))
+    monkeypatch.setattr(dl, "http_get", fetcher_for(files))
+    assert dl.main(["--dest", str(tmp_path)]) == 0
+    assert "1 files OK" in capsys.readouterr().out
+
+    monkeypatch.setattr(dl, "http_get", fetcher_for({"A.csv": b"changed"}))
+    (tmp_path / "A.csv").unlink()
+    assert dl.main(["--dest", str(tmp_path)]) == 1
+    assert "checksum" in capsys.readouterr().err.lower()
+
+
+def test_manifest_holds_metadata_only_no_data_rows():
+    m = dl.load_manifest()
+    assert set(m) == {"source", "files"}
+    for f in m["files"]:
+        assert set(f) == {"name", "sha256", "rows"}
+
+
+# --- review fixes (MCF-10 independent review) --------------------------------
+
+
+def test_bad_local_file_and_changed_source_leave_nothing(tmp_path):
+    good = {"A.csv": b"x\n1\n"}
+    (tmp_path / "A.csv").write_bytes(b"tampered")
+    with pytest.raises(dl.ChecksumError):
+        dl.download(tmp_path, fake_manifest(good), fetcher_for({"A.csv": b"also changed"}))
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_write_error_is_a_clear_error_and_leaves_no_part_file(tmp_path):
+    files = {"A.csv": b"x\n1\n"}
+    (tmp_path / "A.csv").mkdir()  # the target cannot be written
+    with pytest.raises(dl.DownloadError, match="could not write A.csv"):
+        dl.download(tmp_path, fake_manifest(files), fetcher_for(files))
+    assert not (tmp_path / "A.csv.part").exists()
+
+
+@pytest.mark.parametrize("name", ["../escaped.csv", "sub/A.csv", "A.txt", "", ".csv"])
+def test_unsafe_file_names_are_rejected(tmp_path, name):
+    with pytest.raises(dl.DownloadError, match="unsafe file name"):
+        dl.download(tmp_path, fake_manifest({name: b"x"}), fetcher_for({name: b"x"}))
+    assert not (tmp_path.parent / "escaped.csv").exists()
+
+
+def test_real_manifest_names_are_all_safe():
+    for f in dl.load_manifest()["files"]:
+        dl.check_name(f["name"])
+
+
+def test_the_real_fetcher_cannot_reach_the_network_in_tests(tmp_path):
+    with pytest.raises(dl.DownloadError, match="must not use the network"):
+        dl.download(tmp_path, fake_manifest({"A.csv": b"x"}), dl.http_get)
+
+
+def test_delete_error_on_bad_local_file_is_a_clear_error(tmp_path, monkeypatch):
+    (tmp_path / "A.csv").write_bytes(b"tampered")
+
+    def refuse(self, *args, **kwargs):
+        raise PermissionError("read-only folder")
+
+    monkeypatch.setattr(dl.Path, "unlink", refuse)
+    with pytest.raises(dl.DownloadError, match="could not remove the bad local file A.csv"):
+        dl.download(tmp_path, fake_manifest({"A.csv": b"x"}), fetcher_for({"A.csv": b"x"}))
+
+
+@pytest.mark.parametrize("name", [5, None, b"A.csv"])
+def test_non_text_file_names_are_rejected(name):
+    with pytest.raises(dl.DownloadError, match="unsafe file name"):
+        dl.check_name(name)

@@ -55,3 +55,21 @@ Repeated failures: item 10 also partly met in MCF-7 (same session, same cause; n
 
 Result: pass — no ❌.
 Repeated failures: item 10 partly met in MCF-7, MCF-9 and MCF-8, each time for a different cause. The tests-first cause is fixed (MCF-8 committed the failing test first). New cause → L3.
+
+## Ticket MCF-10 — 2026-10-29 — grader: builder pre-check (judgement items also covered by the separate-session independent review and re-review)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira transition and brief at 22:58Z on Oct 28; first commit 523d881 after it | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-10-download-data`; each commit "MCF-10: …"; the `.gitignore` fix is needed by this ticket's code | — |
+| 3 | CI green on the PR | ✅ | PR #10: af7796c green; final head rechecked before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_download.py`, `tests/conftest.py`, `tests/regressions/test_gitignore_data_folder.py`, checksum rule in `tests/test_repo_hygiene.py`; failing tests committed first (523d881, 2a807fa, and the re-review tests) | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D06, D08 only (existing) | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Review "Changes required" (2 blockers, 5 should-fix) → re-review "Approve", all 7 fixed; 2 re-review notes also fixed | — |
+| 8 | Each acceptance criterion met | ✅ | AC1 manifest 29 files, 47,205 rows, full SHA; real run OK. AC2 changed, missing or bad-local file leaves nothing (tests). AC3 type/size + checksum rules, both unit-tested. AC4 network blocked in every test | — |
+| 9 | README and rule pages match | ✅ | README "Get the data" added | — |
+| 10 | Workflow steps followed | ✅ | Brief, In Progress, tests first, review finished before the approval request (L3 applied) | — |
+
+Result: pass — no ❌. First full pass at the ticket point.
+Repeated failures: none. Trend: item 10 partly met in MCF-7, MCF-9, MCF-8 → met in MCF-10 after L3.
