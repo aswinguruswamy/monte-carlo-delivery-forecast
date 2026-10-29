@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 
 from mcf.data.load import load_issues
-from mcf.data.types import BUG, NOT_COUNTED, VALUE, TypeError_, sort_types
+from mcf.data.types import BUG, NOT_COUNTED, VALUE, IssueTypeError, sort_types
 
 D04_VALUE = [
     "Story", "Task", "Improvement", "New Feature", "Suggestion", "Enhancement Request",
@@ -53,7 +53,7 @@ def test_the_map_has_exactly_17_types():
 
 @pytest.mark.parametrize("unknown", ["Spike", "story", "Story ", "", "Sub-Task"])
 def test_unknown_type_stops_with_an_error_that_names_it(unknown):
-    with pytest.raises(TypeError_, match=rf"P\.csv: unknown issue type {unknown!r} \(1 row"):
+    with pytest.raises(IssueTypeError, match=rf"P\.csv: unknown issue type {unknown!r} \(1 row"):
         sort_types(issues(["Story", unknown]), file="P.csv")
 
 
@@ -70,7 +70,7 @@ def test_bug_share_is_zero_when_there_is_no_work_item():
 
 
 def test_value_item_with_no_story_point_stops_with_an_error():
-    with pytest.raises(TypeError_, match=r"P\.csv: value item P-1 \(Task\) has no story point"):
+    with pytest.raises(IssueTypeError, match=r"P\.csv: value item P-1 \(Task\) has no story point"):
         sort_types(issues(["Story", "Task"], [2.0, math.nan]), file="P.csv")
 
 
