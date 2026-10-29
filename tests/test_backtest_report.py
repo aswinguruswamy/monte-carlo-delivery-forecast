@@ -170,3 +170,31 @@ def test_metrics_without_project_summaries_is_an_error():
     del m["summary"]["short_dates"]
     with pytest.raises(ReportError, match="projects.csv"):
         render_report(m, INFO)
+
+
+# --- published files (D08) ----------------------------------------------------
+
+
+def test_only_the_summary_metrics_file_may_be_committed_from_results():
+    from test_repo_hygiene import dataset_violations
+
+    def size(_):
+        return 18_000
+
+    assert dataset_violations(["results/metrics.json"], size) == []
+    assert dataset_violations(["results/cases.csv"], size) == ["results/cases.csv"]
+    assert dataset_violations(["results/projects.csv"], size) == ["results/projects.csv"]
+
+
+def test_results_csv_files_are_git_ignored():
+    import subprocess
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    for name in ("results/cases.csv", "results/projects.csv"):
+        out = subprocess.run(["git", "check-ignore", "--no-index", "-q", name], cwd=root)
+        assert out.returncode == 0, name
+    out = subprocess.run(
+        ["git", "check-ignore", "--no-index", "-q", "results/metrics.json"], cwd=root
+    )
+    assert out.returncode == 1
