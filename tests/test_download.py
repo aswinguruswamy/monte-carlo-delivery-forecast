@@ -160,3 +160,20 @@ def test_real_manifest_names_are_all_safe():
 def test_the_real_fetcher_cannot_reach_the_network_in_tests(tmp_path):
     with pytest.raises(dl.DownloadError, match="must not use the network"):
         dl.download(tmp_path, fake_manifest({"A.csv": b"x"}), dl.http_get)
+
+
+def test_delete_error_on_bad_local_file_is_a_clear_error(tmp_path, monkeypatch):
+    (tmp_path / "A.csv").write_bytes(b"tampered")
+
+    def refuse(self, *args, **kwargs):
+        raise PermissionError("read-only folder")
+
+    monkeypatch.setattr(dl.Path, "unlink", refuse)
+    with pytest.raises(dl.DownloadError, match="could not remove the bad local file A.csv"):
+        dl.download(tmp_path, fake_manifest({"A.csv": b"x"}), fetcher_for({"A.csv": b"x"}))
+
+
+@pytest.mark.parametrize("name", [5, None, b"A.csv"])
+def test_non_text_file_names_are_rejected(name):
+    with pytest.raises(dl.DownloadError, match="unsafe file name"):
+        dl.check_name(name)
