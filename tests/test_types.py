@@ -64,9 +64,16 @@ def test_bug_share_shows():
     assert summary.bug_share == pytest.approx(0.25)
 
 
-def test_bug_share_is_zero_when_there_is_no_work_item():
+def test_bug_share_is_none_when_there_is_no_work_item():
+    # "0% bugs" would look like a real result; None means "no work items".
     _, summary = sort_types(issues(["Epic"]), file="P.csv")
-    assert summary.bug_share == 0.0
+    assert summary.bug_share is None
+
+
+def test_empty_table_gives_zero_counts_and_no_bug_share():
+    sorted_, summary = sort_types(issues([]), file="P.csv")
+    assert len(sorted_) == 0 and "kind" in sorted_.columns
+    assert (summary.value, summary.bug, summary.not_counted, summary.bug_share) == (0, 0, 0, None)
 
 
 def test_value_item_with_no_story_point_stops_with_an_error():
@@ -98,3 +105,27 @@ def test_tawos_types_are_all_known_and_value_items_have_points():
         sort_types(df, file=p.name)  # raises on an unknown type or a missing point
         seen |= set(df["type"])
     assert seen == set(D04_VALUE + D04_BUG + D04_NOT_COUNTED)
+
+
+# --- review findings ---------------------------------------------------------
+
+
+@pytest.mark.parametrize("blank", [None, math.nan])
+def test_blank_type_is_a_clear_unknown_type_error(blank):
+    with pytest.raises(
+        IssueTypeError, match=r"P\.csv: unknown issue type (None|nan) \(1 row\(s\)\)"
+    ):
+        sort_types(issues(["Story", blank]), file="P.csv")
+
+
+def test_other_unknown_types_are_counted_with_blanks():
+    with pytest.raises(IssueTypeError, match=r"'Spike' \(2 row\(s\); 1 other unknown type\(s\)\)"):
+        sort_types(issues(["Spike", "Spike", None]), file="P.csv")
+
+
+@pytest.mark.parametrize("missing", [pd.NA, None, math.nan])
+def test_any_missing_point_on_a_value_item_is_a_clear_error(missing):
+    df = issues(["Story", "Task"]).astype({"story_point": object})
+    df.loc[1, "story_point"] = missing
+    with pytest.raises(IssueTypeError, match=r"value item P-1 \(Task\) has no story point"):
+        sort_types(df, file="P.csv")
