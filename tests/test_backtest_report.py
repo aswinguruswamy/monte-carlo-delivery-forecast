@@ -6,9 +6,9 @@ import re
 from datetime import date, timedelta
 
 import pytest
-from mcf.backtest.report import ReportError, render_report
 
 from mcf.backtest.metrics import compute_metrics
+from mcf.backtest.report import ReportError, render_report
 from mcf.backtest.run import Case, ProjectSummary
 
 T = date(2020, 1, 1)
