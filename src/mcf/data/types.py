@@ -3,11 +3,13 @@
 Only value items count in throughput and velocity. Bugs show as a share only.
 Epics are containers and do not count. Type names are matched exactly, as
 recorded. An unknown type is an error, never a silent default.
+
+Story points are checked for presence only. `load_issues` already rejects
+points that are not finite or not above 0, so pass only tables from it.
 """
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 
 import pandas as pd
@@ -50,10 +52,13 @@ class TypeSummary:
     not_counted: int
 
     @property
-    def bug_share(self) -> float:
-        """Bugs as a share of work items (value + bugs). Epics are not work items."""
+    def bug_share(self) -> float | None:
+        """Bugs as a share of work items (value + bugs). Epics are not work items.
+
+        None when there is no work item, so a report does not show a false "0%".
+        """
         work = self.value + self.bug
-        return self.bug / work if work else 0.0
+        return self.bug / work if work else None
 
 
 def sort_types(issues: pd.DataFrame, file: str) -> tuple[pd.DataFrame, TypeSummary]:
@@ -61,9 +66,10 @@ def sort_types(issues: pd.DataFrame, file: str) -> tuple[pd.DataFrame, TypeSumma
     kind = issues["type"].map(D04_KIND)
     unknown = issues.loc[kind.isna(), "type"]
     if not unknown.empty:
+        counts = unknown.value_counts(dropna=False, sort=False)
         first = unknown.iloc[0]
-        count = int((unknown == first).sum())
-        others = unknown.nunique() - 1
+        count = int(counts[first]) if first in counts.index else int(unknown.isna().sum())
+        others = len(counts) - 1
         more = f"; {others} other unknown type(s)" if others else ""
         raise IssueTypeError(
             f"{file}: unknown issue type {first!r} ({count} row(s){more}). "
@@ -71,7 +77,7 @@ def sort_types(issues: pd.DataFrame, file: str) -> tuple[pd.DataFrame, TypeSumma
         )
 
     value_rows = issues[kind == VALUE]
-    no_point = value_rows["story_point"].map(lambda p: p is None or math.isnan(p))
+    no_point = value_rows["story_point"].isna()
     if no_point.any():
         row = value_rows[no_point].iloc[0]
         raise IssueTypeError(
