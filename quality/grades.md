@@ -176,3 +176,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review finished before the approval request; no back-test run | — |
 
 Result: pass — no ❌. Item 5 closes when the PM decides D28.
+
+## Ticket MCF-17 — 2026-10-29 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief posted before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-17-backtest`; each commit "MCF-17: …" | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_backtest_run.py` (26 tests, synthetic data); failing tests committed first, three times | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D21.1, D29 (logged before the first run), D08 | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: "Changes required", 2 blockers (tests that could not catch a velocity leak or an unstable sort) and 5 should-fix items — all fixed with regression tests | — |
+| 8 | Each acceptance criterion met | ✅ | AC1 ADR rules each tested; AC2 no data after t in the forecasts (window tests); AC3 two full runs, byte-identical outputs (cases.csv SHA-256 1608fda9…) | — |
+| 9 | README and rule pages match | ✅ | ADR 0002 + D29; method fixed before the first run (R2) | — |
+| 10 | Workflow steps followed | ✅ | D29 decided before the first run; no metrics computed (MCF-18) | — |
+
+Result: pass — no ❌.
