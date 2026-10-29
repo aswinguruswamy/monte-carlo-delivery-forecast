@@ -193,3 +193,20 @@ Result: pass — no ❌. Item 5 closes when the PM decides D28.
 | 10 | Workflow steps followed | ✅ | D29 decided before the first run; no metrics computed (MCF-18) | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-18 — 2026-10-29 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief posted before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-18-metrics`; each commit "MCF-18: …" | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_backtest_metrics.py` (43 tests, hand-made cases); failing tests committed first, three times | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D07, D21.1 logged; D30 (bootstrap details) proposed | PM to decide D30 at Review |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: "Approve with changes", no blockers; 7 should-fix and 4 nice-to-have items fixed with regression tests | — |
+| 8 | Each acceptance criterion met | ✅ | AC1 hand calculation; AC2 band edges 75% and 95% pass, 74.99% and 95.01% fail (exact counts) | — |
+| 9 | README and rule pages match | ✅ | ADR 0002 Metrics, Pass rules, What is reported | — |
+| 10 | Workflow steps followed | ✅ | No metrics computed on the real cases (waits for D30) | — |
+
+Result: pass — no ❌. Item 5 closes when the PM decides D30.
