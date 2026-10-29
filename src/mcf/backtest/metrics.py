@@ -185,6 +185,13 @@ def compute_metrics(
     if summaries is not None:
         for s in summaries:
             by_project[s.project]["short_dates"] = {str(n): s.short_dates.get(n, 0) for n in SIZES}
+            by_project[s.project]["cases_by_n"] = {str(n): s.cases.get(n, 0) for n in SIZES}
+        summary["no_case_sizes"] = [
+            [s.project, n]
+            for s in sorted(summaries, key=lambda s: s.p)
+            for n in SIZES
+            if s.cases.get(n, 0) == 0
+        ]
         summary["short_dates"] = {
             str(n): sum(s.short_dates.get(n, 0) for s in summaries) for n in SIZES
         }

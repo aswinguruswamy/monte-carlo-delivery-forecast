@@ -15,8 +15,17 @@ from pathlib import Path
 
 from mcf.backtest.run import SIZES
 
+# Status counts of the rows with a resolution date in the TAWOS extract (checked
+# against the data by tests/test_backtest_report.py when the data is present).
+STATUS_COUNTS = {
+    "Won't Fix": 1032,
+    "Invalid": 408,
+    "In Progress": 2,
+    "Accepted": 1,
+    "Automation": 1,
+}
 TABLE_HEAD = (
-    "| Cases | Calibration 85% | Median error MC 50% | Median error velocity | No forecast "
+    "| Cases scored | Calibration 85% | Median error MC 50% | Median error velocity | No forecast "
     "| Short dates |"
 )
 REQUIRED_INFO = ("code_commit", "cases_sha256", "projects_sha256", "rows_read", "rows_no_date")
@@ -85,7 +94,9 @@ def render_report(metrics: dict, info: dict) -> str:
         add("")
         add(
             f"Success measure {' and '.join(failed)} did not pass. The result is published as it "
-            "is; the method was fixed before the first run and was not changed after it (R2, R3)."
+            "is; the method was fixed before the first run and was not changed after it (R2, R3). "
+            "D29 and D30 completed two details that the ADR did not set: D29 came before the run, "
+            "and D30 came before the metrics."
         )
     lo, hi = boot["median_error_difference_95ci"]
     if s["measure_2_pass"] and lo <= 0:
@@ -117,6 +128,10 @@ def render_report(metrics: dict, info: dict) -> str:
         )
     add("")
     add("Short dates: dates on the 14-day sequence with fewer than N value items done after them.")
+    no_case = s.get("no_case_sizes", [])
+    listed = ", ".join(f"{name} (N = {n})" for name, n in no_case) if no_case else "none"
+    add("")
+    add(f"Projects with no case for a size N: {listed}.")
 
     add("")
     add("## Results by project")
@@ -180,10 +195,25 @@ def render_report(metrics: dict, info: dict) -> str:
         "differently. A v2 back-test on the full TAWOS data is planned (D23)."
     )
     add("- Velocity uses 2-week periods counted from day t, not the teams' real sprints (A2).")
-    add("- Every resolved item counts as done on its resolution day, whatever its status (D21.1).")
+    other = ", ".join(f"{k} ({v:,})" for k, v in STATUS_COUNTS.items())
+    add(
+        "- Every resolved item counts as done on its resolution day, whatever its status (D21.1). "
+        "This does not contradict the first limit: every Resolution value in the extract is a "
+        f"completed value, but some rows still carry another status: {other} (RAID C5)."
+    )
+    if s["measure_2_pass"]:
+        verdict = "this Monte Carlo win on measure 2 is conservative"
+        if lo <= 0:
+            verdict += f"; it is also small and not robust (interval {lo:g} to {hi:g} days)"
+    else:
+        verdict = "a Monte Carlo loss on measure 2 tells less"
     add(
         "- Velocity uses the real points of the next N items, known only after day t. This helps "
-        "velocity; a Monte Carlo win on measure 2 is therefore conservative."
+        f"velocity, so {verdict}."
+    )
+    add(
+        "- Case selection: a forecast date exists only when at least N value items were done "
+        "after it, so the set of cases uses knowledge of the future (ADR 0002 design)."
     )
     add("- Same-day ties in velocity points use the mean of that day's items (D29).")
     add("- Cases overlap: windows 14 days apart share 70 of 84 days.")
@@ -216,10 +246,13 @@ def render_report(metrics: dict, info: dict) -> str:
     add("## Reproduce")
     add("")
     add("```bash")
+    add('pip install -e ".[dev]"')
     add("python -m mcf.data.download --dest data")
     add("python -m mcf.backtest --data data --out results")
     add("python -m mcf.backtest.metrics --cases results/cases.csv \\")
     add("    --projects results/projects.csv --out results/metrics.json")
+    add("python -m mcf.backtest.report --results results --commit <commit> \\")
+    add("    --out docs/backtest-report.md")
     add("```")
     add("")
     add(f"- Code commit of the run: `{info['code_commit']}`")
