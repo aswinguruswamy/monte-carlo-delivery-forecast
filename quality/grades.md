@@ -91,3 +91,20 @@ Repeated failures: none. Trend: item 10 partly met in MCF-7, MCF-9, MCF-8 → me
 
 Result: pass — no ❌.
 Note for the PM: the ADR rule (only NULL = no date) makes open items with an empty resolution date an error. Real Jira exports contain open items → decide in MCF-16 (CLI).
+
+## Ticket MCF-12 — 2026-10-29 — grader: builder pre-check (judgement items also covered by the separate-session review)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira transition and brief at 04:17Z; first commit 3c1797b after it | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-12-sort-types`; each commit "MCF-12: …" | — |
+| 3 | CI green on the PR | ✅ | 384e35a green; final head rechecked before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_types.py` (40 tests); failing tests committed first twice | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D04 only. The bug-share formula (bugs ÷ (value + bugs)) is a reading of D04 that is not yet on record | PM to approve D04.1 at Review |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | "Approve with changes", no blockers; 3 code items fixed; 1 decision item for the PM | — |
+| 8 | Each acceptance criterion met | ✅ | AC1 17 types exact; AC2 unknown type error (incl. blank); AC3 bug share; AC4 missing point on a value item; AC5 TAWOS local check passed | — |
+| 9 | README and rule pages match | ✅ | Code matches D04 and ADR 0002 Data rules 6–7 | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review finished before the approval request | — |
+
+Result: pass — no ❌. Item 5 closes when the PM decides D04.1.
