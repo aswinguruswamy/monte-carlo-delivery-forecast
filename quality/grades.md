@@ -73,3 +73,21 @@ Repeated failures: item 10 partly met in MCF-7, MCF-9 and MCF-8, each time for a
 
 Result: pass — no ❌. First full pass at the ticket point.
 Repeated failures: none. Trend: item 10 partly met in MCF-7, MCF-9, MCF-8 → met in MCF-10 after L3.
+
+## Ticket MCF-11 — 2026-10-29 — grader: builder pre-check (judgement items also covered by the separate-session review and re-review)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira transition and brief at 03:54Z; first commit 5989a60 after it | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-11-load-csv`; each commit "MCF-11: …"; ruff `src` setting needed for this ticket's imports | — |
+| 3 | CI green on the PR | ✅ | 2eae686 green; final head rechecked before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_load.py` (35 tests); failing tests committed first three times (5989a60, fd1ae06, and the re-review tests) | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | No new decision; follows ADR 0002 (D21.1) | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Review "Approve with changes" (1 blocker: empty dates removed against ADR rule 3) → re-review "Approve with changes" → fixed | — |
+| 8 | Each acceptance criterion met | ✅ | AC1 errors name the file and the real line (multi-line, blank lines, ragged rows, unclosed quote). AC2 TAWOS 47,205 read, 19 no date (local run). AC3 100k rows in 0.2 s. AC4 made-up data; TAWOS test skipped in CI | — |
+| 9 | README and rule pages match | ✅ | Loader rules match ADR 0002 Data rules 3–5 and 7 | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review finished before the approval request (L3) | — |
+
+Result: pass — no ❌.
+Note for the PM: the ADR rule (only NULL = no date) makes open items with an empty resolution date an error. Real Jira exports contain open items → decide in MCF-16 (CLI).
