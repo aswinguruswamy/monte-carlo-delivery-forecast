@@ -177,3 +177,23 @@ def test_bad_cases_file_is_an_error(tmp_path):
     (tmp_path / "cases.csv").write_text("project,p\nA,0\n", encoding="utf-8")
     with pytest.raises(MetricsError, match="column"):
         load_cases(tmp_path / "cases.csv")
+
+
+def test_command_line_writes_metrics_and_prints_pass_or_fail(tmp_path, capsys):
+    from mcf.backtest.metrics import main
+
+    write_cases(hand_cases(), tmp_path / "cases.csv")
+    code = main(["--cases", str(tmp_path / "cases.csv"), "--out", str(tmp_path / "m.json")])
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "Measure 1 (85% calibration 75.0%, band 75-95%): PASS" in out
+    assert "Measure 2 (median error MC 1.5 d vs velocity 3.0 d): PASS" in out
+    assert json.loads((tmp_path / "m.json").read_text())["summary"]["cases"] == 4
+
+
+def test_command_line_bad_file_exits_1(tmp_path, capsys):
+    from mcf.backtest.metrics import main
+
+    (tmp_path / "c.csv").write_text("x\n", encoding="utf-8")
+    assert main(["--cases", str(tmp_path / "c.csv"), "--out", str(tmp_path / "m.json")]) == 1
+    assert "error" in capsys.readouterr().err
