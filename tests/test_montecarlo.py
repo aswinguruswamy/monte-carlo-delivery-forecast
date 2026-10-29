@@ -170,3 +170,73 @@ def test_nfr1_10000_runs_are_fast():
     start = time.perf_counter()
     forecast_dates(T, counts, 50, case_generator(0, T, 50))
     assert time.perf_counter() - start < 120
+
+
+# --- review fixes (PR #15) ---------------------------------------------------
+
+
+def test_plain_loop_match_across_many_blocks():
+    from math import ceil
+
+    from mcf.forecast.montecarlo import CHUNK_DAYS
+
+    counts = np.array([0, 1, 3, 0, 2, 5, 0] * 12)
+    days = simulate_days(counts, 500, rng(11), runs=200)
+    assert days.max() > CHUNK_DAYS  # the carry-over between blocks is used
+    g = rng(11)
+    n_blocks = ceil(days.max() / CHUNK_DAYS)
+    draws = np.concatenate(
+        [g.integers(0, len(counts), size=(200, CHUNK_DAYS)) for _ in range(n_blocks)], axis=1
+    )
+    for r in range(200):
+        total, k = 0, 0
+        while total < 500:
+            total += counts[draws[r, k]]
+            k += 1
+        assert days[r] == k
+
+
+@pytest.mark.parametrize("n", [110, 101, 500])
+def test_safety_stop_never_returns_more_than_max_days(monkeypatch, n):
+    import mcf.forecast.montecarlo as mc
+
+    monkeypatch.setattr(mc, "MAX_DAYS", 100)
+    # 1 item a day: N items need exactly N days, which is past the stop.
+    with pytest.raises(MonteCarloError, match="100 days"):
+        mc.simulate_days(np.full(84, 1), n, rng(), runs=50)
+
+
+def test_safety_stop_allows_exactly_max_days(monkeypatch):
+    import mcf.forecast.montecarlo as mc
+
+    monkeypatch.setattr(mc, "MAX_DAYS", 100)
+    assert (mc.simulate_days(np.full(84, 1), 100, rng(), runs=50) == 100).all()
+
+
+@pytest.mark.parametrize("runs", [0, 2.5, True, "10"])
+def test_bad_runs_is_an_error(runs):
+    with pytest.raises(MonteCarloError, match="runs"):
+        simulate_days(np.full(84, 1), 5, rng(), runs=runs)
+
+
+def test_numpy_int_n_is_accepted():
+    assert (simulate_days(np.full(84, 5), np.int64(50), rng(), runs=10) == 10).all()
+
+
+@pytest.mark.parametrize(
+    "counts",
+    [
+        np.array([True, False] * 42),
+        np.array(["1", "2"] * 42),
+        np.array([1, 2] * 42, dtype=object),
+        np.array([2**63, 1], dtype=np.uint64),
+    ],
+)
+def test_bad_count_types_are_an_error(counts):
+    with pytest.raises(MonteCarloError, match="daily count"):
+        simulate_days(counts, 5, rng())
+
+
+def test_percentile_of_no_runs_is_an_error():
+    with pytest.raises(MonteCarloError, match="no runs"):
+        percentile_days(np.array([], dtype=np.int64), 50)
