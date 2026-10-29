@@ -8,6 +8,7 @@ only, no issue rows (D08).
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import sys
@@ -15,14 +16,14 @@ from pathlib import Path
 
 from mcf.backtest.run import SIZES
 
-# Status counts of the rows with a resolution date in the TAWOS extract (checked
-# against the data by tests/test_backtest_report.py when the data is present).
+# Value items with a resolution date and a status other than a closed status, in the
+# TAWOS extract (checked against the data by tests/test_backtest_report.py when the
+# data is present; CI has no data, so the separate-chat re-run also checks it).
 STATUS_COUNTS = {
-    "Won't Fix": 1032,
-    "Invalid": 408,
-    "In Progress": 2,
+    "Won't Fix": 853,
+    "Invalid": 335,
+    "In Progress": 1,
     "Accepted": 1,
-    "Automation": 1,
 }
 TABLE_HEAD = (
     "| Cases scored | Calibration 85% | Median error MC 50% | Median error velocity | No forecast "
@@ -94,10 +95,15 @@ def render_report(metrics: dict, info: dict) -> str:
         add("")
         add(
             f"Success measure {' and '.join(failed)} did not pass. The result is published as it "
-            "is; the method was fixed before the first run and was not changed after it (R2, R3). "
-            "D29 and D30 completed two details that the ADR did not set: D29 came before the run, "
-            "and D30 came before the metrics."
+            "is (R3)."
         )
+    add("")
+    add(
+        f"The 85% date was too early in {1 - s['calibration_85']:.1%} of the scored cases. "
+        "The method was fixed before the first run and was not changed after it (R2). D29 and "
+        "D30 completed two details that the ADR did not set: D29 came before the run, and D30 "
+        "came before the metrics."
+    )
     lo, hi = boot["median_error_difference_95ci"]
     if s["measure_2_pass"] and lo <= 0:
         add("")
@@ -199,7 +205,7 @@ def render_report(metrics: dict, info: dict) -> str:
     add(
         "- Every resolved item counts as done on its resolution day, whatever its status (D21.1). "
         "This does not contradict the first limit: every Resolution value in the extract is a "
-        f"completed value, but some rows still carry another status: {other} (RAID C5)."
+        f"completed value, but there are value items with another status: {other} (RAID C5)."
     )
     if s["measure_2_pass"]:
         verdict = "this Monte Carlo win on measure 2 is conservative"
@@ -279,11 +285,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         metrics = json.loads((args.results / "metrics.json").read_text(encoding="utf-8"))
-        rows = (args.results / "projects.csv").read_text(encoding="utf-8").splitlines()[1:]
-        by_project = {}
-        for row in rows:
-            name, _, read, no_date, *_ = row.split(",")
-            by_project[name] = (int(read), int(no_date))
+        with (args.results / "projects.csv").open(newline="", encoding="utf-8") as fh:
+            by_project = {
+                row["project"]: (int(row["rows_read"]), int(row["rows_no_date"]))
+                for row in csv.DictReader(fh)
+            }
         info = {
             "code_commit": args.commit,
             "cases_sha256": _sha(args.results / "cases.csv"),
