@@ -15,6 +15,9 @@ dependencies = [
     "pandas>=2.2",
 ]
 
+[project.scripts]
+mcf = "mcf.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",

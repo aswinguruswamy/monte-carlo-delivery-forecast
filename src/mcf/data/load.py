@@ -6,6 +6,9 @@ Rules:
 - Each row must have as many fields as the header. Blank lines are skipped.
 - Only a Resolution_Date that is exactly the text "NULL" means "no date". That
   row is removed and counted (ADR 0002 rule 3). Any other value must be a date.
+- Open-items mode (D25, CLI only, `open_items=True`): an empty or blank
+  Resolution_Date means "open, not done". That row is removed and counted. The
+  back-test never uses this mode.
 - The done day is the first 10 characters of Resolution_Date (YYYY-MM-DD). There
   is no time zone conversion (ADR 0002 rule 5).
 - Story_Point is a decimal number above 0. An empty or "NULL" value stays missing
@@ -41,10 +44,11 @@ class LoadReport:
     file: str
     rows_read: int
     rows_no_date: int
+    rows_open: int = 0
 
     @property
     def rows_kept(self) -> int:
-        return self.rows_read - self.rows_no_date
+        return self.rows_read - self.rows_no_date - self.rows_open
 
 
 def _done_day(text: str) -> date | None:
@@ -68,14 +72,14 @@ def _story_point(text: str) -> float | None:
     return value
 
 
-def load_issues(path: str | Path) -> tuple[pd.DataFrame, LoadReport]:
+def load_issues(path: str | Path, open_items: bool = False) -> tuple[pd.DataFrame, LoadReport]:
     path = Path(path)
     name = path.name
     if not path.is_file():
         raise LoadError(f"{name}: file not found")
 
     keys, types, days, points = [], [], [], []
-    rows_read = rows_no_date = 0
+    rows_read = rows_no_date = rows_open = 0
     try:
         with path.open(newline="", encoding="utf-8-sig") as fh:
             reader = csv.reader(fh, strict=True)
@@ -104,6 +108,9 @@ def load_issues(path: str | Path) -> tuple[pd.DataFrame, LoadReport]:
                 if resolution == NO_DATE:
                     rows_no_date += 1
                     continue
+                if open_items and not resolution.strip():
+                    rows_open += 1
+                    continue
                 day = _done_day(resolution)
                 if day is None:
                     raise LoadError(f"{name}, line {line}: bad Resolution_Date {resolution!r}")
@@ -122,8 +129,11 @@ def load_issues(path: str | Path) -> tuple[pd.DataFrame, LoadReport]:
 
     if rows_read == 0:
         raise LoadError(f"{name}: no rows")
+    report = LoadReport(
+        file=name, rows_read=rows_read, rows_no_date=rows_no_date, rows_open=rows_open
+    )
     issues = pd.DataFrame(
         {"issue_key": keys, "type": types, "done_day": days, "story_point": points},
         columns=["issue_key", "type", "done_day", "story_point"],
     ).astype({"issue_key": object, "type": object, "done_day": object, "story_point": float})
-    return issues, LoadReport(file=name, rows_read=rows_read, rows_no_date=rows_no_date)
+    return issues, report
