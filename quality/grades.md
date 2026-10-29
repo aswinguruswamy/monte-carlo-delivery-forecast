@@ -125,3 +125,20 @@ Result: pass — no ❌. Item 5 closes when the PM decides D04.1.
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review finished before the approval request | — |
 
 Result: pass — no ❌. Item 7 also applies to MCF-7 to MCF-12 (same review set-up).
+
+## Ticket MCF-14 — 2026-10-29 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief posted before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-14-velocity`; each commit "MCF-14: …" | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_velocity.py` (36 tests) + 2 throughput regressions; failing tests committed first, twice (build and review fixes) | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D04.1, D05, D21.1 (all logged) | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: "Changes required", 2 blockers (datetime t shifted the window; tolerance untested) and 3 should-fix items — all fixed with regression tests | — |
+| 8 | Each acceptance criterion met | ✅ | AC1 hand calculation; AC2 window t−83..t at both ends; AC3 value items only; AC4 round up, float-safe (420-day case); AC5 velocity 0 = no-forecast error | — |
+| 9 | README and rule pages match | ✅ | Matches ADR 0002 Velocity method 1 and 3, and Cases with no forecast | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review finished before the approval request; no back-test run | — |
+
+Result: pass — no ❌.
