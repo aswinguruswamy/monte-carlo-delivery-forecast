@@ -9,7 +9,9 @@
 
 Cases scored: 7,692 from 29 projects (N = 10, 25, 50). Cases with no forecast: 903 of 8,595 (10.5%); they are counted, not scored.
 
-Success measure 1 did not pass. The result is published as it is; the method was fixed before the first run and was not changed after it (R2, R3). D29 and D30 completed two details that the ADR did not set: D29 came before the run, and D30 came before the metrics.
+Success measure 1 did not pass. The result is published as it is (R3).
+
+The 85% date was too early in 31.0% of the scored cases. The method was fixed before the first run and was not changed after it (R2). D29 and D30 completed two details that the ADR did not set: D29 came before the run, and D30 came before the metrics.
 
 Measure 2 passes on all cases together, but the bootstrap 95% interval of the error difference (0 to 6 days) includes 0, so the advantage is not robust.
 
@@ -86,7 +88,7 @@ The bootstrap picks whole projects (2,000 resamples, seed 20261028, 29 projects 
 
 - The data holds only issues with story points, and only issues resolved as completed (dataset author, 2026-10-29; R13, R5, I1). Teams with many unestimated items may behave differently. A v2 back-test on the full TAWOS data is planned (D23).
 - Velocity uses 2-week periods counted from day t, not the teams' real sprints (A2).
-- Every resolved item counts as done on its resolution day, whatever its status (D21.1). This does not contradict the first limit: every Resolution value in the extract is a completed value, but some rows still carry another status: Won't Fix (1,032), Invalid (408), In Progress (2), Accepted (1), Automation (1) (RAID C5).
+- Every resolved item counts as done on its resolution day, whatever its status (D21.1). This does not contradict the first limit: every Resolution value in the extract is a completed value, but there are value items with another status: Won't Fix (853), Invalid (335), In Progress (1), Accepted (1) (RAID C5).
 - Velocity uses the real points of the next N items, known only after day t. This helps velocity, so this Monte Carlo win on measure 2 is conservative; it is also small and not robust (interval 0 to 6 days).
 - Case selection: a forecast date exists only when at least N value items were done after it, so the set of cases uses knowledge of the future (ADR 0002 design).
 - Same-day ties in velocity points use the mean of that day's items (D29).
@@ -112,6 +114,6 @@ python -m mcf.backtest.report --results results --commit <commit> \
     --out docs/backtest-report.md
 ```
 
-- Code commit of the run: `007e4ab (run), 19d3136 (metrics and report)`
+- Code commit of the run: `007e4ab (run), 12d803a (metrics and report)`
 - `cases.csv` SHA-256: `1608fda91e3fb42e27ea340cfea6ba97a9ac668da9e2b123c02e78b76b2025e7`
 - `projects.csv` SHA-256: `5830cbb859758633d983f78227d1af9ad3b2a7385bdc5dc6a27c7b058ce19ad6`
