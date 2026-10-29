@@ -67,14 +67,59 @@ def test_notice_cites_both_papers():
 
 
 def test_readme_results_equal_the_published_metrics():
-    s = json.loads(read("results/metrics.json"))["summary"]
+    m = json.loads(read("results/metrics.json"))
+    s = m["summary"]
     section = read("README.md").split("\n## Results")[1].split("\n## ")[0]
-    assert f"{s['calibration_85']:.1%}" in section
-    assert re.search(r"\*\*FAIL\*\*|did not pass", section)  # measure 1 shown as failed
-    assert f"{s['median_error_mc50']:g} days" in section
-    assert f"{s['median_error_velocity']:g} days" in section
-    assert f"{s['cases']:,}" in section
+    rows = [r for r in section.splitlines() if r.startswith("| 1.") or r.startswith("| 2.")]
+    verdict = {True: "**PASS**", False: "**FAIL**"}
+    assert rows[0].endswith(f"| {verdict[s['measure_1_pass']]} |")
+    assert rows[1].endswith(f"| {verdict[s['measure_2_pass']]} |")
+    assert f"{s['calibration_85']:.1%}" in rows[0]
+    assert f"{s['median_error_mc50']:g} days vs {s['median_error_velocity']:g} days" in rows[1]
+    assert f"**{s['cases']:,}**" in section
+    total = s["cases"] + s["no_forecast_cases"]
+    assert (
+        f"{s['no_forecast_cases']:,} of {total:,} cases ({s['no_forecast_share']:.1%})" in section
+    )
+    assert f"too early in {1 - s['calibration_85']:.1%}" in section
+    lo, hi = m["bootstrap"]["median_error_difference_95ci"]
+    assert f"{lo:g} to {hi:g} days" in section
     assert "docs/backtest-report.md" in section
+
+
+def test_readme_limits_match_the_report():
+    limits = read("README.md").split("\n## Limits")[1].split("\n## ")[0]
+    for words in (
+        "resolved as completed",
+        "whatever its status",
+        "Won't Fix (853)",
+        "Invalid (335)",
+        "mean points of that day",
+        "knowledge of the future",
+    ):
+        assert words in limits, words
+
+
+def test_readme_no_tracing_sentence_is_a_prohibition():
+    assert "**Do not try to trace issues back to individual contributors.**" in read("README.md")
+
+
+def test_readme_options_and_run_time_source():
+    use = read("README.md").split("\n## Use")[1].split("\n## ")[0]
+    assert "`--backlog N`" in use and "required" in use
+    assert "20261028" in use
+    data = read("README.md").split("\n## Data")[1].split("\n## ")[0]
+    assert "python -m mcf.backtest.report" in data
+    assert "measured on 2026-10-29" in data
+
+
+def test_method_page_states_the_points_rules_and_d29_d30():
+    method = read("docs/method.md")
+    assert "mean points per value item in the window × N" in method  # D28 estimate
+    assert "real points of the next N items" in method  # ADR Velocity method 2
+    assert "D29" in method and "mean points of that day's items" in method
+    assert "D30" in method and "2,000" in method and "20261028" in method
+    assert "docs/adr/0002-backtest-method.md" in method or "adr/0002-backtest-method.md" in method
 
 
 def test_method_page_explains_both_methods_and_the_pass_rules():
