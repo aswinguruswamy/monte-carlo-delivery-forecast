@@ -142,3 +142,20 @@ Result: pass — no ❌. Item 7 also applies to MCF-7 to MCF-12 (same review set
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review finished before the approval request; no back-test run | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-15 — 2026-10-29 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief posted before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-15-montecarlo`; each commit "MCF-15: …" | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_montecarlo.py` (41 tests, fixed seeds); failing tests committed first, twice (build and review fixes) | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D04.1, D05, D21.1 (all logged) | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: "Approve with changes", no blockers; 4 should-fix and 3 nice-to-have items fixed with regression tests | — |
+| 8 | Each acceptance criterion met | ✅ | AC1 constant 5/day, N=50 → 10 days; AC2 k ≥ 1; AC3 inverted CDF; AC4 50% ≤ 85% ≤ 95%; AC5 all-zero = no-forecast error; AC6 ADR seed stream; NFR1 worst case 10.7 s (reviewer) | — |
+| 9 | README and rule pages match | ✅ | Matches ADR 0002 Monte Carlo method 1–3 and the Back-test seed rule | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review finished before the approval request; no back-test run | — |
+
+Result: pass — no ❌.
