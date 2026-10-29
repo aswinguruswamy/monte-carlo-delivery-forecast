@@ -237,8 +237,8 @@ def test_scored_cases_column_name():
 
 def test_status_versus_resolution_is_explained_with_counts():
     limits = render_report(metrics(), INFO).split("## Limits")[1].split("\n## ")[0]
-    assert "Won't Fix (1,032)" in limits
-    assert "Invalid (408)" in limits
+    assert "value items with another status: Won't Fix (853), Invalid (335)" in limits
+    assert "Automation" not in limits  # no value item has this status
     assert "every Resolution value in the extract is a completed value" in limits
 
 
@@ -276,12 +276,17 @@ def test_reproduce_steps_are_complete():
 
 
 def test_status_counts_match_the_data():
-    """The fixed status counts in the report equal the TAWOS extract (skipped without data)."""
+    """The fixed status counts in the report equal the TAWOS extract.
+
+    Known gap: CI has no data, so this test is skipped there. It runs where the data is
+    downloaded, and the separate-chat re-run checklist includes it (MCF-19 re-check).
+    """
     import csv
     from collections import Counter
     from pathlib import Path
 
     from mcf.backtest.report import STATUS_COUNTS
+    from mcf.data.types import D04_KIND
 
     data = Path(__file__).resolve().parents[1] / "data"
     files = sorted(data.glob("*.csv"))
@@ -291,6 +296,17 @@ def test_status_counts_match_the_data():
     for f in files:
         with f.open(newline="", encoding="utf-8-sig") as fh:
             for row in csv.DictReader(fh):
-                if row["Resolution_Date"] != "NULL":
+                if row["Resolution_Date"] != "NULL" and D04_KIND.get(row["Type"]) == "value":
                     counts[row["Status"]] += 1
     assert {k: counts[k] for k in STATUS_COUNTS} == STATUS_COUNTS
+
+
+def test_d29_d30_sentence_shows_also_when_both_measures_pass():
+    text = render_report(metrics(hits=3, total=4), INFO)
+    summary = text.split("## Summary")[1].split("\n## ")[0]
+    assert "D29 and D30 completed two details that the ADR did not set" in summary
+
+
+def test_direction_of_the_85_percent_miss_in_plain_words():
+    text = render_report(metrics(hits=3, total=4), INFO)
+    assert "The 85% date was too early in 25.0% of the scored cases." in text
