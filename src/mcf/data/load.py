@@ -29,6 +29,7 @@ REQUIRED = ["Issue_Key", "Type", "Resolution_Date", "Story_Point"]
 NO_DATE = "NULL"
 NO_POINT = {"", "NULL"}
 DATE_TEXT = re.compile(r"\d{4}-\d{2}-\d{2}(?:[ T].*)?")
+POINT_TEXT = re.compile(r"[0-9]+(?:\.[0-9]+)?|\.[0-9]+", re.ASCII)
 
 
 class LoadError(ValueError):
@@ -59,10 +60,9 @@ def _story_point(text: str) -> float | None:
     """Return the point value, NaN for no value, or None if the value is bad."""
     if text.strip() in NO_POINT:
         return math.nan
-    try:
-        value = float(text)
-    except ValueError:
+    if not POINT_TEXT.fullmatch(text.strip()):
         return None
+    value = float(text)
     if not math.isfinite(value) or value <= 0:
         return None
     return value
@@ -78,7 +78,7 @@ def load_issues(path: str | Path) -> tuple[pd.DataFrame, LoadReport]:
     rows_read = rows_no_date = 0
     try:
         with path.open(newline="", encoding="utf-8-sig") as fh:
-            reader = csv.reader(fh)
+            reader = csv.reader(fh, strict=True)
             header = next(reader, None)
             if header is None:
                 raise LoadError(f"{name}: empty file")
@@ -118,12 +118,12 @@ def load_issues(path: str | Path) -> tuple[pd.DataFrame, LoadReport]:
     except UnicodeDecodeError as exc:
         raise LoadError(f"{name}: not UTF-8 text: {exc}") from exc
     except csv.Error as exc:
-        raise LoadError(f"{name}: not a readable CSV file: {exc}") from exc
+        raise LoadError(f"{name}, line {reader.line_num}: not a readable CSV file: {exc}") from exc
 
     if rows_read == 0:
         raise LoadError(f"{name}: no rows")
     issues = pd.DataFrame(
         {"issue_key": keys, "type": types, "done_day": days, "story_point": points},
         columns=["issue_key", "type", "done_day", "story_point"],
-    ).astype({"story_point": float})
+    ).astype({"issue_key": object, "type": object, "done_day": object, "story_point": float})
     return issues, LoadReport(file=name, rows_read=rows_read, rows_no_date=rows_no_date)
