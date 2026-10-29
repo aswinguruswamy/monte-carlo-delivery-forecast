@@ -198,3 +198,22 @@ def test_results_csv_files_are_git_ignored():
         ["git", "check-ignore", "--no-index", "-q", "results/metrics.json"], cwd=root
     )
     assert out.returncode == 1
+
+
+def test_published_report_matches_the_published_metrics():
+    """Every number in docs/backtest-report.md comes from results/metrics.json."""
+    import json
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    report = (root / "docs" / "backtest-report.md").read_text(encoding="utf-8")
+    metrics = json.loads((root / "results" / "metrics.json").read_text(encoding="utf-8"))
+    info = {
+        "code_commit": re.search(r"Code commit of the run: `([^`]+)`", report).group(1),
+        "cases_sha256": re.search(r"`cases.csv` SHA-256: `([0-9a-f]{64})`", report).group(1),
+        "projects_sha256": re.search(r"`projects.csv` SHA-256: `([0-9a-f]{64})`", report).group(1),
+        "rows_read": int(re.search(r"([\d,]+) rows read", report).group(1).replace(",", "")),
+        "rows_no_date": int(re.search(r"(\d+) rows with no resolution date", report).group(1)),
+    }
+    assert render_report(metrics, info) == report

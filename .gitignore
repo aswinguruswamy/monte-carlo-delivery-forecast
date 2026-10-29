@@ -12,3 +12,4 @@ build/
 # Downloaded dataset (never commit, D08)
 /data/
 .venv*/
+/results/*.csv
