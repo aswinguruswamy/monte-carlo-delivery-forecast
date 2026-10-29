@@ -210,3 +210,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | No metrics computed on the real cases (waits for D30) | — |
 
 Result: pass — no ❌. Item 5 closes when the PM decides D30.
+
+## Ticket MCF-19 — 2026-10-29 — grader: builder pre-check (judgement items also covered by the separate-chat review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-19-report`; each commit "MCF-19: …" | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_backtest_report.py` (27 tests); failing tests committed first, three times | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D21.1, D23, D29, D30 logged; D31 (AC2 record) proposed | PM to decide D31 at Review |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Separate chat (D24): "Changes required" (2 blockers, 7 should-fix) → fixed; re-check "Approve with changes", no blockers, 4 should-fix → fixed. Re-run byte-identical. | — |
+| 8 | Each acceptance criterion met | ✅ | AC1 summary, 29 project rows, limits; AC2 data:validate-data run in the re-check ("Share with noted caveats"), logged in MCF-19 | — |
+| 9 | README and rule pages match | ✅ | ADR 0002 What is reported; RAID Log v6 (R2, R3, R13, C5) | — |
+| 10 | Workflow steps followed | ✅ | Method fixed before results; failed measure published as failed (R3) | — |
+
+Result: pass — no ❌. Item 5 closes when the PM decides D31.
