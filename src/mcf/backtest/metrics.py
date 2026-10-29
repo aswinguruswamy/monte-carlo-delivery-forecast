@@ -190,3 +190,35 @@ def load_cases(path: str | Path) -> list[Case]:
 
 def write_metrics(metrics: dict, path: str | Path) -> None:
     Path(path).write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(
+        prog="python -m mcf.backtest.metrics", description="Back-test metrics (ADR 0002)."
+    )
+    parser.add_argument("--cases", required=True, type=Path, help="cases.csv from mcf.backtest")
+    parser.add_argument("--out", required=True, type=Path, help="metrics.json to write")
+    args = parser.parse_args(argv)
+    try:
+        metrics = compute_metrics(load_cases(args.cases))
+    except (MetricsError, OSError, ValueError, KeyError) as exc:
+        print(f"mcf.backtest.metrics: error: {exc}", file=sys.stderr)
+        return 1
+    write_metrics(metrics, args.out)
+    s = metrics["summary"]
+    m1 = "PASS" if s["measure_1_pass"] else "FAIL"
+    m2 = "PASS" if s["measure_2_pass"] else "FAIL"
+    print(f"Cases scored: {s['cases']}; no forecast: {s['no_forecast_cases']}")
+    print(f"Measure 1 (85% calibration {s['calibration_85']:.1%}, band 75-95%): {m1}")
+    print(
+        f"Measure 2 (median error MC {s['median_error_mc50']:.1f} d vs velocity "
+        f"{s['median_error_velocity']:.1f} d): {m2}"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
