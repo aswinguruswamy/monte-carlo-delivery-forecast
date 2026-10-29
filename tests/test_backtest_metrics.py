@@ -6,6 +6,7 @@ import json
 from datetime import date, timedelta
 
 import pytest
+
 from mcf.backtest.metrics import (
     BOOTSTRAP_RESAMPLES,
     MetricsError,
@@ -15,7 +16,6 @@ from mcf.backtest.metrics import (
     load_cases,
     write_metrics,
 )
-
 from mcf.backtest.run import Case, write_cases
 
 T = date(2020, 1, 1)
