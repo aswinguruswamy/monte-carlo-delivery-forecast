@@ -9,7 +9,7 @@
 
 Cases scored: 7,692 from 29 projects (N = 10, 25, 50). Cases with no forecast: 903 of 8,595 (10.5%); they are counted, not scored.
 
-Success measure 1 did not pass. The result is published as it is; the method was fixed before the first run and was not changed after it (R2, R3).
+Success measure 1 did not pass. The result is published as it is; the method was fixed before the first run and was not changed after it (R2, R3). D29 and D30 completed two details that the ADR did not set: D29 came before the run, and D30 came before the metrics.
 
 Measure 2 passes on all cases together, but the bootstrap 95% interval of the error difference (0 to 6 days) includes 0, so the advantage is not robust.
 
@@ -19,7 +19,7 @@ A Monte Carlo date is a probability, not a promise: the 50% date is not certain.
 
 ## Results by backlog size
 
-| N | Cases | Calibration 85% | Median error MC 50% | Median error velocity | No forecast | Short dates |
+| N | Cases scored | Calibration 85% | Median error MC 50% | Median error velocity | No forecast | Short dates |
 | --- | --- | --- | --- | --- | --- | --- |
 | 10 | 2,871 | 71.1% | 19 d | 20 d | 432 | 685 |
 | 25 | 2,536 | 68.1% | 36 d | 41 d | 253 | 1,199 |
@@ -27,9 +27,11 @@ A Monte Carlo date is a probability, not a promise: the 50% date is not certain.
 
 Short dates: dates on the 14-day sequence with fewer than N value items done after them.
 
+Projects with no case for a size N: CONFSERVER (N = 50).
+
 ## Results by project
 
-| Project | Cases | Calibration 85% | Median error MC 50% | Median error velocity | No forecast | Short dates |
+| Project | Cases scored | Calibration 85% | Median error MC 50% | Median error velocity | No forecast | Short dates |
 | --- | --- | --- | --- | --- | --- | --- |
 | APIKIT | 284 | 60.6% | 231.5 d | 161 d | 153 | 109 |
 | APSTUD | 103 | 61.2% | 38 d | 78 d | 1 | 73 |
@@ -84,8 +86,9 @@ The bootstrap picks whole projects (2,000 resamples, seed 20261028, 29 projects 
 
 - The data holds only issues with story points, and only issues resolved as completed (dataset author, 2026-10-29; R13, R5, I1). Teams with many unestimated items may behave differently. A v2 back-test on the full TAWOS data is planned (D23).
 - Velocity uses 2-week periods counted from day t, not the teams' real sprints (A2).
-- Every resolved item counts as done on its resolution day, whatever its status (D21.1).
-- Velocity uses the real points of the next N items, known only after day t. This helps velocity; a Monte Carlo win on measure 2 is therefore conservative.
+- Every resolved item counts as done on its resolution day, whatever its status (D21.1). This does not contradict the first limit: every Resolution value in the extract is a completed value, but some rows still carry another status: Won't Fix (1,032), Invalid (408), In Progress (2), Accepted (1), Automation (1) (RAID C5).
+- Velocity uses the real points of the next N items, known only after day t. This helps velocity, so this Monte Carlo win on measure 2 is conservative; it is also small and not robust (interval 0 to 6 days).
+- Case selection: a forecast date exists only when at least N value items were done after it, so the set of cases uses knowledge of the future (ADR 0002 design).
 - Same-day ties in velocity points use the mean of that day's items (D29).
 - Cases overlap: windows 14 days apart share 70 of 84 days.
 - 29 open-source projects; the result may not hold for other teams.
@@ -100,12 +103,15 @@ The bootstrap picks whole projects (2,000 resamples, seed 20261028, 29 projects 
 ## Reproduce
 
 ```bash
+pip install -e ".[dev]"
 python -m mcf.data.download --dest data
 python -m mcf.backtest --data data --out results
 python -m mcf.backtest.metrics --cases results/cases.csv \
     --projects results/projects.csv --out results/metrics.json
+python -m mcf.backtest.report --results results --commit <commit> \
+    --out docs/backtest-report.md
 ```
 
-- Code commit of the run: `007e4ab (run), aebb32d (metrics)`
+- Code commit of the run: `007e4ab (run), 19d3136 (metrics and report)`
 - `cases.csv` SHA-256: `1608fda91e3fb42e27ea340cfea6ba97a9ac668da9e2b123c02e78b76b2025e7`
 - `projects.csv` SHA-256: `5830cbb859758633d983f78227d1af9ad3b2a7385bdc5dc6a27c7b058ce19ad6`
