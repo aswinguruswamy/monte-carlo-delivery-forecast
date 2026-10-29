@@ -1,36 +1,95 @@
 # Monte Carlo Delivery Forecast (MCF)
 
-Forecast delivery dates at 50%, 85% and 95% confidence from a team's past throughput, and prove the accuracy with a back-test on real public data.
+Forecast when the next N work items will be done, as dates at 50%, 85% and 95% confidence, from a team's past throughput. The tool also gives the usual velocity date, and a back-test on 29 real open-source projects compares the two methods.
 
-**Status:** in development (MVP). The full README comes in MCF-25.
+**Status:** v1 in development. The MVP (command line and back-test) is complete. The full v1.0.0 release follows the release check (MCF-27).
 
-## Development
+## Install
+
+Python 3.11 or 3.12.
 
 ```bash
+git clone https://github.com/aswinguruswamy/monte-carlo-delivery-forecast.git
+cd monte-carlo-delivery-forecast
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-ruff check . && ruff format --check .
 pytest
 ```
 
-## Forecast from your own CSV
+## Use
 
 ```bash
 mcf forecast team.csv --backlog 40
 ```
 
-The CSV needs the columns `Issue_Key`, `Type`, `Resolution_Date` and `Story_Point`. An empty `Resolution_Date` means an open item: it is skipped and counted (D25). Options (D28): `--as-of YYYY-MM-DD` (day t, default: the last done day in the file; items done after it are not used), `--backlog-points P` (for the velocity date; default: an estimate), `--seed S`. Run `mcf forecast --help` for details. The 50% date is not certain: half of the runs finish later.
+The CSV needs the columns `Issue_Key`, `Type`, `Resolution_Date` and `Story_Point`. An empty `Resolution_Date` means an open item: it is skipped and counted (D25). Options (D28):
 
-## Get the data
+- `--as-of YYYY-MM-DD`: day t, the forecast date. Default: the last done day in the file. Items done after day t are not used.
+- `--backlog-points P`: story points of the backlog, for the velocity date. Default: an estimate, labelled "estimated".
+- `--seed S`: random seed. The same file and seed give the same dates.
+
+Run `mcf forecast --help` for details. The output gives the Monte Carlo 50%, 85% and 95% dates and the velocity date. **The 50% date is not certain: half of the runs finish later.**
+
+## How it works
+
+- **Monte Carlo:** take the daily count of finished value items in the last 84 days. In one run, pick days from that history at random and add them up until the backlog is done. Do 10,000 runs. The 85% date is the day by which 85% of the runs are done.
+- **Velocity (the usual method):** story points done in the last 84 days ÷ 6 two-week periods = points per sprint. Date = backlog points ÷ velocity × 14 days.
+- **Back-test:** go back to many past dates, forecast from the data known on each date, and compare with what really happened.
+
+The full method in plain words is in [docs/method.md](docs/method.md). The exact rules are in [ADR 0002](docs/adr/0002-backtest-method.md), fixed before the first run.
+
+## Results
+
+Back-test of v1 on the TAWOS extract: 29 projects, N = 10, 25 and 50 items, **7,692** scored cases.
+
+| Success measure | Result | Pass rule | Pass or fail |
+| --- | --- | --- | --- |
+| 1. The 85% date is correct in 75–95% of cases | 69.0% | 75–95% | **FAIL** |
+| 2. Median error: Monte Carlo 50% date vs velocity date | 34 days vs 36 days | Monte Carlo smaller | **PASS** |
+
+Measure 1 did not pass: the 85% date was too early in 31.0% of cases. Measure 2 passes, but the lead is small and not robust (the 95% interval of the difference is 0 to 6 days). 903 cases (10.5%) have no forecast because no item was done in their 84-day window. The method was not changed after the results. Full report, with one row for each project: [docs/backtest-report.md](docs/backtest-report.md).
+
+## Limits
+
+- The data holds only issues with story points, and only issues resolved as completed. Teams with many unestimated items may behave differently.
+- Velocity uses 2-week periods counted from day t, not the teams' real sprints.
+- In the back-test, velocity uses the real points of the next N items, which a team would not know exactly. This helps velocity.
+- The back-test cases overlap (dates 14 days apart share most of their history).
+- 29 open-source projects; the result may not hold for other teams.
+- Monte Carlo assumes that the past 84 days are a fair sample of the next weeks.
+
+## Data
+
+The back-test uses the TAWOS dataset extract (SOLAR-group/SPvsDevelopmentEffort, `Dataset/RQ2 and RQ3`, commit `e8ae43b`). **The data is subject to the TAWOS terms of use: https://github.com/SOLAR-group/TAWOS.** This repository holds no data files (D08). Get the data with:
 
 ```bash
 python -m mcf.data.download --dest data
 ```
 
-This gets the 29 TAWOS files (47,205 rows) at a fixed commit and checks each file with SHA-256. The data is not stored in this repository (D08). If a file does not match, the script stops.
+This gets the 29 files (47,205 rows) and checks each file with SHA-256. If a file does not match, the script stops. **Do not try to trace issues back to individual contributors.** The tool loads no names or titles, and only summary numbers are published.
 
-Copy `.env.example` to `.env` for local secrets. Never commit `.env`.
+Re-run the back-test (about 7 minutes):
 
-## Project documents
+```bash
+python -m mcf.backtest --data data --out results
+python -m mcf.backtest.metrics --cases results/cases.csv --projects results/projects.csv --out results/metrics.json
+```
 
-Confluence space MCF: Charter, Decision Log, RAID Log, Test Plan, Scope, Estimate and Backlog.
+## Cite
+
+See [CITATION.cff](CITATION.cff). If you use the data, cite:
+
+- Tawosi, Al-Subaihin, Moussa, Sarro. *A Versatile Dataset of Agile Open Source Software Projects.* MSR 2022. https://doi.org/10.1145/3524842.3528029
+- Tawosi, Moussa, Sarro. *On the Relationship Between Story Points and Development Effort in Agile Open-Source Software.* ESEM 2022. https://doi.org/10.1145/3544902.3546238
+
+## Handover
+
+- **Rules for changes:** [CLAUDE.md](CLAUDE.md) (method before results, tests first, no data files, AI explanation rules).
+- **Decisions and risks:** Confluence space MCF (Decision Log, RAID Log, Test Plan). Each decision has an ID (Dxx); a changed decision keeps the old row, struck through (D14).
+- **Quality:** CI runs style, tests on Python 3.11 and 3.12, a secret scan, a dependency scan and a licence scan on each pull request. Grades per ticket: `quality/grades.md`.
+- **To change the back-test method:** write a new decision and a before-and-after report first (ADR 0002 Change rule). A test locks the ADR text.
+- Copy `.env.example` to `.env` for local secrets. Never commit `.env`.
+
+## Licence
+
+Apache 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE).

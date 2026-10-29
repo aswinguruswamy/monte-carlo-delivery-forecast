@@ -17,6 +17,7 @@ Project documents: Confluence space MCF (Charter, Decision Log, RAID Log, Test P
 ## Data
 1. Never commit dataset files. Use the download script with commit e8ae43b and checksums (D08).
 2. Count value items only (D04). An unknown issue type is an error, never a silent default.
+3. Never try to trace issues back to individual contributors (dataset author, RAID C2). Load no names or titles.
 
 ## AI explanation
 1. Code calculates every number and date. Claude only explains them.
