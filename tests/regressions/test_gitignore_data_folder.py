@@ -10,13 +10,17 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def ignored(path: str) -> bool:
-    result = subprocess.run(["git", "check-ignore", "-q", path], cwd=ROOT, check=False)
+    # --no-index: also test tracked paths against the rules (MCF-10 review).
+    result = subprocess.run(
+        ["git", "check-ignore", "-q", "--no-index", path], cwd=ROOT, check=False
+    )
     return result.returncode == 0
 
 
 def test_code_package_named_data_is_not_ignored():
     assert not ignored("src/mcf/data/download.py")
     assert not ignored("src/mcf/data/tawos_manifest.json")
+    assert not ignored("src/mcf/data/new_module.py")  # untracked path too
 
 
 def test_downloaded_dataset_folder_is_ignored():

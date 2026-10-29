@@ -195,6 +195,11 @@ def test_stack_adr_names_libraries_and_python_versions():
         assert f"Python {version}" in text
 
 
+def checksum_violations(files: list[str], sha_of, dataset: set[str]) -> list[str]:
+    """Return the tracked files whose SHA-256 is a dataset file's SHA-256 (D08)."""
+    return [f for f in files if sha_of(f) in dataset]
+
+
 def test_no_tracked_file_matches_a_dataset_checksum():
     """D08: catches a dataset file even if it is renamed (follow-up from the MCF-7 review)."""
     import hashlib
@@ -202,9 +207,13 @@ def test_no_tracked_file_matches_a_dataset_checksum():
     from mcf.data.download import load_manifest
 
     dataset = {f["sha256"] for f in load_manifest()["files"]}
-    hits = [
-        f
-        for f in tracked_files()
-        if (ROOT / f).is_file() and hashlib.sha256((ROOT / f).read_bytes()).hexdigest() in dataset
-    ]
+    files = [f for f in tracked_files() if (ROOT / f).is_file()]
+    hits = checksum_violations(
+        files, lambda f: hashlib.sha256((ROOT / f).read_bytes()).hexdigest(), dataset
+    )
     assert hits == []
+
+
+def test_checksum_rule_catches_a_renamed_dataset_file():
+    sha = {"docs/notes.txt": "aaa", "src/x.py": "bbb", "renamed_mesos.md": "ccc"}
+    assert checksum_violations(list(sha), sha.get, {"ccc"}) == ["renamed_mesos.md"]

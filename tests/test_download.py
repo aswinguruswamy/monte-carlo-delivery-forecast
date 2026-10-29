@@ -44,7 +44,7 @@ def fetcher_for(files: dict[str, bytes], calls: list[str] | None = None):
 def test_manifest_pins_the_source_and_29_files_with_47205_rows():
     m = dl.load_manifest()
     assert m["source"]["repo"] == "SOLAR-group/SPvsDevelopmentEffort"
-    assert m["source"]["commit"].startswith("e8ae43b")
+    assert m["source"]["commit"] == "e8ae43b8377a23eb84128108a38e139a7d549c2c"
     assert m["source"]["folder"] == "Dataset/RQ2 and RQ3"
     assert len(m["files"]) == 29
     assert len({f["name"] for f in m["files"]}) == 29
@@ -124,3 +124,39 @@ def test_manifest_holds_metadata_only_no_data_rows():
     assert set(m) == {"source", "files"}
     for f in m["files"]:
         assert set(f) == {"name", "sha256", "rows"}
+
+
+# --- review fixes (MCF-10 independent review) --------------------------------
+
+
+def test_bad_local_file_and_changed_source_leave_nothing(tmp_path):
+    good = {"A.csv": b"x\n1\n"}
+    (tmp_path / "A.csv").write_bytes(b"tampered")
+    with pytest.raises(dl.ChecksumError):
+        dl.download(tmp_path, fake_manifest(good), fetcher_for({"A.csv": b"also changed"}))
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_write_error_is_a_clear_error_and_leaves_no_part_file(tmp_path):
+    files = {"A.csv": b"x\n1\n"}
+    (tmp_path / "A.csv").mkdir()  # the target cannot be written
+    with pytest.raises(dl.DownloadError, match="could not write A.csv"):
+        dl.download(tmp_path, fake_manifest(files), fetcher_for(files))
+    assert not (tmp_path / "A.csv.part").exists()
+
+
+@pytest.mark.parametrize("name", ["../escaped.csv", "sub/A.csv", "A.txt", "", ".csv"])
+def test_unsafe_file_names_are_rejected(tmp_path, name):
+    with pytest.raises(dl.DownloadError, match="unsafe file name"):
+        dl.download(tmp_path, fake_manifest({name: b"x"}), fetcher_for({name: b"x"}))
+    assert not (tmp_path.parent / "escaped.csv").exists()
+
+
+def test_real_manifest_names_are_all_safe():
+    for f in dl.load_manifest()["files"]:
+        dl.check_name(f["name"])
+
+
+def test_the_real_fetcher_cannot_reach_the_network_in_tests(tmp_path):
+    with pytest.raises(dl.DownloadError, match="must not use the network"):
+        dl.download(tmp_path, fake_manifest({"A.csv": b"x"}), dl.http_get)
