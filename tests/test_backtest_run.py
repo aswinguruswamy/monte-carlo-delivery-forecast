@@ -312,3 +312,39 @@ def _sha(path: Path) -> str:
     import hashlib
 
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+# --- command line: python -m mcf.backtest --------------------------------------
+
+
+def test_command_line_writes_cases_and_summaries(tmp_path, monkeypatch):
+    import mcf.backtest.__main__ as cli
+
+    data = tmp_path / "data"
+    data.mkdir()
+    write_project(data, "A", daily(150))
+    manifest = {"files": [{"name": "A.csv", "sha256": _sha(data / "A.csv")}]}
+    monkeypatch.setattr(cli, "load_manifest", lambda: manifest)
+    out = tmp_path / "out"
+    code = cli.main(["--data", str(data), "--out", str(out), "--tie-rule", "mean", "--runs", "50"])
+    assert code == 0
+    assert (out / "cases.csv").read_text().startswith("project,p,t,n,")
+    assert (out / "projects.csv").read_text().startswith("project,p,rows_read,")
+
+
+def test_command_line_needs_the_tie_rule(tmp_path):
+    import mcf.backtest.__main__ as cli
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["--data", str(tmp_path), "--out", str(tmp_path / "o")])
+    assert exc.value.code == 2
+
+
+def test_command_line_stops_on_a_file_not_in_the_manifest(tmp_path, monkeypatch, capsys):
+    import mcf.backtest.__main__ as cli
+
+    write_project(tmp_path, "A", daily(150))
+    monkeypatch.setattr(cli, "load_manifest", lambda: {"files": []})
+    code = cli.main(["--data", str(tmp_path), "--out", str(tmp_path / "o"), "--tie-rule", "row"])
+    assert code == 1
+    assert "A.csv" in capsys.readouterr().err
