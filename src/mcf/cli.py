@@ -13,7 +13,7 @@ from datetime import date
 
 import numpy as np
 
-from mcf.data.load import LoadError, load_issues
+from mcf.data.load import LoadError, LoadReport, load_issues
 from mcf.data.types import (
     BUG,
     D04_KIND,
@@ -24,7 +24,6 @@ from mcf.data.types import (
     sort_types,
 )
 from mcf.forecast.montecarlo import (
-    PERCENTILES,
     RUNS,
     SEED,
     MonteCarloError,
@@ -32,6 +31,7 @@ from mcf.forecast.montecarlo import (
 )
 from mcf.forecast.throughput import ThroughputError, counts_from_ordinals, done_ordinals, window
 from mcf.forecast.velocity import VelocityError, velocity_date, window_velocity
+from mcf.result import ForecastFacts, report_number, report_percent
 
 
 def _positive_int(text: str) -> int:
@@ -132,7 +132,12 @@ def _items(count: int) -> str:
     return f"{count} value item" + ("" if count == 1 else "s")
 
 
-def forecast(args: argparse.Namespace) -> str:
+def compute(args: argparse.Namespace) -> ForecastFacts:
+    """Calculate the numbers and dates of the forecast (no text from the data)."""
+    return _compute_with_load(args)[0]
+
+
+def _compute_with_load(args: argparse.Namespace) -> tuple[ForecastFacts, LoadReport]:
     issues, load = load_issues(args.file, open_items=True)
     unknown = sorted({ty for ty in load.open_types if ty not in D04_KIND})
     if unknown:
@@ -146,9 +151,9 @@ def forecast(args: argparse.Namespace) -> str:
     ordinals = done_ordinals(issues)
 
     if args.as_of is not None:
-        t, t_note = args.as_of, "--as-of"
+        t = args.as_of
     else:  # the last done day of any item (value, bug or epic)
-        t, t_note = max(issues["done_day"]), "last done day in the file"
+        t = max(issues["done_day"])
 
     start, end = window(t)
     counts = counts_from_ordinals(ordinals, start, end)
@@ -161,10 +166,10 @@ def forecast(args: argparse.Namespace) -> str:
 
     velocity = window_velocity(issues, t)
     if args.backlog_points is not None:
-        points, points_note = args.backlog_points, "given"
+        points = args.backlog_points
     else:
         mean_points = velocity * 6 / int(counts.sum())
-        points, points_note = mean_points * args.backlog, "estimated"
+        points = mean_points * args.backlog
     v_date = velocity_date(t, velocity, points)
 
     in_window = issues["done_day"].map(lambda d: start <= d <= end)
@@ -174,21 +179,46 @@ def forecast(args: argparse.Namespace) -> str:
         bug=int((kinds == BUG).sum()),
         not_counted=int((kinds == NOT_COUNTED).sum()),
     ).bug_share
+    return ForecastFacts(
+        t=t,
+        backlog=args.backlog,
+        window_start=start,
+        window_end=end,
+        items_done=int(counts.sum()),
+        mc50=dates[50],
+        mc85=dates[85],
+        mc95=dates[95],
+        runs=RUNS,
+        velocity_date=v_date,
+        velocity_per_sprint=report_number(float(velocity)),
+        points_needed=report_number(float(points)),
+        points_estimated=args.backlog_points is None,
+        open_items=load.rows_open,
+        rows_no_date=load.rows_no_date,
+        bug_share_percent=None if bug_share is None else report_percent(bug_share),
+    ), load
+
+
+def forecast(args: argparse.Namespace) -> str:
+    f, _ = _compute_with_load(args)
+    t_note = "--as-of" if args.as_of is not None else "last done day in the file"
+    points_note = "estimated" if f.points_estimated else "given"
+    share = f"{f.bug_share_percent}%" if f.bug_share_percent is not None else "n/a"
     lines = [
-        f"Forecast: the next {args.backlog} value items",
-        f"From {t} ({t_note})",
-        f"History: {start} to {end} (84 days), {_items(int(counts.sum()))} done",
+        f"Forecast: the next {f.backlog} value items",
+        f"From {f.t} ({t_note})",
+        f"History: {f.window_start} to {f.window_end} (84 days), {_items(f.items_done)} done",
         "",
-        f"Monte Carlo ({RUNS:,} runs, seed {args.seed}):",
-        *(f"  {p}%: {dates[p]}" for p in PERCENTILES),
+        f"Monte Carlo ({f.runs:,} runs, seed {args.seed}):",
+        *(f"  {p}%: {d}" for p, d in ((50, f.mc50), (85, f.mc85), (95, f.mc95))),
         "  The 50% date is not certain: half of the runs finish later.",
         "",
-        f"Velocity: {v_date} ({_num(velocity)} points per 2 weeks; "
-        f"{_num(points)} points needed, {points_note})",
+        f"Velocity: {f.velocity_date} ({_num(f.velocity_per_sprint)} points per 2 weeks; "
+        f"{_num(f.points_needed)} points needed, {points_note})",
         "",
-        f"Open items skipped: {load.rows_open}",
-        f"Rows with no date (NULL): {load.rows_no_date}",
-        f"Bug share ({start} to {end}): {_percent(bug_share) if bug_share is not None else 'n/a'}",
+        f"Open items skipped: {f.open_items}",
+        f"Rows with no date (NULL): {f.rows_no_date}",
+        f"Bug share ({f.window_start} to {f.window_end}): {share}",
     ]
     return "\n".join(lines)
 

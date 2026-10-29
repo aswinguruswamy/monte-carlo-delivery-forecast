@@ -1,0 +1,15 @@
+Forecast: the next 30 value items
+From 2020-06-30 (last done day in the file)
+History: 2020-04-08 to 2020-06-30 (84 days), 126 value items done
+
+Monte Carlo (10,000 runs, seed 20261028):
+  50%: 2020-07-20
+  85%: 2020-07-24
+  95%: 2020-07-26
+  The 50% date is not certain: half of the runs finish later.
+
+Velocity: 2020-07-20 (63.2 points per 2 weeks; 90.2 points needed, estimated)
+
+Open items skipped: 1
+Rows with no date (NULL): 1
+Bug share (2020-04-08 to 2020-06-30): 10%
