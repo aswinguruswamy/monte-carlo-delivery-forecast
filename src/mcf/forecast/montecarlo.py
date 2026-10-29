@@ -9,6 +9,9 @@ Draw order (fixed, so a result can be checked by hand): the generator gives
 blocks of `CHUNK_DAYS` day indexes for all runs at once, shape (runs,
 CHUNK_DAYS), block after block. Run r uses row r of each block in turn. Blocks
 are drawn for every run, also for runs that are already done.
+
+The caller passes the daily counts of the window (84 days in the back-test,
+ADR 0002); this module accepts any non-empty length.
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ SEED = 20261028
 PERCENTILES = (50, 85, 95)
 CHUNK_DAYS = 64
 MAX_DAYS = 100_000  # about 274 years: a safety stop, never a real forecast
+_MAX_COUNT = 2**40  # a guard against wrap-around; real daily counts are far smaller
 
 
 class MonteCarloError(ValueError):
@@ -43,6 +47,8 @@ def _check_counts(daily_counts: np.ndarray) -> np.ndarray:
         raise MonteCarloError(f"daily counts must be whole numbers, got {counts.dtype}")
     if (counts < 0).any():
         raise MonteCarloError("a daily count is below 0")
+    if (counts > _MAX_COUNT).any():
+        raise MonteCarloError(f"a daily count is above {_MAX_COUNT}")
     if not counts.any():
         raise MonteCarloError("no forecast: no value item was done in the history window")
     return counts.astype(np.int64)
@@ -54,8 +60,8 @@ def simulate_days(
     """Return, for each run, the number of days needed to finish n items."""
     if isinstance(n, bool) or not isinstance(n, (int, np.integer)) or n < 0:
         raise MonteCarloError(f"N must be a whole number of 0 or more, got {n!r}")
-    if runs < 1:
-        raise MonteCarloError(f"runs must be 1 or more, got {runs}")
+    if isinstance(runs, bool) or not isinstance(runs, (int, np.integer)) or runs < 1:
+        raise MonteCarloError(f"runs must be a whole number of 1 or more, got {runs!r}")
     counts = _check_counts(daily_counts)
     if n == 0:
         return np.zeros(runs, dtype=np.int64)
@@ -64,8 +70,6 @@ def simulate_days(
     totals = np.zeros(runs, dtype=np.int64)
     used = 0
     while True:
-        if used >= MAX_DAYS:
-            raise MonteCarloError(f"no result after {MAX_DAYS} days; throughput is too low")
         block = counts[rng.integers(0, counts.size, size=(runs, CHUNK_DAYS))]
         open_runs = np.flatnonzero(days == 0)
         running = totals[open_runs, None] + np.cumsum(block[open_runs], axis=1)
@@ -74,6 +78,8 @@ def simulate_days(
         days[open_runs[hit]] = used + reached[hit].argmax(axis=1) + 1
         totals[open_runs] = running[:, -1]
         used += CHUNK_DAYS
+        if days.max() > MAX_DAYS or (not hit.all() and used >= MAX_DAYS):
+            raise MonteCarloError(f"no result within {MAX_DAYS} days; throughput is too low")
         if hit.all():
             return days
 
@@ -82,6 +88,8 @@ def percentile_days(days: np.ndarray, p: float) -> int:
     """Return the smallest k such that at least p% of the runs are <= k."""
     if not 0 < p <= 100:
         raise MonteCarloError(f"percentile must be above 0 and at most 100, got {p}")
+    if np.asarray(days).size == 0:
+        raise MonteCarloError("no runs to take a percentile of")
     return int(np.quantile(np.asarray(days), p / 100, method="inverted_cdf"))
 
 
