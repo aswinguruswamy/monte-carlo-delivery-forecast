@@ -4,7 +4,7 @@ This page explains how the tool makes its dates and how the back-test checks the
 
 ## The question
 
-"When will the next N value items be done?" A value item is a story, task, improvement or similar (D04.1). Bugs and epics do not count.
+"When will the next N value items be done?" A value item has one of 12 types: Story, Task, Improvement, New Feature, Suggestion, Enhancement Request, Sub-task, Technical task, Documentation, Technical Debt, Wish or Question (D04.1). Bugs and epics do not count.
 
 ## Monte Carlo
 
@@ -19,6 +19,10 @@ The 50% date is **not certain**: half of the runs finish later. A later date wit
 
 1. Add the story points of the value items done in the same 84 days, and divide by 6 two-week periods. This is the velocity: points per sprint.
 2. Date = backlog points ÷ velocity × 14 days, rounded up to a whole day.
+
+Where the backlog points come from:
+- **In the command line:** from `--backlog-points`, or else an estimate: the mean points per value item in the window × N (D28).
+- **In the back-test:** the real points of the next N items that were done. A real team does not know these exactly, so this helps velocity.
 
 ## The back-test
 
@@ -36,4 +40,8 @@ A case with no item done in its 84 days has no forecast. It is counted and repor
 
 ## Why the rules were fixed first
 
-If the method changes after the results are known, it is easy to tune it until it passes. So the method, the data and the pass rules were written down and approved before the first run (ADR 0002, D21.1). Two details that the ADR did not set were decided before the results they affect (D29, D30). The v1 result is published as it is, also the failed measure: see [backtest-report.md](backtest-report.md).
+If the method changes after the results are known, it is easy to tune it until it passes. So the method, the data and the pass rules were written down and approved before the first run (ADR 0002, D21.1). Two details that the ADR did not set were decided before the results they affect:
+- **D29 (before the run):** when several items were done on the same day as the N-th item, velocity uses the mean points of that day's items.
+- **D30 (before the metrics):** the information-only 95% interval comes from 2,000 resamples of whole projects, seed 20261028.
+
+The exact rules are in [ADR 0002](adr/0002-backtest-method.md) (docs/adr/0002-backtest-method.md). The v1 result is published as it is, also the failed measure: see [backtest-report.md](backtest-report.md).
