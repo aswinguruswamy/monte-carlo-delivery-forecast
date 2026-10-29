@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import pandas as pd
 import pytest
@@ -101,3 +101,70 @@ def test_bad_points_needed_is_an_error(bad):
 def test_bad_velocity_is_an_error(bad):
     with pytest.raises(VelocityError, match="velocity"):
         velocity_date(T, bad, 10.0)
+
+
+# --- review fixes (PR #14) ---------------------------------------------------
+
+
+@pytest.mark.parametrize("t", [pd.Timestamp("2020-06-30 12:00"), datetime(2020, 6, 30, 12)])
+def test_datetime_t_is_an_error_not_a_shifted_window(t):
+    df = items([(83, VALUE, 6.0)])
+    with pytest.raises(VelocityError, match="calendar date"):
+        window_velocity(df, t)
+    with pytest.raises(VelocityError, match="calendar date"):
+        velocity_date(t, 1.0, 1.0)
+
+
+def test_float_tolerance_keeps_an_exact_day():
+    # 6.5 points in the window, 32.5 needed: exactly 30 sprints = 420 days.
+    # Plain ceil gives 421 (420.00000000000006).
+    assert velocity_date(T, 6.5 / 6, 32.5) == T + timedelta(days=420)
+
+
+def test_a_real_fraction_still_rounds_up():
+    assert velocity_date(T, 3.0, 1.0) == T + timedelta(days=5)  # 4.67 -> 5
+
+
+def test_unknown_kind_is_an_error():
+    df = items([(0, VALUE, 1.0)]).assign(kind="vaule")
+    with pytest.raises(VelocityError, match="unknown kind"):
+        window_velocity(df, T)
+
+
+@pytest.mark.parametrize("bad", [None, "not a date"])
+def test_value_item_with_no_done_day_is_an_error(bad):
+    df = items([(0, VALUE, 1.0)])
+    df["done_day"] = [bad]
+    with pytest.raises(VelocityError, match="done day"):
+        window_velocity(df, T)
+
+
+@pytest.mark.parametrize("bad", [0.0, -2.0, float("nan"), float("inf"), "abc", True])
+def test_bad_story_point_is_an_error(bad):
+    df = items([(0, VALUE, 1.0)]).astype({"story_point": object})
+    df.loc[0, "story_point"] = bad
+    with pytest.raises(VelocityError, match="story point"):
+        window_velocity(df, T)
+
+
+def test_timezone_done_day_keeps_the_recorded_day():
+    df = items([(83, VALUE, 6.0)])
+    df["done_day"] = pd.to_datetime(["2020-04-08 23:30"]).tz_localize("America/Toronto")
+    assert window_velocity(df, T) == pytest.approx(1.0)
+
+
+def test_missing_issue_key_column_is_an_error():
+    with pytest.raises(VelocityError, match="issue_key"):
+        window_velocity(items([(0, VALUE, 1.0)]).drop(columns="issue_key"), T)
+
+
+@pytest.mark.parametrize("velocity, needed", [(1e-308, 1e10), (1.0, 1e305)])
+def test_overflow_is_a_velocity_error(velocity, needed):
+    with pytest.raises(VelocityError):
+        velocity_date(T, velocity, needed)
+
+
+@pytest.mark.parametrize("velocity, needed", [(True, 1.0), (1.0, True)])
+def test_bool_inputs_are_an_error(velocity, needed):
+    with pytest.raises(VelocityError):
+        velocity_date(T, velocity, needed)
