@@ -163,7 +163,7 @@ def test_missing_file_is_a_clear_error(tmp_path):
 
 def test_100000_rows_load_quickly(tmp_path):
     body = "".join(
-        f"P-{i},Story,Done,2020-01-{i % 28 + 1:02d} 10:00:00,{i % 8}\n" for i in range(100_000)
+        f"P-{i},Story,Done,2020-01-{i % 28 + 1:02d} 10:00:00,{i % 8 + 1}\n" for i in range(100_000)
     )
     p = write(tmp_path, body)
     start = time.perf_counter()
