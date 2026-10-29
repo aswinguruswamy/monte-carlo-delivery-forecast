@@ -196,4 +196,4 @@ def test_the_real_transport_cannot_reach_the_network_in_tests():
 def test_no_test_file_holds_a_real_key():
     root = Path(__file__).resolve().parent
     for f in root.rglob("*.py"):
-        assert "sk-ant-" not in f.read_text(encoding="utf-8"), f
+        assert "sk-" + "ant-" not in f.read_text(encoding="utf-8"), f
