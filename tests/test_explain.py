@@ -316,3 +316,9 @@ def test_prompt_has_a_version():
     from mcf.explain.prompt import PROMPT_VERSION
 
     assert build_prompt(facts())["version"] == PROMPT_VERSION
+
+
+@pytest.mark.parametrize("over", [{"bug_share_percent": 150}, {"backlog": 0}, {"runs": 0}])
+def test_facts_reject_values_the_cli_cannot_make(over):
+    with pytest.raises(ValueError):
+        facts(**over)
