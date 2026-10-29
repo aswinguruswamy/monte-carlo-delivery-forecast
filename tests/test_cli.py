@@ -213,3 +213,94 @@ def test_nfr1_100000_rows_end_to_end(tmp_path, capsys):
     code, out, err = run(capsys, "forecast", str(p), "--backlog", "50")
     assert code == 0, err
     assert time.perf_counter() - start < 120
+
+
+# --- review fixes (PR #16) ---------------------------------------------------
+
+
+def test_nothing_after_as_of_is_used(tmp_path, capsys):
+    as_of = T - timedelta(days=50)
+    rows = [f"S-{i},Story,{as_of - timedelta(days=i % 84)},2" for i in range(42)]
+    rows += [f"B-{i},Bug,{as_of + timedelta(days=1 + i % 40)}," for i in range(100)]
+    rows += [f"L-{i},Story,{as_of + timedelta(days=1 + i % 40)},8" for i in range(300)]
+    code, out, err = run(
+        capsys, "forecast", str(write(tmp_path, rows)), "--backlog", "10", "--as-of", str(as_of)
+    )
+    assert code == 0, err
+    start = as_of - timedelta(days=83)
+    assert f"Bug share ({start} to {as_of}): 0%" in out
+    assert "42 value items done" in out
+    # 42 x 2 points / 6 = 14 per sprint; estimate 2 x 10 = 20 points (later 8-point items unused)
+    assert "14.0 points per 2 weeks; 20.0 points needed, estimated" in out
+
+
+def test_bug_share_is_for_the_window(tmp_path, capsys):
+    rows = [
+        f"S-1,Story,{T},1",
+        f"S-2,Story,{T},1",
+        f"B-1,Bug,{T},",
+        f"B-2,Bug,{T - timedelta(days=200)},",
+    ]  # outside the window
+    _, out, _ = run(capsys, "forecast", str(write(tmp_path, rows)), "--backlog", "1")
+    assert f"Bug share ({T - timedelta(days=83)} to {T}): 33%" in out
+
+
+def test_unknown_type_on_an_open_row_is_an_error(tmp_path, capsys):
+    p = write(tmp_path, [f"S-1,Story,{T},1", "O-1,Spike,,1"])
+    code, _, err = run(capsys, "forecast", str(p), "--backlog", "1")
+    assert code == 1
+    assert "unknown issue type 'Spike'" in err
+
+
+def test_bad_point_on_an_open_row_is_an_error(tmp_path, capsys):
+    p = write(tmp_path, [f"S-1,Story,{T},1", "O-1,Story,,abc"])
+    code, _, err = run(capsys, "forecast", str(p), "--backlog", "1")
+    assert code == 1
+    assert "bad Story_Point" in err
+
+
+def test_whitespace_date_is_not_an_open_item(tmp_path, capsys):
+    p = write(tmp_path, [f"S-1,Story,{T},1", "O-1,Story,  ,1"])
+    code, _, err = run(capsys, "forecast", str(p), "--backlog", "1")
+    assert code == 1
+    assert "bad Resolution_Date" in err
+
+
+def test_date_past_the_last_calendar_day_is_a_clear_error(tmp_path, capsys):
+    p = write(tmp_path, ["S-1,Story,9999-12-30,1"])
+    code, _, err = run(capsys, "forecast", str(p), "--backlog", "5")
+    assert code == 1
+    assert "mcf: error:" in err
+
+
+def test_a_folder_is_not_a_file(tmp_path, capsys):
+    code, _, err = run(capsys, "forecast", str(tmp_path), "--backlog", "5")
+    assert code == 1
+    assert "not a file" in err
+    assert str(tmp_path) in err
+
+
+def test_unreadable_file_is_a_clear_error(tmp_path, capsys, monkeypatch):
+    p = steady(tmp_path)
+
+    def deny(*args, **kwargs):
+        raise PermissionError("Permission denied")
+
+    monkeypatch.setattr(Path, "open", deny)
+    code, _, err = run(capsys, "forecast", str(p), "--backlog", "5")
+    assert code == 1
+    assert "cannot read" in err
+
+
+def test_one_item_is_singular(tmp_path, capsys):
+    _, out, _ = run(
+        capsys, "forecast", str(write(tmp_path, [f"S-1,Story,{T},1"])), "--backlog", "1"
+    )
+    assert "1 value item done" in out
+
+
+def test_tiny_backlog_points_keep_their_digits(tmp_path, capsys):
+    _, out, _ = run(
+        capsys, "forecast", str(steady(tmp_path)), "--backlog", "5", "--backlog-points", "0.0001"
+    )
+    assert "0.0001 points needed, given" in out
