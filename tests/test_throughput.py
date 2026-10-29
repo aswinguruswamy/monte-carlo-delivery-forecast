@@ -83,3 +83,53 @@ def test_window_counts_the_first_and_last_day():
 def test_window_needs_at_least_one_day():
     with pytest.raises(ThroughputError, match="at least 1 day"):
         window(D, days=0)
+
+
+# --- review findings ---------------------------------------------------------
+
+
+@pytest.mark.parametrize("bad_kind", ["Value", None, float("nan"), "story"])
+def test_unknown_kind_is_an_error_not_a_silent_zero(bad_kind):
+    df = items([(0, VALUE), (1, VALUE)])
+    df.loc[1, "kind"] = bad_kind
+    with pytest.raises(ThroughputError, match=r"unknown kind .* P-1"):
+        daily_throughput(df, D, D + timedelta(days=1))
+
+
+@pytest.mark.parametrize("missing", [pd.NaT, None])
+def test_value_item_with_no_done_day_is_a_clear_error(missing):
+    df = items([(0, VALUE), (1, VALUE)]).astype({"done_day": object})
+    df.loc[1, "done_day"] = missing
+    with pytest.raises(ThroughputError, match=r"value item P-1 has no done day"):
+        daily_throughput(df, D, D + timedelta(days=1))
+
+
+def test_table_without_done_day_column_is_an_error():
+    with pytest.raises(ThroughputError, match="done_day"):
+        daily_throughput(items([(0, VALUE)]).drop(columns="done_day"), D, D)
+
+
+@pytest.mark.parametrize(
+    "as_type",
+    [
+        lambda d: pd.Timestamp(d),
+        lambda d: pd.Timestamp(d).replace(hour=23, minute=59),
+        lambda d: pd.Timestamp(d).replace(hour=23).tz_localize("America/Toronto"),
+        lambda d: __import__("datetime").datetime(d.year, d.month, d.day, 10, 0),
+    ],
+)
+def test_datetime_like_done_days_count_on_their_calendar_day(as_type):
+    df = items([(0, VALUE), (2, VALUE)])
+    df["done_day"] = [as_type(d) for d in df["done_day"]]
+    assert daily_throughput(df, D, D + timedelta(days=2)).tolist() == [1, 0, 1]
+
+
+def test_precomputed_ordinals_give_the_same_counts():
+    from mcf.forecast.throughput import counts_from_ordinals, done_ordinals
+
+    df = items([(0, VALUE), (0, VALUE), (2, BUG), (3, VALUE)])
+    ords = done_ordinals(df)
+    start, end = D, D + timedelta(days=3)
+    assert (
+        counts_from_ordinals(ords, start, end).tolist() == daily_throughput(df, start, end).tolist()
+    )
