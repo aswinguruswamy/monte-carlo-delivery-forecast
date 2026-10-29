@@ -184,3 +184,30 @@ def test_tawos_data_loads_with_19_rows_with_no_date():
     assert sum(r.rows_no_date for r in reports.values()) == 19
     no_date = {k: r.rows_no_date for k, r in reports.items() if r.rows_no_date}
     assert no_date == {"APIKIT": 1, "DM": 2, "JSWCLOUD": 5, "MDL": 11}
+
+
+# --- re-review findings ------------------------------------------------------
+
+
+def test_unclosed_quote_is_an_error_not_lost_rows(tmp_path):
+    header = "Issue_Key,Type,Status,Resolution_Date,Story_Point,Note\n"
+    body = (
+        'P-1,Story,Done,2020-01-01 10:00:00,1,"oops\n'
+        "P-2,Story,Done,2020-01-02 10:00:00,1,x\n"
+        "P-3,Story,Done,2020-01-03 10:00:00,1,x\n"
+    )
+    with pytest.raises(LoadError, match=r"P\.csv, line \d+: not a readable CSV file"):
+        load_issues(write(tmp_path, body, header=header))
+
+
+@pytest.mark.parametrize("bad", ["1_000", "３", "1e400"])
+def test_story_point_must_be_a_plain_decimal(tmp_path, bad):
+    with pytest.raises(LoadError, match=r"bad Story_Point"):
+        load_issues(write(tmp_path, f"P-1,Story,Done,2020-01-01 10:00:00,{bad}\n"))
+
+
+def test_all_null_file_keeps_the_column_types(tmp_path):
+    issues, report = load_issues(write(tmp_path, "P-1,Story,Open,NULL,1\n"))
+    assert report.rows_kept == 0
+    assert list(issues.columns) == ["issue_key", "type", "done_day", "story_point"]
+    assert issues["issue_key"].dtype == object and issues["story_point"].dtype == float
