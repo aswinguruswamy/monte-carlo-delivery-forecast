@@ -203,7 +203,8 @@ def test_projects_are_numbered_in_alphabetical_file_order(tmp_path):
 
 def test_same_seed_gives_the_same_output(tmp_path):
     write_project(tmp_path, "A", [(d, "Story", 2.0) for d in range(200) for _ in range(d % 3)])
-    out1, out2 = tmp_path / "1.csv", tmp_path / "2.csv"
+    (tmp_path / "out").mkdir()
+    out1, out2 = tmp_path / "out" / "1.csv", tmp_path / "out" / "2.csv"
     write_cases(run_backtest(tmp_path, sizes=(10, 25), runs=200, tie_rule="mean")[0], out1)
     write_cases(run_backtest(tmp_path, sizes=(10, 25), runs=200, tie_rule="mean")[0], out2)
     assert out1.read_bytes() == out2.read_bytes()
