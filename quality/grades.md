@@ -108,3 +108,20 @@ Note for the PM: the ADR rule (only NULL = no date) makes open items with an emp
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review finished before the approval request | — |
 
 Result: pass — no ❌. Item 5 closes when the PM decides D04.1.
+
+## Ticket MCF-13 — 2026-10-29 — grader: builder pre-check (judgement items also covered by the separate-session review)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira transition and brief at 04:39Z; first commit 96430d3 after it | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-13-throughput`; each commit "MCF-13: …" | — |
+| 3 | CI green on the PR | ✅ | cfe4cab green; final head rechecked before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_throughput.py` (22 tests); failing tests committed first twice | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D04.1 (logged) | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | 🟡 | "Approve with changes", no blockers; 4 items fixed. The reviewer is a separate subagent with its own context, but it runs inside the builder's session | PM to decide if a subagent counts as independent (pm-toolkit rule) |
+| 8 | Each acceptance criterion met | ✅ | AC1 hand calculation; AC2 zero days kept; AC3 only value (unknown kind = error); AC4 window t−83..t tested at both ends; AC5 start > end error | — |
+| 9 | README and rule pages match | ✅ | Matches ADR 0002 History window and Monte Carlo step 1 | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review finished before the approval request | — |
+
+Result: pass — no ❌. Item 7 also applies to MCF-7 to MCF-12 (same review set-up).
