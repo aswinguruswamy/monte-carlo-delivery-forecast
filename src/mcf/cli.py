@@ -23,6 +23,8 @@ from mcf.data.types import (
     TypeSummary,
     sort_types,
 )
+from mcf.explain.check import explain_checked
+from mcf.explain.client import urllib_transport
 from mcf.forecast.montecarlo import (
     RUNS,
     SEED,
@@ -32,6 +34,8 @@ from mcf.forecast.montecarlo import (
 from mcf.forecast.throughput import ThroughputError, counts_from_ordinals, done_ordinals, window
 from mcf.forecast.velocity import VelocityError, velocity_date, window_velocity
 from mcf.result import ForecastFacts, report_number, report_percent
+
+TRANSPORT = urllib_transport  # replaced by a fake in tests (NFR8)
 
 
 def _positive_int(text: str) -> int:
@@ -116,6 +120,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=SEED,
         metavar="S",
         help=f"random seed, for repeatable dates (default: {SEED})",
+    )
+    fc.add_argument(
+        "--explain",
+        action="store_true",
+        help="add a short explanation by Claude (needs ANTHROPIC_API_KEY). Every number and "
+        "date in it is checked; if a check fails, only the plain report is shown",
     )
     return parser
 
@@ -227,6 +237,12 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         print(forecast(args))
+        if getattr(args, "explain", False):
+            text, reason = explain_checked(compute(args), transport=TRANSPORT)
+            if text is not None:
+                print(f"\nExplanation (AI, checked):\n{text}")
+            else:
+                print(f"\nAI explanation not shown: {reason}")
     except (
         LoadError,
         IssueTypeError,
