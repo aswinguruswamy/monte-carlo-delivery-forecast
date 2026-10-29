@@ -133,3 +133,19 @@ def test_precomputed_ordinals_give_the_same_counts():
     assert (
         counts_from_ordinals(ords, start, end).tolist() == daily_throughput(df, start, end).tolist()
     )
+
+
+# --- review fixes (PR #14) ---------------------------------------------------
+
+
+def test_missing_issue_key_column_is_an_error():
+    with pytest.raises(ThroughputError, match="issue_key"):
+        daily_throughput(items([(0, VALUE)]).drop(columns="issue_key"), D, D)
+
+
+def test_mixed_timezone_days_are_a_clear_error():
+    df = items([(0, VALUE), (1, VALUE)]).astype({"done_day": object})
+    df.loc[0, "done_day"] = pd.Timestamp("2020-03-01 10:00", tz="UTC")
+    df.loc[1, "done_day"] = pd.Timestamp("2020-03-02 10:00")
+    with pytest.raises(ThroughputError, match="done day"):
+        daily_throughput(df, D, D + timedelta(days=1))
