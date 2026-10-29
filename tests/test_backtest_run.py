@@ -20,6 +20,7 @@ from mcf.backtest.run import (
     run_backtest,
     run_project,
     write_cases,
+    write_summaries,
 )
 from mcf.data.types import sort_types
 from mcf.forecast.montecarlo import case_generator, forecast_dates
@@ -57,7 +58,8 @@ def test_sizes_are_the_adr_sizes():
 
 
 def test_first_date_is_first_value_day_plus_83_then_every_14_days():
-    issues = table([(5, "Bug", float("nan"))] + daily(200))  # the bug day does not count
+    # A bug 10 days before the first value item: it must not move the first date.
+    issues = table([(-10, "Bug", float("nan"))] + daily(200))
     ts = forecast_dates_for(issues, 10)
     assert ts[0] == D0 + timedelta(days=83)
     assert all((b - a).days == 14 for a, b in zip(ts, ts[1:], strict=False))
@@ -213,7 +215,7 @@ def test_same_seed_gives_the_same_output(tmp_path):
     assert "A-" not in text  # no issue rows (D08)
 
 
-def test_empty_rows_in_the_data_stop_the_run(tmp_path):
+def test_back_test_loads_with_adr_rule_3_so_an_empty_date_stops_it(tmp_path):
     (tmp_path / "A.csv").write_text(
         "Issue_Key,Type,Resolution_Date,Story_Point\nA-1,Story,,1\n", encoding="utf-8"
     )
@@ -230,3 +232,83 @@ def test_tie_rule_is_required(tmp_path):
     write_project(tmp_path, "A", daily(120))
     with pytest.raises(TypeError):
         run_backtest(tmp_path, sizes=(10,), runs=10)  # type: ignore[call-arg]
+
+
+# --- review fixes (PR #17) ---------------------------------------------------
+
+
+def test_velocity_speed_uses_only_the_window():
+    base = daily(300)
+    t = D0 + timedelta(days=83 + 28)
+    later = (t - D0).days + 1
+    changed = [(o, ty, (pt * 5 if o >= later else pt)) for o, ty, pt in base]
+    changed += [(o, "Story", 1.0) for o in range(later, 300) for _ in range(3)]
+    assert window_velocity(table(base), t) == window_velocity(table(changed), t)
+    b, _ = run_project(table(changed), "P", 0, sizes=(10,), runs=50, tie_rule="row")
+    case = next(c for c in b if c.t == t)
+    speed = window_velocity(table(base), t)  # the speed known on day t
+    assert case.velocity == velocity_date(t, speed, points_needed(table(changed), t, 10, "row"))
+
+
+def test_rows_out_of_date_order_keep_file_order_within_a_day():
+    # 20 rows, not in date order. Day 3 holds 4 items with 1, 2, 3, 4 points in file order,
+    # mixed with other days. The 2nd item after day 0 is the 1st item of day 3.
+    rows = []
+    for k in range(4):
+        rows.append((10 + k, "Story", 50.0))
+        rows.append((3, "Story", float(k + 1)))
+        rows.append((1, "Story", 7.0)) if k == 0 else rows.append((20 + k, "Story", 9.0))
+    rows += [(30 + k, "Story", 2.0) for k in range(8)]
+    rows = rows[::-1]  # reverse: day 3 file order is now 4, 3, 2, 1
+    issues = table(rows)
+    assert len(issues) == 20
+    assert actual_date(issues, D0, 2) == D0 + timedelta(days=3)
+    assert points_needed(issues, D0, 2, "row") == 7.0 + 4.0  # first day-3 row in the file
+    assert points_needed(issues, D0, 3, "row") == 7.0 + 4.0 + 3.0
+    assert points_needed(issues, D0, 2, "mean") == 7.0 + 2.5
+
+
+def test_short_dates_counted_for_each_size():
+    # one item a day on days 0..199; dates 83 + 14k <= 199 (k = 0..8, 9 dates)
+    # N = 10: t <= 189 -> 8 dates, 1 short; N = 50: t <= 149 -> 5 dates, 4 short;
+    # N = 25: t <= 174 -> 7 dates, 2 short.
+    _, summary = run_project(table(daily(200)), "P", 0, sizes=(10, 25, 50), runs=20, tie_rule="row")
+    assert summary.cases == {10: 8, 25: 7, 50: 5}
+    assert summary.short_dates == {10: 1, 25: 2, 50: 4}
+
+
+def test_summaries_are_written_with_the_load_counts(tmp_path):
+    write_project(tmp_path, "A", daily(120) + [(5, "Story", 1.0)])
+    (tmp_path / "A.csv").write_text(
+        (tmp_path / "A.csv").read_text() + "A-x,Story,NULL,1\n", encoding="utf-8"
+    )
+    _, summaries = run_backtest(tmp_path, sizes=(10, 50), runs=20, tie_rule="row")
+    out = tmp_path / "out"
+    out.mkdir()
+    write_summaries(summaries, out / "projects.csv")
+    lines = (out / "projects.csv").read_text().splitlines()
+    assert lines[0] == "project,p,rows_read,rows_no_date,n,cases,no_forecast,short_dates"
+    assert lines[1].startswith("A,0,122,1,10,")
+    assert lines[2] == "A,0,122,1,50,0,0," + lines[2].split(",")[-1]  # listed with 0 cases
+
+
+def test_files_must_match_the_manifest(tmp_path):
+    write_project(tmp_path, "A", daily(120))
+    good = {"files": [{"name": "A.csv", "sha256": _sha(tmp_path / "A.csv")}]}
+    run_backtest(tmp_path, sizes=(10,), runs=10, tie_rule="row", manifest=good)
+    write_project(tmp_path, "B", daily(120))
+    with pytest.raises(BacktestError, match="B.csv"):
+        run_backtest(tmp_path, sizes=(10,), runs=10, tie_rule="row", manifest=good)
+    (tmp_path / "B.csv").unlink()
+    bad = {"files": [{"name": "A.csv", "sha256": "0" * 64}]}
+    with pytest.raises(BacktestError, match="checksum"):
+        run_backtest(tmp_path, sizes=(10,), runs=10, tie_rule="row", manifest=bad)
+    missing = {"files": [*good["files"], {"name": "C.csv", "sha256": "0" * 64}]}
+    with pytest.raises(BacktestError, match="C.csv"):
+        run_backtest(tmp_path, sizes=(10,), runs=10, tie_rule="row", manifest=missing)
+
+
+def _sha(path: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(path.read_bytes()).hexdigest()
