@@ -7,58 +7,80 @@ whole day. There is no rounding to the end of a sprint.
 
 Velocity 0 means "no forecast" (ADR 0002, Cases with no forecast): an error,
 never a date.
+
+Day t must be a calendar date (`datetime.date`), not a date and time, so the
+window holds whole days. Story points are checked on every value row, also rows
+done after t: `load_issues` already rejects bad points, so a bad point here is a
+bad input table.
 """
 
 from __future__ import annotations
 
 import math
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
+import numpy as np
 import pandas as pd
 
 from mcf.data.types import VALUE
-from mcf.forecast.throughput import KINDS, WINDOW_DAYS, window
+from mcf.forecast.throughput import WINDOW_DAYS, ThroughputError, done_ordinals, window
 
 SPRINT_DAYS = 14
 SPRINTS = WINDOW_DAYS // SPRINT_DAYS  # 6
-_FLOAT_TOLERANCE = 1e-9  # in days; float error is far smaller, real data steps are 1 day
+# Float error in points / velocity x 14 is about 1e-13 days for real data. Real
+# results that are not whole days differ from a whole day by far more than 1e-9
+# (points have at most a few decimals), so this never rounds a real fraction down.
+_FLOAT_TOLERANCE = 1e-9
 
 
 class VelocityError(ValueError):
     """Velocity or a velocity date cannot be calculated from this input."""
 
 
+def _check_day(t: object) -> None:
+    if isinstance(t, datetime) or not isinstance(t, date):
+        raise VelocityError(f"day t must be a calendar date (datetime.date), got {t!r}")
+
+
+def _number(value: object, name: str) -> float:
+    if isinstance(value, bool | np.bool_) or not isinstance(value, int | float | np.number):
+        raise VelocityError(f"bad {name} {value!r}")
+    return float(value)
+
+
 def window_velocity(issues: pd.DataFrame, t: date) -> float:
     """Return the story points per 2-week sprint in the 84-day window ending on day t."""
-    for column in ("kind", "done_day", "story_point"):
-        if column not in issues.columns:
-            raise VelocityError(f"the table has no {column!r} column; run sort_types first")
-
-    bad_kind = ~issues["kind"].isin(KINDS)
-    if bad_kind.any():
-        raise VelocityError(f"unknown kind {issues.loc[bad_kind, 'kind'].iloc[0]!r}")
+    _check_day(t)
+    if "story_point" not in issues.columns:
+        raise VelocityError("the table has no 'story_point' column; run sort_types first")
+    try:
+        ordinals = done_ordinals(issues)
+    except ThroughputError as exc:
+        raise VelocityError(str(exc)) from exc
 
     value_rows = issues[issues["kind"] == VALUE]
-    days = pd.to_datetime(value_rows["done_day"], errors="coerce")
-    if days.isna().any():
-        key = value_rows.loc[days.isna(), "issue_key"].iloc[0]
-        raise VelocityError(f"value item {key} has no done day")
-    if getattr(days.dt, "tz", None) is not None:
-        days = days.dt.tz_localize(None)  # keep the recorded wall-clock day
-    days = days.dt.normalize()
-
-    points = value_rows["story_point"].astype(float)
-    if points.isna().any() or not points.map(math.isfinite).all() or (points <= 0).any():
-        key = value_rows.loc[~(points > 0) | ~points.map(math.isfinite), "issue_key"].iloc[0]
-        raise VelocityError(f"value item {key} has a bad story point")
+    points = np.empty(len(value_rows), dtype=float)
+    for i, (key, point) in enumerate(
+        zip(value_rows["issue_key"], value_rows["story_point"], strict=True)
+    ):
+        try:
+            number = _number(point, "story point")
+        except VelocityError:
+            raise VelocityError(f"value item {key} has a bad story point {point!r}") from None
+        if not math.isfinite(number) or number <= 0:
+            raise VelocityError(f"value item {key} has a bad story point {point!r}")
+        points[i] = number
 
     start, end = window(t)
-    in_window = (days >= pd.Timestamp(start)) & (days <= pd.Timestamp(end))
+    in_window = (ordinals >= start.toordinal()) & (ordinals <= end.toordinal())
     return float(points[in_window].sum()) / SPRINTS
 
 
 def velocity_date(t: date, velocity: float, points_needed: float) -> date:
     """Return t + (points_needed / velocity) x 14 days, rounded up to a whole day."""
+    _check_day(t)
+    velocity = _number(velocity, "velocity")
+    points_needed = _number(points_needed, "points needed")
     if not math.isfinite(velocity) or velocity < 0:
         raise VelocityError(f"bad velocity {velocity!r}")
     if velocity == 0:
@@ -67,6 +89,11 @@ def velocity_date(t: date, velocity: float, points_needed: float) -> date:
         raise VelocityError(f"bad points needed {points_needed!r}")
 
     exact = points_needed / velocity * SPRINT_DAYS
+    if not math.isfinite(exact):
+        raise VelocityError(f"no date: {points_needed} points at velocity {velocity} is too far")
     nearest = round(exact)
     days = nearest if abs(exact - nearest) <= _FLOAT_TOLERANCE else math.ceil(exact)
-    return t + timedelta(days=days)
+    try:
+        return t + timedelta(days=days)
+    except OverflowError as exc:
+        raise VelocityError(f"no date: {days} days after {t} is past the last date") from exc

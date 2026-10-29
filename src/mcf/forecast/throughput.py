@@ -38,7 +38,7 @@ def done_ordinals(issues: pd.DataFrame) -> np.ndarray:
 
     The calendar day is the day as recorded (a time zone is not converted).
     """
-    for column in ("kind", "done_day"):
+    for column in ("issue_key", "kind", "done_day"):
         if column not in issues.columns:
             raise ThroughputError(f"the table has no {column!r} column; run sort_types first")
 
@@ -48,7 +48,10 @@ def done_ordinals(issues: pd.DataFrame) -> np.ndarray:
         raise ThroughputError(f"unknown kind {row['kind']!r} for {row['issue_key']}")
 
     value_rows = issues[issues["kind"] == VALUE]
-    days = pd.to_datetime(value_rows["done_day"], errors="coerce")
+    try:
+        days = pd.to_datetime(value_rows["done_day"], errors="coerce")
+    except (TypeError, ValueError) as exc:  # for example, mixed time zones
+        raise ThroughputError(f"a value item has a done day that cannot be read: {exc}") from exc
     if days.isna().any():
         key = value_rows.loc[days.isna(), "issue_key"].iloc[0]
         raise ThroughputError(f"value item {key} has no done day")
