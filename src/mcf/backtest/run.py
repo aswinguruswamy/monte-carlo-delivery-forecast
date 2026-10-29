@@ -6,9 +6,10 @@ MCF-18. Only the window t-83..t feeds the Monte Carlo and velocity speed; the
 points needed of the next N items come from after t by ADR design (Velocity
 method 4).
 
-`tie_rule` (proposed D29) says which points count when the N-th item's day
-holds more items than needed: "row" = file row order; "mean" = the mean points
-of that day's items x the number needed. It has no default: the PM decides.
+`tie_rule` says which points count when the N-th item's day holds more items
+than needed: "row" = file row order; "mean" = the mean points of that day's
+items x the number needed. D29 (PM, 2026-10-29, before any run) chose "mean";
+the command line uses it. The library function keeps it explicit.
 """
 
 from __future__ import annotations
@@ -137,7 +138,7 @@ def actual_date(issues: pd.DataFrame, t: date, n: int) -> date:
 
 
 def points_needed(issues: pd.DataFrame, t: date, n: int, tie_rule: str) -> float:
-    """The story points of the next n value items done after day t (proposed D29)."""
+    """The story points of the next n value items done after day t (D29)."""
     return _points_needed(*_value_items(issues), t, n, tie_rule)
 
 

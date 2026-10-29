@@ -1,7 +1,7 @@
-"""Run the back-test: `python -m mcf.backtest --data data --out results --tie-rule R`.
+"""Run the back-test: `python -m mcf.backtest --data data --out results`.
 
 The data must be exactly the 29 manifest files with matching SHA-256 (D08). The
-tie rule (D29) has no default. Writes cases.csv and projects.csv. No issue rows.
+same-day tie rule is "mean" (D29). Writes cases.csv and projects.csv. No issue rows.
 """
 
 from __future__ import annotations
@@ -23,7 +23,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m mcf.backtest", description=__doc__)
     parser.add_argument("--data", required=True, type=Path, help="folder with the TAWOS CSV files")
     parser.add_argument("--out", required=True, type=Path, help="folder for the result files")
-    parser.add_argument("--tie-rule", required=True, choices=TIE_RULES, help="D29 rule")
+    parser.add_argument(
+        "--tie-rule", default="mean", choices=TIE_RULES, help="same-day tie rule (D29: mean)"
+    )
     parser.add_argument("--runs", type=int, default=RUNS, help=f"runs per case (ADR: {RUNS})")
     args = parser.parse_args(argv)
     try:
