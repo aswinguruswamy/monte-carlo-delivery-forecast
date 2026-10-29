@@ -332,12 +332,19 @@ def test_command_line_writes_cases_and_summaries(tmp_path, monkeypatch):
     assert (out / "projects.csv").read_text().startswith("project,p,rows_read,")
 
 
-def test_command_line_needs_the_tie_rule(tmp_path):
+def test_command_line_tie_rule_is_d29_mean(tmp_path, monkeypatch):
     import mcf.backtest.__main__ as cli
 
-    with pytest.raises(SystemExit) as exc:
-        cli.main(["--data", str(tmp_path), "--out", str(tmp_path / "o")])
-    assert exc.value.code == 2
+    seen = {}
+
+    def fake_run(data, **kwargs):
+        seen.update(kwargs)
+        return [], []
+
+    monkeypatch.setattr(cli, "run_backtest", fake_run)
+    assert cli.main(["--data", str(tmp_path), "--out", str(tmp_path / "o")]) == 0
+    assert seen["tie_rule"] == "mean"
+    assert seen["runs"] == 10_000
 
 
 def test_command_line_stops_on_a_file_not_in_the_manifest(tmp_path, monkeypatch, capsys):
