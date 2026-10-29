@@ -210,7 +210,10 @@ def _compute_with_load(args: argparse.Namespace) -> tuple[ForecastFacts, LoadRep
 
 
 def forecast(args: argparse.Namespace) -> str:
-    f, _ = _compute_with_load(args)
+    return render(_compute_with_load(args)[0], args)
+
+
+def render(f: ForecastFacts, args: argparse.Namespace) -> str:
     t_note = "--as-of" if args.as_of is not None else "last done day in the file"
     points_note = "estimated" if f.points_estimated else "given"
     share = f"{f.bug_share_percent}%" if f.bug_share_percent is not None else "n/a"
@@ -236,9 +239,10 @@ def forecast(args: argparse.Namespace) -> str:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        print(forecast(args))
+        facts = _compute_with_load(args)[0]
+        print(render(facts, args))
         if getattr(args, "explain", False):
-            text, reason = explain_checked(compute(args), transport=TRANSPORT)
+            text, reason = explain_checked(facts, transport=TRANSPORT)
             if text is not None:
                 print(f"\nExplanation (AI, checked):\n{text}")
             else:

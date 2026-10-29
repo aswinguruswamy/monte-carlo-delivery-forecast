@@ -131,7 +131,7 @@ def test_good_text_is_returned():
 
 def test_text_with_a_wrong_number_is_dropped():
     text, reason = explain_checked(facts(), transport=transport("It needs 41 items."), api_key="k")
-    assert text is None and "41" in reason
+    assert text is None and reason == "a number or date in it is not in the result"
 
 
 def test_api_failure_gives_no_text_and_a_reason():
