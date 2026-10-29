@@ -217,3 +217,80 @@ def test_published_report_matches_the_published_metrics():
         "rows_no_date": int(re.search(r"(\d+) rows with no resolution date", report).group(1)),
     }
     assert render_report(metrics, info) == report
+
+
+# --- separate-chat review fixes (PR #19) -------------------------------------
+
+
+def test_projects_with_no_case_for_a_size_are_listed():
+    text = render_report(metrics(), INFO)
+    assert (
+        "Projects with no case for a size N: ALPHA (N = 50), BETA (N = 50), GAMMA (N = 50)." in text
+    )
+
+
+def test_scored_cases_column_name():
+    text = render_report(metrics(), INFO)
+    assert "| Project | Cases scored | Calibration 85%" in text
+    assert "| N | Cases scored |" in text
+
+
+def test_status_versus_resolution_is_explained_with_counts():
+    limits = render_report(metrics(), INFO).split("## Limits")[1].split("\n## ")[0]
+    assert "Won't Fix (1,032)" in limits
+    assert "Invalid (408)" in limits
+    assert "every Resolution value in the extract is a completed value" in limits
+
+
+def test_measure_2_limit_sentence_depends_on_the_result():
+    win = render_report(metrics(mc_err=1, v_err=3), INFO)
+    loss = render_report(metrics(mc_err=3, v_err=1), INFO)
+    assert "this Monte Carlo win on measure 2 is conservative" in win
+    assert "conservative" not in loss
+    assert "a Monte Carlo loss on measure 2 tells less" in loss
+
+
+def test_small_non_robust_win_is_named_in_the_limit():
+    # one project: interval is a single value, so build two projects with a known 0 lower end
+    m = metrics(mc_err=1, v_err=3)
+    m["bootstrap"]["median_error_difference_95ci"] = [0.0, 6.0]
+    limits = render_report(m, INFO).split("## Limits")[1].split("\n## ")[0]
+    assert "small and not robust" in limits
+
+
+def test_d29_and_d30_are_named_next_to_the_no_change_statement():
+    text = render_report(metrics(hits=1, total=4), INFO)
+    assert "D29 and D30 completed two details that the ADR did not set" in text
+    assert "D29 came before the run, and D30 came before the metrics" in text
+
+
+def test_case_selection_limit():
+    limits = render_report(metrics(), INFO).split("## Limits")[1].split("\n## ")[0]
+    assert "a forecast date exists only when at least N value items were done after it" in limits
+
+
+def test_reproduce_steps_are_complete():
+    section = render_report(metrics(), INFO).split("## Reproduce")[1]
+    assert 'pip install -e ".[dev]"' in section
+    assert "python -m mcf.backtest.report --results results" in section
+
+
+def test_status_counts_match_the_data():
+    """The fixed status counts in the report equal the TAWOS extract (skipped without data)."""
+    import csv
+    from collections import Counter
+    from pathlib import Path
+
+    from mcf.backtest.report import STATUS_COUNTS
+
+    data = Path(__file__).resolve().parents[1] / "data"
+    files = sorted(data.glob("*.csv"))
+    if len(files) != 29:
+        pytest.skip("TAWOS data not downloaded")
+    counts = Counter()
+    for f in files:
+        with f.open(newline="", encoding="utf-8-sig") as fh:
+            for row in csv.DictReader(fh):
+                if row["Resolution_Date"] != "NULL":
+                    counts[row["Status"]] += 1
+    assert {k: counts[k] for k in STATUS_COUNTS} == STATUS_COUNTS
