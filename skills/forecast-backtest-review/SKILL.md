@@ -29,7 +29,7 @@ python -m mcf.backtest.metrics --cases results/cases.csv --projects results/proj
 
 ## Step 3 — judgement checks (a script cannot make these)
 
-1. **Method before results:** read the Decision Log. Was each method detail decided before the results it affects? D29 (same-day tie rule) must be before the first run; D30 (bootstrap details) must be before the metrics. Any later change needs a new decision and a before-and-after report (ADR 0002 Change rule).
+1. **Method before results:** check the rule of method before results. Read the Decision Log. Was each method detail decided before the results it affects? D29 (same-day tie rule) must be before the first run; D30 (bootstrap details) must be before the metrics. Any later change needs a new decision and a before-and-after report (ADR 0002 Change rule).
 2. **Overclaim:** look for words that overclaim, that is, claim more than the numbers show ("proves", "always", "reliable", a win that the bootstrap interval does not support). A small, non-robust lead must be called small.
 3. **Limits:** the extract (story points only, resolved as completed), 2-week periods, velocity's future points, overlapping cases, case selection.
 4. **Data terms:** TAWOS terms of use, no tracing to individual contributors, citations, no issue rows.
