@@ -329,3 +329,20 @@ Result: pass — no ❌. Items 6 and 8 close when the live run on `main` reports
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
 Result: pass — no ❌. Item 8 closed by D36.
+
+## Ticket MCF-29 — 2026-11-03 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-29-date-overflow`; each commit "MCF-29: …"; the web chart overflow went to a new ticket (MCF-30) | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
+| 4 | PR adds tests | ✅ | Regression test first (55a356b fails on the old code, reviewer checked); boundary test 0001-03-24 / 0001-03-25 | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D37 (logged) | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: "Approve with changes", 0 blockers; 1 should-fix outside scope → MCF-30; message nice-to-have done with tests first | — |
+| 8 | Each acceptance criterion met | ✅ | Clear `mcf: error:` and exit 1; no traceback (subprocess test); same text on the page in page words | — |
+| 9 | README and rule pages match | n/a | No user-facing doc change | — |
+| 10 | Workflow steps followed | ✅ | Brief, regression test first, review before approval | — |
+
+Result: pass — no ❌.
