@@ -20,7 +20,9 @@ def test_requirements_installs_this_package_with_the_web_extra():
         for ln in (ROOT / "requirements.txt").read_text().splitlines()
         if ln.strip() and not ln.strip().startswith("#")
     ]
-    assert lines == [".[web]"]
+    # editable install: the app then finds examples/sample_team.csv in the checkout
+    # (a normal install puts the package in site-packages, and the sample is lost)
+    assert lines == ["-e .[web]"]
 
 
 def test_no_dependency_file_takes_priority_over_requirements_txt():
@@ -42,6 +44,8 @@ def test_demo_doc_gives_the_deploy_settings():
         "Do not add `ANTHROPIC_API_KEY`",
         "scripts/browser_check.py --url",
         "scripts/record_demo.py",
+        "wake",
+        "?embed=true",
     ):
         assert needed in doc, needed
 
@@ -60,3 +64,21 @@ def test_record_script_writes_an_mp4_without_a_key():
 
 def test_readme_links_the_demo_doc():
     assert "docs/demo.md" in (ROOT / "README.md").read_text()
+
+
+def test_the_sample_file_is_found_from_the_package_path():
+    from mcf.web import logic
+
+    assert logic.SAMPLE_FILE == ROOT / "examples" / "sample_team.csv"
+    assert logic.sample_bytes() is not None
+
+
+def test_videos_and_cloud_secrets_are_never_committed():
+    ignored = (ROOT / ".gitignore").read_text().splitlines()
+    assert "*.mp4" in ignored
+    assert ".streamlit/secrets.toml" in ignored
+
+
+def test_a_url_is_used_as_given():
+    source = (ROOT / "scripts" / "browser_check.py").read_text()
+    assert "url = args.url\n" in source
