@@ -261,3 +261,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | Brief with tool check (L8), tests first, review and re-check before approval | — |
 
 Result: pass — no ❌. Item 5 closes when the PM decides D32.
+
+## Ticket MCF-22 — 2026-11-03 — grader: builder pre-check (judgement items also covered by four subagent reviews, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-22-check`; each commit "MCF-22: …" | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_explain_check.py` (44 tests); failing tests committed first, five times | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D32, D33 (struck), D33.1 (logged) | — |
+| 6 | AI ticket evaluation | ✅ | Three adversarial reviews (30, 47 of 135, 91 of 109 bypasses) led to D33.1: a closed ID check; the 4th review found no way to print non-bank text. Live-model evaluation is MCF-23 | — |
+| 7 | Independent review with a verdict | ✅ | Four reviews; the last one: "Changes requested", 3 wording blockers + 4 should-fix items, all fixed with tests | — |
+| 8 | Each acceptance criterion met | ✅ | A number in the reply → dropped (any free text is dropped); "will" → dropped; API failure → plain report (NFR5) | — |
+| 9 | README and rule pages match | ✅ | README `--explain`; CLAUDE.md AI rules met by design | — |
+| 10 | Workflow steps followed | 🟡 | Design changes went to the PM (D33, D33.1). The bank text needs the PM's approval at Review | PM approves the bank |
+
+Result: pass — no ❌. Item 10 closes when the PM approves the bank text.
