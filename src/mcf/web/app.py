@@ -140,6 +140,9 @@ def main() -> None:
     bottom[1].metric("Velocity date", str(f.velocity_date))
     st.markdown("**The 50% date is not certain: half of the runs finish later.**")
     st.altair_chart(_chart(result), width="stretch")
+    left_out = logic.runs_not_drawn(result)
+    if left_out:
+        st.caption(f"{left_out:,} runs end after 9999-12-31 and are not drawn.")
     st.caption(
         f"{f.runs:,} simulated runs from {f.items_done} value items done between "
         f"{f.window_start} and {f.window_end}. Bars: runs that finish on each date. "

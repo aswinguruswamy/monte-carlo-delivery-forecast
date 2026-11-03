@@ -143,9 +143,20 @@ def forecast_from_bytes(
     return WebForecast(facts=facts, report=render(facts, args), finish_days=days)
 
 
+def _last_day(result: WebForecast) -> int:
+    """The largest number of days after day t that is still a calendar date."""
+    return (date.max - result.facts.t).days
+
+
+def runs_not_drawn(result: WebForecast) -> int:
+    """Runs that end after 9999-12-31: the chart leaves them out (MCF-30)."""
+    return int((result.finish_days > _last_day(result)).sum())
+
+
 def chart_table(result: WebForecast) -> pd.DataFrame:
-    """Number of simulated runs that finish on each date."""
-    days, runs = np.unique(result.finish_days, return_counts=True)
+    """Number of simulated runs that finish on each date (up to 9999-12-31)."""
+    finish = result.finish_days[result.finish_days <= _last_day(result)]
+    days, runs = np.unique(finish, return_counts=True)
     t = result.facts.t
     return pd.DataFrame(
         {
