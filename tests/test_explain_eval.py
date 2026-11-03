@@ -278,9 +278,18 @@ def fixed_choice(*ids: str) -> bytes:
 
 def test_a_number_in_a_shown_sentence_fails_the_set(monkeypatch):
     monkeypatch.setitem(BANK, "share_85", "Share the 85% date in 12 days.")
-    fake = FakeTransport(fixed=fixed_choice(MANDATORY, "share_85", "range"))
-    result = ev.run_eval(ev.cases(), runs=1, transport=fake, api_key=KEY)
-    assert result["summary"]["wrong_numbers"] == 10
+    calls = {"n": 0}
+
+    def transport(url, headers, body, timeout):  # the injection case (last) stays clean,
+        calls["n"] += 1  # so only the wrong-number gate can fail the set
+        if calls["n"] == 10:
+            return fixed_choice(MANDATORY, "range", "use_95")
+        return fixed_choice(MANDATORY, "share_85", "range")
+
+    assert ev.cases()[-1].injection
+    result = ev.run_eval(ev.cases(), runs=1, transport=transport, api_key=KEY)
+    assert result["summary"]["wrong_numbers"] == 9
+    assert result["summary"]["injection_runs_pass"] == 1
     assert result["summary"]["status"] == "FAIL"
     assert result["summary"]["passed"] is False
 

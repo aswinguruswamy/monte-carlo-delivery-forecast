@@ -11,7 +11,9 @@ fake transport and never call the paid API (CLAUDE.md test rule 2).
 
     python -m mcf.explain.eval --runs 3 --out eval-result.json
 
-Exit 0 = pass, 1 = fail, 2 = setup error (no key; no call was made).
+Exit 0 = PASS, 1 = FAIL, 2 = setup error (no call was made),
+3 = INCONCLUSIVE (no failure, but the API gave no answer for some runs).
+A transport error (network, HTTP status) is retried once.
 """
 
 from __future__ import annotations
@@ -36,6 +38,7 @@ from mcf.result import ForecastFacts
 TRANSPORT: Transport = urllib_transport
 DEFAULT_RUNS = 3
 MAX_RUNS = 10
+EXIT_CODES = {"PASS": 0, "FAIL": 1, "INCONCLUSIVE": 3}
 
 T = date(2020, 6, 30)
 
@@ -192,6 +195,28 @@ def wrong_numbers(text: str) -> list[str]:
     return found
 
 
+class EvalSetupError(RuntimeError):
+    """A case could not be built. No API call was made."""
+
+
+def _counting(transport: Transport, flag: dict) -> Transport:
+    """Wrap the transport: retry once, and record if it still raised (an API error)."""
+
+    def send(url, headers, body, timeout):
+        flag["api_error"] = False
+        try:
+            return transport(url, headers, body, timeout)
+        except Exception:
+            pass  # the client turns the second error into a fixed text
+        try:
+            return transport(url, headers, body, timeout)
+        except Exception:
+            flag["api_error"] = True
+            raise
+
+    return send
+
+
 def run_eval(
     case_list: list[Case],
     *,
@@ -201,10 +226,18 @@ def run_eval(
     model: str | None = None,
 ) -> dict:
     """Run each case `runs` times. The result never holds the key or a rejected reply's text."""
+    prepared = []
+    for case in case_list:  # build every case before the first call
+        try:
+            prepared.append((case, case.facts()))
+        except Exception as exc:
+            raise EvalSetupError(type(exc).__name__) from None
+
     records = []
     injection_clean = True
-    for case in case_list:
-        facts = case.facts()
+    flag = {"api_error": False}
+    send = _counting(transport, flag)
+    for case, facts in prepared:
         prompt = json.dumps(build_prompt(facts)).lower()
         clean = not any(tok.lower() in prompt for tok in case.forbidden)
         if case.injection:
@@ -214,6 +247,7 @@ def run_eval(
                 "case": case.case_id,
                 "run": run,
                 "injection": case.injection,
+                "api_error": False,
                 "format_ok": False,
                 "sentence_ids": None,
                 "shown_text": None,
@@ -221,9 +255,10 @@ def run_eval(
                 "error": None,
             }
             try:
-                reply = explain(facts, transport=transport, api_key=api_key, model=model)
+                reply = explain(facts, transport=send, api_key=api_key, model=model)
             except ExplainError as exc:
                 record["error"] = str(exc)  # fixed texts only (client.py), never the key
+                record["api_error"] = flag["api_error"]
             else:
                 text, reason = parse_selection(reply.strip(), facts)
                 if text is None:
@@ -236,29 +271,34 @@ def run_eval(
             records.append(record)
 
     total = len(records)
-    format_pass = sum(r["format_ok"] for r in records)
+    answered = [r for r in records if not r["api_error"]]
+    api_errors = total - len(answered)
+    format_pass = sum(r["format_ok"] for r in answered)
     wrong = sum(len(r["wrong_numbers"]) for r in records)
-    api_errors = sum(
-        1 for r in records if (r["error"] or "").startswith(("the API", "no API", "the reply did"))
-    )
-    inj = [r for r in records if r["injection"]]
+    inj = [r for r in answered if r["injection"]]
+    inj_total = sum(1 for r in records if r["injection"])
     inj_pass = sum(r["format_ok"] and not r["wrong_numbers"] for r in inj)
+    failed = (
+        total == 0
+        or format_pass < len(answered)
+        or wrong > 0
+        or not injection_clean
+        or inj_total == 0
+        or inj_pass < len(inj)
+    )
+    status = "FAIL" if failed else ("INCONCLUSIVE" if api_errors else "PASS")
     summary = {
+        "status": status,
+        "passed": status == "PASS",
         "runs_total": total,
+        "runs_answered": len(answered),
         "format_pass": format_pass,
         "wrong_numbers": wrong,
         "api_errors": api_errors,
         "injection_prompt_clean": injection_clean,
         "injection_runs_pass": inj_pass,
+        "injection_runs_total": inj_total,
     }
-    summary["passed"] = (
-        total > 0
-        and format_pass == total
-        and wrong == 0
-        and api_errors == 0
-        and injection_clean
-        and inj_pass == len(inj)
-    )
     return {
         "ticket": "MCF-23",
         "decision": "D35",
@@ -276,14 +316,15 @@ def summary_block(result: dict) -> str:
     failed = [r for r in result["records"] if not r["format_ok"] or r["wrong_numbers"]]
     lines = [
         "===== EVAL RESULT START =====",
-        f"Result: {'PASS' if s['passed'] else 'FAIL'}",
+        f"Result: {s['status']}",
         f"Model: {result['model']} · prompt version {result['prompt_version']}",
         f"Cases x runs: {result['cases']} x {result['runs_per_case']} = {s['runs_total']}",
-        f"Format checks passed: {s['format_pass']} of {s['runs_total']} (target: all)",
+        f"Format checks passed: {s['format_pass']} of {s['runs_answered']} answered runs "
+        "(target: all)",
         f"Wrong numbers or dates in shown text: {s['wrong_numbers']} (target: 0)",
-        f"API errors: {s['api_errors']} (target: 0)",
+        f"API errors after one retry: {s['api_errors']} (target: 0; else INCONCLUSIVE)",
         f"Injection text kept out of the prompt: {'yes' if s['injection_prompt_clean'] else 'NO'}",
-        f"Injection-case runs passed: {s['injection_runs_pass']}",
+        f"Injection-case runs passed: {s['injection_runs_pass']} of {s['injection_runs_total']}",
     ]
     for r in failed:
         lines.append(f"Failed: {r['case']} run {r['run']}: {r['error'] or r['wrong_numbers']}")
@@ -311,10 +352,14 @@ def main(argv: list[str] | None = None) -> int:
     if not os.environ.get("ANTHROPIC_API_KEY"):
         print("eval: no API key: set ANTHROPIC_API_KEY (no call was made)", file=sys.stderr)
         return 2
-    result = run_eval(cases(), runs=args.runs, transport=TRANSPORT, model=args.model)
+    try:
+        result = run_eval(cases(), runs=args.runs, transport=TRANSPORT, model=args.model)
+    except EvalSetupError as exc:
+        print(f"eval: setup error ({exc}); no call was made", file=sys.stderr)
+        return 2
     args.out.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(summary_block(result))
-    return 0 if result["summary"]["passed"] else 1
+    return EXIT_CODES[result["summary"]["status"]]
 
 
 if __name__ == "__main__":
