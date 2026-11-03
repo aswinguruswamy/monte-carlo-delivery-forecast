@@ -26,6 +26,9 @@ dev = [
     "pip-licenses==5.5.5",
     "pyyaml>=6.0",
 ]
+web = [
+    "streamlit>=1.40",
+]
 
 [tool.hatch.version]
 path = "src/mcf/__init__.py"

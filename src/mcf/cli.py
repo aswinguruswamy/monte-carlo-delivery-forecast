@@ -29,7 +29,8 @@ from mcf.forecast.montecarlo import (
     RUNS,
     SEED,
     MonteCarloError,
-    forecast_dates,
+    dates_from_days,
+    simulate_days,
 )
 from mcf.forecast.throughput import ThroughputError, counts_from_ordinals, done_ordinals, window
 from mcf.forecast.velocity import VelocityError, velocity_date, window_velocity
@@ -149,6 +150,14 @@ def compute(args: argparse.Namespace) -> ForecastFacts:
 
 
 def _compute_with_load(args: argparse.Namespace) -> tuple[ForecastFacts, LoadReport]:
+    facts, load, _ = _compute_full(args)
+    return facts, load
+
+
+def _compute_full(
+    args: argparse.Namespace,
+) -> tuple[ForecastFacts, LoadReport, np.ndarray]:
+    """Return the facts, the load report and the simulated days of each run (for a chart)."""
     issues, load = load_issues(args.file, open_items=True)
     unknown = sorted({ty for ty in load.open_types if ty not in D04_KIND})
     if unknown:
@@ -173,7 +182,8 @@ def _compute_with_load(args: argparse.Namespace) -> tuple[ForecastFacts, LoadRep
             f"no forecast: no value item was done from {start} to {end}; use another --as-of"
         )
     rng = np.random.Generator(np.random.PCG64(args.seed))
-    dates = forecast_dates(t, counts, args.backlog, rng)
+    days = simulate_days(counts, args.backlog, rng)
+    dates = dates_from_days(t, days)
 
     velocity = window_velocity(issues, t)
     if args.backlog_points is not None:
@@ -190,24 +200,28 @@ def _compute_with_load(args: argparse.Namespace) -> tuple[ForecastFacts, LoadRep
         bug=int((kinds == BUG).sum()),
         not_counted=int((kinds == NOT_COUNTED).sum()),
     ).bug_share
-    return ForecastFacts(
-        t=t,
-        backlog=args.backlog,
-        window_start=start,
-        window_end=end,
-        items_done=int(counts.sum()),
-        mc50=dates[50],
-        mc85=dates[85],
-        mc95=dates[95],
-        runs=RUNS,
-        velocity_date=v_date,
-        velocity_per_sprint=report_number(float(velocity)),
-        points_needed=report_number(float(points)),
-        points_estimated=args.backlog_points is None,
-        open_items=load.rows_open,
-        rows_no_date=load.rows_no_date,
-        bug_share_percent=None if bug_share is None else report_percent(bug_share),
-    ), load
+    return (
+        ForecastFacts(
+            t=t,
+            backlog=args.backlog,
+            window_start=start,
+            window_end=end,
+            items_done=int(counts.sum()),
+            mc50=dates[50],
+            mc85=dates[85],
+            mc95=dates[95],
+            runs=RUNS,
+            velocity_date=v_date,
+            velocity_per_sprint=report_number(float(velocity)),
+            points_needed=report_number(float(points)),
+            points_estimated=args.backlog_points is None,
+            open_items=load.rows_open,
+            rows_no_date=load.rows_no_date,
+            bug_share_percent=None if bug_share is None else report_percent(bug_share),
+        ),
+        load,
+        days,
+    )
 
 
 def forecast(args: argparse.Namespace) -> str:

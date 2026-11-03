@@ -1,0 +1,6 @@
+# Streamlit settings for the MCF page (MCF-24).
+[server]
+maxUploadSize = 10  # MB; the page logic also refuses larger files
+
+[browser]
+gatherUsageStats = false  # send no usage data to Streamlit

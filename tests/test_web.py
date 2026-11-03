@@ -15,11 +15,11 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from mcf.web import logic
-from mcf.web.logic import MAX_UPLOAD_BYTES, WebError, forecast_from_bytes
 
 from mcf.cli import compute, render
 from mcf.forecast.montecarlo import SEED, percentile_days
+from mcf.web import logic
+from mcf.web.logic import MAX_UPLOAD_BYTES, WebError, forecast_from_bytes
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLE = ROOT / "examples" / "sample_team.csv"
@@ -187,3 +187,9 @@ def test_streamlit_settings_limit_uploads_and_send_no_usage_data():
 def test_logic_module_does_not_import_streamlit():
     source = (ROOT / "src" / "mcf" / "web" / "logic.py").read_text()
     assert "import streamlit" not in source
+
+
+def test_ci_tests_and_licence_scan_cover_the_web_extra():
+    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
+    assert ci.count('pip install -e ".[dev,web]"') == 2  # tests and security jobs
+    assert '/tmp/runtime/bin/pip install --quiet ".[web]"' in ci  # D19 licence scan

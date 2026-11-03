@@ -34,6 +34,15 @@ The CSV needs the columns `Issue_Key`, `Type`, `Resolution_Date` and `Story_Poin
 
 Run `mcf forecast --help` for details. The output gives the Monte Carlo 50%, 85% and 95% dates and the velocity date. **The 50% date is not certain: half of the runs finish later.**
 
+## Web page
+
+```bash
+pip install -e ".[web]"
+streamlit run streamlit_app.py
+```
+
+Use the made-up sample file ([examples/sample_team.csv](examples/sample_team.csv)) or upload your own CSV (same columns as above, 10 MB at most). Enter the backlog and see the 50%, 85% and 95% dates, the velocity date, and a chart of the simulated finish dates. The page uses the same code as `mcf forecast`, so the dates are the same. A bad file shows a clear error. The page shows no issue keys or file names. The AI explanation is on only when `ANTHROPIC_API_KEY` is set on the server. The page sends no usage data to Streamlit (`.streamlit/config.toml`).
+
 ## How it works
 
 - **Monte Carlo:** take the daily count of finished value items in the last 84 days. In one run, pick days from that history at random and add them up until the backlog is done. Do 10,000 runs. The 85% date is the day by which 85% of the runs are done.

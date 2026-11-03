@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,web]"
       - name: Style
         run: |
           ruff check .
@@ -51,13 +51,13 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,web]"
       - name: Dependency scan (pip-audit)
         run: pip-audit --skip-editable
       - name: Licence scan of runtime dependencies (pip-licenses, D19)
         run: |
           python -m venv /tmp/runtime
-          /tmp/runtime/bin/pip install --quiet .
+          /tmp/runtime/bin/pip install --quiet ".[web]"
           pip-licenses --python /tmp/runtime/bin/python \
             --fail-on="${STRONG_COPYLEFT}"
         env:

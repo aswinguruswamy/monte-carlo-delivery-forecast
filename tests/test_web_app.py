@@ -10,11 +10,11 @@ import json
 from pathlib import Path
 
 import pytest
-from mcf.web import logic
-from mcf.web.logic import forecast_from_bytes
 
 from mcf.cli import compute
 from mcf.forecast.montecarlo import SEED
+from mcf.web import logic
+from mcf.web.logic import forecast_from_bytes
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLE = ROOT / "examples" / "sample_team.csv"
@@ -72,8 +72,8 @@ def test_page_with_the_sample_shows_the_3_dates_the_velocity_date_and_the_chart(
         "95% date": str(expected.mc95),
         "Velocity date": str(expected.velocity_date),
     }
-    assert len(at.get("arrow_vega_lite_chart")) == 1
-    text = " ".join(m.value for m in at.markdown + at.caption)
+    assert len(at.get("vega_lite_chart")) == 1
+    text = " ".join(e.value for group in (at.markdown, at.caption) for e in group)
     assert "The 50% date is not certain" in text
     assert "SAMPLE-" not in text
 
@@ -118,7 +118,8 @@ def test_page_with_a_bad_ai_reply_shows_the_plain_report(app, monkeypatch):
     at = app()
     assert not at.exception
     assert len(at.metric) == 4
-    page = " ".join(m.value for m in at.markdown + at.caption + at.info + at.warning)
+    groups = (at.markdown, at.caption, at.info, at.warning)
+    page = " ".join(e.value for group in groups for e in group)
     assert "for sure" not in page
     assert "AI explanation not shown" in page
 
@@ -143,7 +144,7 @@ def test_upload_a_bad_file_shows_a_clear_error_and_no_stack_trace(app):
     assert len(at.error) == 1
     assert "missing column(s): Resolution_Date, Story_Point" in at.error[0].value
     assert len(at.metric) == 0
-    assert len(at.get("arrow_vega_lite_chart")) == 0
+    assert len(at.get("vega_lite_chart")) == 0
 
 
 def test_upload_mode_with_no_file_asks_for_one(app):
@@ -165,3 +166,4 @@ def test_optional_inputs_change_the_forecast(app):
     ).facts
     assert metrics(at)["Velocity date"] == str(expected.velocity_date)
     assert metrics(at)["85% date"] == str(expected.mc85)
+    assert "seed 7)" in at.code[0].value  # the page uses the seed it was given
