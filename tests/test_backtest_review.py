@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+
 from mcf.backtest.review import ACCEPTED_SHA256, review
 
 ROOT = Path(__file__).resolve().parents[1]
