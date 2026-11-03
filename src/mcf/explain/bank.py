@@ -17,26 +17,30 @@ WIDE_RATIO = 0.5  # (95% date - 50% date) / (50% date - day t) at or above this 
 HIGH_BUG_SHARE = 25  # percent
 
 BANK = {
-    MANDATORY: "The 50% date is not certain: half of the simulated runs finish later.",
+    MANDATORY: "The 50% date is not certain: up to half of the simulated runs finish after it.",
     "share_85": "The 85% date is a safer date to share with a sponsor.",
     "use_95": "Use the 95% date when a late finish costs a lot.",
-    "simulated": "Each date comes from many simulated runs of the team's recent pace.",
+    "simulated": (
+        "The 50%, 85% and 95% dates come from many simulated runs of the team's recent daily pace."
+    ),
     "range": "Share a range of dates, not one date.",
     "pace_assumption": "The forecast assumes that the team keeps its recent pace.",
-    "spread_narrow": "The dates are close together, so the recent pace was steady.",
-    "spread_wide": "The dates are far apart, so the recent pace changed a lot from day to day.",
+    "spread_narrow": ("The 95% date is near the 50% date, compared with the time to the 50% date."),
+    "spread_wide": (
+        "The 95% date is far after the 50% date, compared with the time to the 50% date."
+    ),
     "velocity_before_50": (
-        "The velocity date comes before the 50% date, so the velocity forecast looks hopeful."
+        "The velocity date comes before the 50% date, so the velocity forecast looks optimistic."
     ),
     "velocity_50_85": "The velocity date falls between the 50% date and the 85% date.",
     "velocity_85_95": "The velocity date falls between the 85% date and the 95% date.",
     "velocity_after_95": (
-        "The velocity date comes after the 95% date, so the velocity forecast looks cautious."
+        "The velocity date comes after the 95% date, so the velocity forecast looks conservative."
     ),
     "points_estimated": "The velocity date uses an estimate of the backlog points.",
     "open_items": "Open items in the file were not counted as done.",
     "bugs_high": (
-        "Bugs took a large share of the recent work, and bugs do not count as value items."
+        "Bugs were a large share of the items done recently, and bugs do not count as value items."
     ),
 }
 

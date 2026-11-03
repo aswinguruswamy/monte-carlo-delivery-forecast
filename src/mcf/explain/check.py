@@ -23,7 +23,7 @@ def parse_selection(reply: str, facts: ForecastFacts) -> tuple[str | None, str |
     """Return (rendered text, None), or (None, a fixed reason)."""
     try:
         data = json.loads(reply)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, RecursionError):
         return None, REASON_TEXT
     if not isinstance(data, dict) or set(data) != {"sentences"}:
         return None, REASON_TEXT
