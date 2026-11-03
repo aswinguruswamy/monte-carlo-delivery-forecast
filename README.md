@@ -37,7 +37,7 @@ Run `mcf forecast --help` for details. The output gives the Monte Carlo 50%, 85%
 ## Web page
 
 ```bash
-pip install -e ".[web]"
+pip install -e ".[web]" -c constraints.txt
 streamlit run streamlit_app.py
 ```
 
