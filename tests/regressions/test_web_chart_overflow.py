@@ -27,9 +27,9 @@ def test_the_chart_leaves_out_runs_after_the_last_date():
     result = forecast_from_bytes(late_file(), backlog=5)
     hist = logic.chart_table(result)  # raised OverflowError before the fix
     left_out = logic.runs_not_drawn(result)
-    assert left_out > 0
+    assert left_out == 1  # seed 20261028: 1 run ends after 9999-12-31
     assert int(hist["runs"].sum()) + left_out == result.facts.runs
-    assert max(hist["finish_date"]) <= date.max
+    assert max(hist["finish_date"]) == date.max  # runs that end on 9999-12-31 are drawn
 
 
 def test_a_normal_forecast_draws_every_run():
@@ -51,4 +51,14 @@ def test_the_page_draws_the_chart_and_says_how_many_runs_are_left_out():
     at.run()
     assert not at.exception and not at.error
     assert len(at.get("vega_lite_chart")) == 1
-    assert any("end after 9999-12-31 and are not drawn" in c.value for c in at.caption)
+    assert any(
+        c.value == "The chart does not show 1 run that ends after 9999-12-31." for c in at.caption
+    )
+
+
+def test_the_caption_uses_the_plural_for_more_runs():
+    from mcf.web.app import not_drawn_text
+
+    assert not_drawn_text(1) == "The chart does not show 1 run that ends after 9999-12-31."
+    assert not_drawn_text(2) == "The chart does not show 2 runs that end after 9999-12-31."
+    assert not_drawn_text(0) is None
