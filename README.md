@@ -28,6 +28,7 @@ The CSV needs the columns `Issue_Key`, `Type`, `Resolution_Date` and `Story_Poin
 - `--as-of YYYY-MM-DD`: day t, the forecast date. Default: the last done day in the file. Items done after day t are not used.
 - `--backlog-points P`: story points of the backlog, for the velocity date. Default: an estimate (mean points per value item in the window × N), labelled "estimated".
 - `--seed S`: random seed, default 20261028. The same file and seed give the same dates.
+- `--explain`: add a short explanation. Claude picks sentences from a PM-approved list that fit this forecast (needs `ANTHROPIC_API_KEY`; model from `MCF_MODEL`, D32, D33.1). The sentences hold no numbers or dates; code writes those. If the reply is not a valid choice, or the call fails, only the plain report shows.
 
 Run `mcf forecast --help` for details. The output gives the Monte Carlo 50%, 85% and 95% dates and the velocity date. **The 50% date is not certain: half of the runs finish later.**
 

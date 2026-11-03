@@ -23,6 +23,8 @@ from mcf.data.types import (
     TypeSummary,
     sort_types,
 )
+from mcf.explain.check import explain_checked
+from mcf.explain.client import urllib_transport
 from mcf.forecast.montecarlo import (
     RUNS,
     SEED,
@@ -32,6 +34,8 @@ from mcf.forecast.montecarlo import (
 from mcf.forecast.throughput import ThroughputError, counts_from_ordinals, done_ordinals, window
 from mcf.forecast.velocity import VelocityError, velocity_date, window_velocity
 from mcf.result import ForecastFacts, report_number, report_percent
+
+TRANSPORT = urllib_transport  # replaced by a fake in tests (NFR8)
 
 
 def _positive_int(text: str) -> int:
@@ -117,6 +121,13 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="S",
         help=f"random seed, for repeatable dates (default: {SEED})",
     )
+    fc.add_argument(
+        "--explain",
+        action="store_true",
+        help="add a short explanation: Claude picks approved sentences that fit this forecast "
+        "(needs ANTHROPIC_API_KEY; D33.1). If the reply is not a valid choice, or the call "
+        "fails, only the plain report is shown",
+    )
     return parser
 
 
@@ -200,7 +211,10 @@ def _compute_with_load(args: argparse.Namespace) -> tuple[ForecastFacts, LoadRep
 
 
 def forecast(args: argparse.Namespace) -> str:
-    f, _ = _compute_with_load(args)
+    return render(_compute_with_load(args)[0], args)
+
+
+def render(f: ForecastFacts, args: argparse.Namespace) -> str:
     t_note = "--as-of" if args.as_of is not None else "last done day in the file"
     points_note = "estimated" if f.points_estimated else "given"
     share = f"{f.bug_share_percent}%" if f.bug_share_percent is not None else "n/a"
@@ -226,7 +240,14 @@ def forecast(args: argparse.Namespace) -> str:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        print(forecast(args))
+        facts = _compute_with_load(args)[0]
+        print(render(facts, args))
+        if getattr(args, "explain", False):
+            text, reason = explain_checked(facts, transport=TRANSPORT)
+            if text is not None:
+                print(f"\nExplanation (AI-selected, approved sentences):\n{text}")
+            else:
+                print(f"\nAI explanation not shown: {reason}")
     except (
         LoadError,
         IssueTypeError,

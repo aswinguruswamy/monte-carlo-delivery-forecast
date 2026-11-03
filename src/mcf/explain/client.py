@@ -86,7 +86,7 @@ def _text(raw: bytes) -> tuple[str | None, str | None]:
     except (ValueError, KeyError, TypeError, AttributeError):
         return None, "the API reply could not be read"
     if stop not in ("end_turn", "stop_sequence"):
-        return None, f"the reply did not finish normally (stop reason {stop!r})"
+        return None, "the reply did not stop normally"
     if not text:
         return None, "the API reply has no text"
     return text, None
