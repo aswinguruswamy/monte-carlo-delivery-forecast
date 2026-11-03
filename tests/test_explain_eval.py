@@ -267,3 +267,130 @@ def test_injection_text_in_the_prompt_fails_the_set():
     assert s["format_pass"] == 1
     assert s["injection_prompt_clean"] is False
     assert s["passed"] is False
+
+
+# --- review fixes (PR #24) -------------------------------------------------------------
+
+
+def fixed_choice(*ids: str) -> bytes:
+    return text_reply(json.dumps({"sentences": list(ids)}))
+
+
+def test_a_number_in_a_shown_sentence_fails_the_set(monkeypatch):
+    monkeypatch.setitem(BANK, "share_85", "Share the 85% date in 12 days.")
+    fake = FakeTransport(fixed=fixed_choice(MANDATORY, "share_85", "range"))
+    result = ev.run_eval(ev.cases(), runs=1, transport=fake, api_key=KEY)
+    assert result["summary"]["wrong_numbers"] == 10
+    assert result["summary"]["status"] == "FAIL"
+    assert result["summary"]["passed"] is False
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        RuntimeError(KEY),
+        __import__("urllib.error").error.HTTPError("https://x", 500, KEY, None, None),
+    ],
+)
+def test_main_never_shows_the_key_from_the_environment(monkeypatch, tmp_path, capsys, error):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", KEY)
+    monkeypatch.setattr(ev, "TRANSPORT", FakeTransport(fail=error))
+    out = tmp_path / "r.json"
+    code = ev.main(["--out", str(out), "--runs", "1"])
+    printed = capsys.readouterr()
+    assert code == 3  # inconclusive: no answer from the API
+    for text in (printed.out, printed.err, out.read_text(encoding="utf-8")):
+        assert KEY not in text
+
+
+def test_a_transient_api_error_is_retried_once():
+    good = FakeTransport()
+    calls = {"n": 0}
+
+    def transport(url, headers, body, timeout):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise TimeoutError()
+        return good(url, headers, body, timeout)
+
+    s = ev.run_eval(ev.cases(), runs=1, transport=transport, api_key=KEY)["summary"]
+    assert calls["n"] == 11
+    assert s["api_errors"] == 0
+    assert s["status"] == "PASS"
+
+
+def test_api_errors_make_the_set_inconclusive_not_a_format_failure():
+    fake = FakeTransport(fail=TimeoutError())
+    result = ev.run_eval(ev.cases(), runs=1, transport=fake, api_key=KEY)
+    s = result["summary"]
+    assert fake.calls == 20  # one retry for each run
+    assert s["api_errors"] == 10
+    assert s["runs_answered"] == 0
+    assert s["format_pass"] == 0
+    assert s["status"] == "INCONCLUSIVE"
+    assert "Format checks passed: 0 of 0 answered runs" in ev.summary_block(result)
+
+
+def test_a_failed_run_with_some_api_errors_is_still_a_fail():
+    calls = {"n": 0}
+
+    def transport(url, headers, body, timeout):
+        calls["n"] += 1
+        if calls["n"] <= 2:
+            raise TimeoutError()
+        return text_reply("free text")
+
+    s = ev.run_eval(ev.cases(), runs=1, transport=transport, api_key=KEY)["summary"]
+    assert s["api_errors"] == 1
+    assert s["status"] == "FAIL"
+
+
+def test_a_reply_that_did_not_stop_normally_is_a_model_failure_not_an_api_error():
+    reply = json.dumps(
+        {"content": [{"type": "text", "text": "{"}], "stop_reason": "max_tokens"}
+    ).encode()
+    s = ev.run_eval(ev.cases(), runs=1, transport=FakeTransport(fixed=reply), api_key=KEY)[
+        "summary"
+    ]
+    assert s["api_errors"] == 0
+    assert s["format_pass"] == 0
+    assert s["status"] == "FAIL"
+
+
+def test_a_setup_error_exits_2_with_a_fixed_message(monkeypatch, tmp_path, capsys):
+    from mcf.data.load import LoadError
+
+    def broken() -> ForecastFacts:
+        raise LoadError("secret detail")
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", KEY)
+    fake = FakeTransport()
+    monkeypatch.setattr(ev, "TRANSPORT", fake)
+    monkeypatch.setattr(ev, "cases", lambda: [ev.Case("broken", broken)])
+    assert ev.main(["--out", str(tmp_path / "r.json")]) == 2
+    err = capsys.readouterr().err
+    assert "eval: setup error (LoadError); no call was made" in err
+    assert "secret detail" not in err
+    assert fake.calls == 0
+
+
+def test_a_set_without_the_injection_case_cannot_pass():
+    no_injection = [c for c in ev.cases() if not c.injection]
+    result = ev.run_eval(no_injection, runs=1, transport=FakeTransport(), api_key=KEY)
+    assert result["summary"]["status"] == "FAIL"
+
+
+def test_the_summary_shows_injection_runs_as_x_of_y():
+    result = ev.run_eval(ev.cases(), runs=3, transport=FakeTransport(), api_key=KEY)
+    assert "Injection-case runs passed: 3 of 3" in ev.summary_block(result)
+
+
+def test_the_eval_workflow_is_hardened():
+    wf = yaml.safe_load(EVAL_WORKFLOW.read_text())
+    job = wf["jobs"]["eval"]
+    assert job["timeout-minutes"] >= 60
+    checkout = next(s for s in job["steps"] if "actions/checkout" in s.get("uses", ""))
+    assert checkout["with"]["persist-credentials"] is False
+    runs = wf[True]["workflow_dispatch"]["inputs"]["runs"]  # yaml reads "on" as True
+    assert runs["type"] == "choice"
+    assert runs["options"] == [str(n) for n in range(1, 11)]
