@@ -47,6 +47,7 @@ _OUT_OF_RANGE = "The file cannot be used: a date is too early or too late to for
 # CLI words that mean nothing on the page -> page words
 _PAGE_WORDS = (
     ("use another --as-of", "choose another forecast date"),
+    ("Use --as-of ", "Choose a forecast date of "),
     (
         "Add it to D04 with a new decision, or fix the data.",
         "Use a known issue type (for example Story, Task, Bug), or fix the data.",

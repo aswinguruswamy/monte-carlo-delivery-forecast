@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import math
 import sys
-from datetime import date
+from datetime import date, timedelta
 
 import numpy as np
 
@@ -175,7 +175,14 @@ def compute_full(
     else:  # the last done day of any item (value, bug or epic)
         t = max(issues["done_day"])
 
-    start, end = window(t)
+    try:
+        start, end = window(t)
+    except OverflowError:  # MCF-29: day t is in the first 83 days of year 1
+        first = date.min + timedelta(days=83)  # 0001-03-25: the first day t that works
+        raise ThroughputError(
+            f"no forecast from {t}: the 84-day history window starts before {date.min}. "
+            f"Use --as-of {first} or later."
+        ) from None
     counts = counts_from_ordinals(ordinals, start, end)
     if not counts.any():
         raise MonteCarloError(
