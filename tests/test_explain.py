@@ -79,7 +79,7 @@ def test_no_text_from_the_data_reaches_the_prompt(tmp_path):
         assert secret not in text, secret
 
 
-def test_instructions_forbid_numbers_dates_and_certainty():
+def test_instructions_ask_for_json_ids_only():
     system = build_prompt(facts())["system"].lower()
     assert "reply only with json" in system
     assert "sentence ids" in system
@@ -201,9 +201,10 @@ def test_no_test_file_holds_a_real_key():
 # --- review fixes (PR #21) ---------------------------------------------------
 
 
-def test_prompt_is_the_same_for_any_result():
-    """No result value reaches Claude, so the prompt does not depend on the result (D33)."""
+def test_prompt_depends_only_on_the_qualities():
+    """Only fixed words about the result reach Claude (D33.1)."""
     assert build_prompt(facts()) == build_prompt(facts(backlog=7, items_done=3))
+    assert build_prompt(facts()) != build_prompt(facts(open_items=0))
 
 
 @pytest.mark.parametrize(

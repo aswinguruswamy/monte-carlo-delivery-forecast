@@ -73,7 +73,44 @@ def test_bank_sentences_never_sound_certain():
 
 def test_the_mandatory_sentence_says_the_50_percent_date_is_not_certain():
     assert MANDATORY in BANK
-    assert "50% date is not certain" in BANK[MANDATORY]
+    assert BANK[MANDATORY] == (
+        "The 50% date is not certain: up to half of the simulated runs finish after it."
+    )
+
+
+def test_review_fixes_to_the_bank_wording():
+    """Review of PR #22 (D33.1): no sentence may be false or claim more than the data shows."""
+    assert BANK["simulated"].startswith("The 50%, 85% and 95% dates come from")
+    assert "so" not in BANK["spread_narrow"].split() and "so" not in BANK["spread_wide"].split()
+    assert "compared with the time to the 50% date" in BANK["spread_narrow"]
+    assert "items done" in BANK["bugs_high"]
+    assert "optimistic" in BANK["velocity_before_50"]
+    assert "conservative" in BANK["velocity_after_95"]
+
+
+@pytest.mark.parametrize(
+    "mc95_day, spread",
+    [(30, "wide"), (29, "narrow")],  # t=Jun 30, 50% date Jul 20 (20 days)
+)
+def test_spread_threshold_is_at_or_above_half(mc95_day, spread):
+    # 95% date on Jul 30 -> gap 10 days = 0.5 x 20 -> wide; Jul 29 -> 0.45 -> narrow
+    q = qualities(facts(mc85=date(2020, 7, 25), mc95=date(2020, 7, mc95_day)))
+    assert q["spread"] == spread
+
+
+@pytest.mark.parametrize("share, level", [(25, "high"), (24, "low")])
+def test_bug_share_threshold_is_at_or_above_25(share, level):
+    assert qualities(facts(bug_share_percent=share))["bugs"] == level
+
+
+def test_no_lead_time_counts_as_narrow():
+    q = qualities(facts(mc50=T, mc85=T, mc95=T, velocity_date=T))
+    assert q["spread"] == "narrow"
+
+
+def test_deeply_nested_json_is_dropped_not_a_crash():
+    text, reason = parse_selection("[" * 100_000 + "]" * 100_000, facts())
+    assert text is None and reason == REASON_TEXT
 
 
 # --- qualities: code turns numbers into fixed words ----------------------------
