@@ -275,6 +275,23 @@ Result: pass — no ❌. Item 5 closes when the PM decides D32.
 | 7 | Independent review with a verdict | ✅ | Four reviews; the last one: "Changes requested", 3 wording blockers + 4 should-fix items, all fixed with tests | — |
 | 8 | Each acceptance criterion met | ✅ | A number in the reply → dropped (any free text is dropped); "will" → dropped; API failure → plain report (NFR5) | — |
 | 9 | README and rule pages match | ✅ | README `--explain`; CLAUDE.md AI rules met by design | — |
-| 10 | Workflow steps followed | 🟡 | Design changes went to the PM (D33, D33.1). The bank text needs the PM's approval at Review | PM approves the bank |
+| 10 | Workflow steps followed | ✅ | Design changes went to the PM (D33, D33.1). The PM approved the bank text at Review (2026-11-03) | — |
 
-Result: pass — no ❌. Item 10 closes when the PM approves the bank text.
+Result: pass — no ❌. Item 10 closed: the PM approved the bank text on 2026-11-03.
+
+## Ticket MCF-20 — 2026-11-03 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-20-review-skill`; each commit "MCF-20: …" | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
+| 4 | PR adds tests | 🟡 | `tests/test_backtest_review.py` (25 tests), tests first twice; one commit (0d437ef) was pushed with a failing test and fixed in the next commit | Lesson L10 |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D06, D07, D13, D21.1, D29, D30 (logged) | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: "Request changes", 3 blockers (band taken from the code, no 29-project check, tests ran against the wrong copy) + 3 should-fix — all fixed with tests | — |
+| 8 | Each acceptance criterion met | ✅ | ADR rules (lock, order, fixed values), future data (3 named tests on the reviewed copy), the band (fixed 75–95%); each gap listed | — |
+| 9 | README and rule pages match | ✅ | SKILL.md lists the ADR rules left to judgement | — |
+| 10 | Workflow steps followed | ✅ | Brief with tool check (L8), review before approval | — |
+
+Result: pass — no ❌.
