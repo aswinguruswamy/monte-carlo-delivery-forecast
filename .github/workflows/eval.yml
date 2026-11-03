@@ -1,0 +1,59 @@
+name: AI evaluation (manual)
+
+# MCF-23, D35: the live AI evaluation set (10 cases x 3 runs) with real Claude calls.
+# It runs only when the PM starts it by hand. It never runs on push or pull request,
+# so CI and the tests never call the paid API (CLAUDE.md test rule 2).
+# The key comes from the repository secret ANTHROPIC_API_KEY. GitHub masks it in logs.
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: "Runs per case (1-10)"
+        required: true
+        default: "3"
+      model:
+        description: "Model (empty = MCF_MODEL default)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    name: AI evaluation set
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install -e .
+      - name: Run the evaluation set
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RUNS: ${{ inputs.runs }}
+          MODEL: ${{ inputs.model }}
+        run: |
+          set -o pipefail
+          args=(--runs "$RUNS" --out eval-result.json)
+          if [ -n "$MODEL" ]; then args+=(--model "$MODEL"); fi
+          python -m mcf.explain.eval "${args[@]}" | tee eval-summary.txt
+      - name: Job summary
+        if: always()
+        run: |
+          if [ -f eval-summary.txt ]; then
+            { echo '```'; cat eval-summary.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload the result
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: eval-result
+          path: |
+            eval-result.json
+            eval-summary.txt
+          if-no-files-found: ignore

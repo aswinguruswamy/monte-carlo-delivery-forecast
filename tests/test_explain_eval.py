@@ -20,7 +20,7 @@ from mcf.result import ForecastFacts
 ROOT = Path(__file__).resolve().parents[1]
 EVAL_WORKFLOW = ROOT / ".github" / "workflows" / "eval.yml"
 CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
-KEY = "sk-ant-test-0000-SECRET"
+KEY = "fake-test-key-0000-SECRET"
 
 
 def good_reply(facts: ForecastFacts) -> bytes:
@@ -53,6 +53,7 @@ class FakeTransport:
             return self.fixed
         # choose IDs from the sentences offered in the prompt
         content = json.loads(body)["messages"][0]["content"]
+        content = content.split("Sentences you can choose:", 1)[1]
         offered = [ln[2:].split(":")[0] for ln in content.splitlines() if ln.startswith("- ")]
         offered = [i for i in offered if i in BANK]
         ids = [MANDATORY, *[i for i in offered if i != MANDATORY][:3]]
@@ -250,10 +251,19 @@ def test_the_eval_workflow_reads_only_and_takes_the_key_from_a_secret():
     text = EVAL_WORKFLOW.read_text(encoding="utf-8")
     assert "${{ secrets.ANTHROPIC_API_KEY }}" in text
     assert "python -m mcf.explain.eval" in text
-    assert "sk-ant" not in text
+    assert "sk-" + "ant-" not in text
 
 
 def test_ci_never_runs_the_live_eval():
     text = CI_WORKFLOW.read_text(encoding="utf-8")
     assert "mcf.explain.eval" not in text
     assert "ANTHROPIC_API_KEY" not in text
+
+
+def test_injection_text_in_the_prompt_fails_the_set():
+    # Plant the bug: a case whose "forbidden" text is in every prompt.
+    leaky = ev.Case("leak", ev.cases()[0].facts, injection=True, forbidden=("sentences",))
+    s = ev.run_eval([leaky], runs=1, transport=FakeTransport(), api_key=KEY)["summary"]
+    assert s["format_pass"] == 1
+    assert s["injection_prompt_clean"] is False
+    assert s["passed"] is False
