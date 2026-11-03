@@ -114,3 +114,112 @@ def test_bad_metrics_file_is_a_gap(tmp_path, bad):
     repo = copy_repo(tmp_path)
     (repo / "results" / "metrics.json").write_text(bad)
     assert "files_present" in names(review(repo, run_tests=False))
+
+
+# --- review fixes (PR #23) ---------------------------------------------------
+
+
+def edit_json(repo: Path, change) -> None:
+    path = repo / "results" / "metrics.json"
+    m = json.loads(path.read_text())
+    change(m)
+    path.write_text(json.dumps(m))
+
+
+def test_the_band_is_fixed_in_the_review_not_taken_from_the_code():
+    from fractions import Fraction
+
+    from mcf.backtest import review as rv
+
+    assert rv.BAND == (Fraction(75, 100), Fraction(95, 100))
+
+
+def test_a_changed_band_in_the_code_is_a_gap(monkeypatch):
+    from fractions import Fraction
+
+    import mcf.backtest.metrics as metrics
+
+    monkeypatch.setattr(metrics, "BAND", (Fraction(60, 100), Fraction(95, 100)))
+    assert "band_fixed" in names(review(ROOT, run_tests=False))
+
+
+@pytest.mark.parametrize(
+    "change, check",
+    [
+        (lambda m: m["bootstrap"].update(resamples=500), "fixed_method_values"),
+        (lambda m: m["bootstrap"].update(seed=1), "fixed_method_values"),
+        (lambda m: m["by_project"].pop("APSTUD"), "project_count"),
+    ],
+)
+def test_changed_method_values_are_gaps(tmp_path, change, check):
+    repo = copy_repo(tmp_path)
+    edit_json(repo, change)
+    assert check in names(review(repo, run_tests=False))
+
+
+def test_rows_with_no_date_must_be_19(tmp_path):
+    repo = copy_repo(tmp_path)
+    report = repo / "docs" / "backtest-report.md"
+    report.write_text(
+        report.read_text().replace(
+            " 19 rows with no resolution date", " 25 rows with no resolution date"
+        )
+    )
+    assert "fixed_method_values" in names(review(repo, run_tests=False))
+
+
+def test_the_future_data_tests_are_named_exactly():
+    from mcf.backtest.review import FUTURE_TESTS
+
+    assert FUTURE_TESTS == (
+        "tests/test_backtest_run.py::test_no_future_data_is_used_by_the_forecasts",
+        "tests/test_backtest_run.py::test_velocity_speed_uses_only_the_window",
+        "tests/test_backtest_run.py::test_window_with_no_value_item_is_a_no_forecast_case",
+    )
+
+
+def test_future_data_tests_run_against_the_reviewed_copy(tmp_path):
+    """A copy whose run tests are missing must give a gap, even if the main checkout has them."""
+    repo = copy_repo(tmp_path)
+    (repo / "src").mkdir()
+    shutil.copytree(ROOT / "src" / "mcf", repo / "src" / "mcf")
+    (repo / "tests").mkdir()
+    gaps = review(repo, run_tests=True)
+    assert "future_data_tests" in names(gaps)
+
+
+def git(repo: Path, *args: str) -> None:
+    import subprocess
+
+    subprocess.run(
+        ["git", "-C", str(repo), *args],
+        check=True,
+        capture_output=True,
+        env={
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@t",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@t",
+            "PATH": "/usr/bin:/bin",
+        },
+    )
+
+
+def test_adr_committed_after_the_run_code_is_a_gap(tmp_path):
+    repo = copy_repo(tmp_path)
+    git(repo, "init", "-q")
+    (repo / "src" / "mcf" / "backtest").mkdir(parents=True)
+    (repo / "src" / "mcf" / "backtest" / "run.py").write_text("# run\n")
+    git(repo, "add", "src")
+    git(repo, "commit", "-q", "-m", "run first")
+    git(repo, "add", "docs", "results")
+    git(repo, "commit", "-q", "-m", "ADR later")
+    gaps = review(repo, run_tests=False)
+    assert "adr_before_run" in names(gaps)
+
+
+def test_skill_command_sets_the_python_path():
+    skill = (ROOT / "skills" / "forecast-backtest-review" / "SKILL.md").read_text()
+    assert "PYTHONPATH=src python -m mcf.backtest.review --repo ." in skill
+    for words in ("data rules 3 and 6", "84-day window", "10,000 runs", "no issue rows"):
+        assert words in skill, words
