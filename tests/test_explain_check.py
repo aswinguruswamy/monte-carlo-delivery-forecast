@@ -1,4 +1,9 @@
-"""MCF-22 acceptance checks: every number and date in the AI text is checked (R4, NFR4, NFR5)."""
+"""MCF-22 acceptance checks for the D33 design (R4, NFR4, NFR5; CLAUDE.md AI rules).
+
+D33: code writes every number and date. Claude writes a short plain paragraph that
+holds no digit (only the labels 50%, 85% and 95%), no date, no month or weekday,
+no number word and no certainty word. The check rejects anything else.
+"""
 
 from __future__ import annotations
 
@@ -8,7 +13,13 @@ from pathlib import Path
 
 import pytest
 
-from mcf.explain.check import check_text, explain_checked
+from mcf.explain.check import (
+    REASON_CERTAIN,
+    REASON_NUMBER,
+    REASON_TEXT,
+    check_text,
+    explain_checked,
+)
 from mcf.result import ForecastFacts
 
 T = date(2020, 6, 30)
@@ -37,77 +48,102 @@ def facts(**over) -> ForecastFacts:
     return ForecastFacts(**base)
 
 
-GOOD = (
-    "From 2020-06-30, the team has a 50% chance to finish the next 40 items by July 20, 2020. "
-    "Half of the simulated runs finish later, so the 50% date is not certain. "
-    "The 85% date is 28 July 2020 and the 95% date is Aug 2, 2020. "
-    "Velocity, at 31.5 points per 2 weeks, gives 2020-07-25. "
-    "The history covers 84 days with 120 items done, and 21% of work items were bugs."
-)
+GOOD = [
+    "The 50% date is the middle result: half of the simulated runs finish later, so it is "
+    "not certain. The 85% date gives more room and is a safer date to share with a sponsor. "
+    "The 95% date is the cautious choice when a miss would be costly.",
+    "Treat the 50% date as a coin toss, not a commitment. Plan on the 85% date. Use the 95% "
+    "date when the cost of being late is high.",
+    "Each date comes from many simulated runs of the team's recent pace. Later dates hold more "
+    "of those runs, so they carry less risk.",
+    "The median (50%) date is not a guarantee.",
+    "Share a range, not a single day: the 85% and 95% dates show how much room to keep.",
+]
 
 
-def test_a_clean_text_passes():
-    assert check_text(GOOD, facts()) == []
-
-
-@pytest.mark.parametrize(
-    "text, problem",
-    [
-        ("The 85% date is 2020-07-29.", "date"),  # one day off
-        ("The 85% date is July 29, 2020.", "date"),
-        ("The 85% date is 29 July 2020.", "date"),
-        ("The team needs 41 items.", "number"),
-        ("Velocity is 31.6 points per sprint.", "number"),
-        ("About 22% were bugs.", "number"),
-        ("That is 20 days from now.", "number"),  # not given; Claude calculated it
-        ("It used 10,001 runs.", "number"),
-        ("The 85% date is in mid-August.", None),  # no number: allowed
-    ],
-)
-def test_numbers_and_dates_not_in_the_result_are_problems(text, problem):
-    problems = check_text(text, facts())
-    if problem is None:
-        assert problems == []
-    else:
-        assert problems and problem in problems[0]
-
-
-def test_allowed_numbers_with_commas_and_the_method_constants():
-    text = "The 50%, 85% and 95% dates come from 10,000 runs over 84 days (6 sprints of 2 weeks)."
+@pytest.mark.parametrize("text", GOOD)
+def test_good_explanations_pass(text):
     assert check_text(text, facts()) == []
-
-
-def test_a_month_day_date_without_year_must_match_a_fact_date():
-    assert check_text("The 85% date is Jul 28.", facts()) == []
-    assert check_text("The 85% date is Jul 27.", facts())
 
 
 @pytest.mark.parametrize(
     "text",
     [
-        "The work will be done on the 50% date, July 20, 2020.",
-        "The 50% date is certain.",
-        "You can definitely expect delivery by the 50% date.",
-        "The 50% date of July 20, 2020 is guaranteed.",
-        "The team will finish by July 20, 2020.",  # the 50% date without saying "50%"
+        # any digit apart from the three labels
+        "The team needs 41 items.",
+        "The 85% date is 2020-07-29.",
+        "About 22% of items were bugs.",
+        "It used 10,000 runs.",
+        "Release v9 is planned.",
+        "It used 1e9 runs.",
+        "The 50.0% date is the middle one.",
+        "The 50 % date is the middle one.",
+        "P50 is the middle one.",
+        "Velocity is -31.5 points.",
+        "About 1/2 of the runs finish later.",
+        "The 85% date is in the 3rd week.",
+        "The work takes 10:30 hours.",
+        # dates without digits
+        "The 85% date is in late July.",
+        "Delivery is on Monday.",
+        "Delivery is next week.",
+        "Delivery is tomorrow.",
+        "It ends in a fortnight.",
+        "The 95% date is in early September.",
+        # number words
+        "The team needs forty-one items.",
+        "It takes three weeks.",
+        "A dozen items remain.",
+        "Look at all three dates.",
+        # certainty, synonyms, negation tricks
+        "The 50% date will happen.",
+        "The team is going to finish on the 50% date.",
+        "Expect delivery on the 50% date.",
+        "You can count on the 50% date.",
+        "The 50% date is assured.",
+        "No doubt about the 50% date.",
+        "The 50% date won't slip.",
+        "The 50% date is set in stone.",
+        "The 50% date is locked in.",
+        "Bank on the 50% date.",
+        "It is a firm date.",
+        "It is inevitable.",
+        "It can't fail.",
+        "It is a safe bet.",
+        "It is pretty much a given.",
+        "It is never uncertain.",
+        "There is no uncertainty.",
+        "It is not without certainty.",
+        "It is not uncertain.",
+        "The team is on track for the 50% date.",
+        "The 50% date is the delivery date.",
+        "The work ships on the 50% date.",
+        "The 50% date is not guaranteed to slip.",
+        "There is no guarantee the work takes longer than the 50% date.",
+        "It is not certain that the work slips past the 50% date.",
+        "We promise the 50% date.",
+        "The 50% date shall hold.",
+        "It is definitely the 50% date.",
+        # velocity is described by code, not by Claude
+        "The velocity date is later than the 95% date.",
+        # characters that cannot be checked
+        "The team wіll finish.",  # Cyrillic і
+        "This is сertain.",  # Cyrillic с
+        "The 85% date is ready.\x1b[A\x1b[K",
+        "The 85 % date.",
+        "Ｔhe date.",
+        "",
+        "   ",
     ],
 )
-def test_certainty_about_the_50_percent_date_fails(text):
-    problems = check_text(text, facts())
-    assert any("certain" in p for p in problems), problems
+def test_bad_texts_fail(text):
+    assert check_text(text, facts()), repr(text)
 
 
-def test_negated_certainty_is_fine():
-    assert check_text("The 50% date is not certain; it is not a guarantee.", facts()) == []
-
-
-def test_certainty_words_fail_anywhere_in_the_text():
-    """Fail closed (review of PR #22): a certainty word anywhere drops the text."""
-    assert check_text("Half of the runs will finish after the 85% date of Jul 28.", facts())
-
-
-def test_empty_text_is_a_problem():
-    assert check_text("   ", facts())
+def test_reasons_are_fixed_text():
+    assert check_text("It needs 41 items.", facts())[0] == REASON_NUMBER
+    assert check_text("The 50% date will happen.", facts())[0] == REASON_CERTAIN
+    assert check_text("Wіll.", facts())[0] == REASON_TEXT
 
 
 # --- the safe path (NFR5) -----------------------------------------------------
@@ -125,13 +161,13 @@ def transport(text: str | None = None, error: Exception | None = None):
 
 
 def test_good_text_is_returned():
-    text, reason = explain_checked(facts(), transport=transport(GOOD), api_key="k")
-    assert text == GOOD and reason is None
+    text, reason = explain_checked(facts(), transport=transport(GOOD[0]), api_key="k")
+    assert text == GOOD[0] and reason is None
 
 
-def test_text_with_a_wrong_number_is_dropped():
+def test_text_with_a_number_is_dropped_with_a_fixed_reason():
     text, reason = explain_checked(facts(), transport=transport("It needs 41 items."), api_key="k")
-    assert text is None and reason == "a number or date in it is not in the result"
+    assert text is None and reason == REASON_NUMBER
 
 
 def test_api_failure_gives_no_text_and_a_reason():
@@ -141,8 +177,18 @@ def test_api_failure_gives_no_text_and_a_reason():
 
 def test_missing_key_gives_no_text_and_a_reason(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    text, reason = explain_checked(facts(), transport=transport(GOOD))
+    text, reason = explain_checked(facts(), transport=transport(GOOD[0]))
     assert text is None and "ANTHROPIC_API_KEY" in reason
+
+
+def test_a_cut_reply_reason_is_fixed_text():
+    def cut(url, headers, body, timeout):
+        return json.dumps(
+            {"content": [{"type": "text", "text": "x"}], "stop_reason": "<b>odd</b>"}
+        ).encode()
+
+    text, reason = explain_checked(facts(), transport=cut, api_key="k")
+    assert text is None and "odd" not in reason
 
 
 # --- CLI --explain --------------------------------------------------------------
@@ -172,11 +218,10 @@ def test_cli_without_explain_makes_no_call_and_prints_the_plain_report(capsys, m
 
 
 def test_cli_adds_checked_text(capsys, monkeypatch):
-    good = "The 85% date is 2020-07-24, and the 50% date of 2020-07-20 is not certain."
-    code, out = run_cli(capsys, monkeypatch, transport(good))
+    code, out = run_cli(capsys, monkeypatch, transport(GOOD[1]))
     assert code == 0
     assert out.startswith(EXPECTED)
-    assert "Explanation (AI, checked):" in out and good in out
+    assert "Explanation (AI, checked):" in out and GOOD[1] in out
 
 
 def test_cli_drops_bad_text_and_keeps_the_plain_report(capsys, monkeypatch):
@@ -184,7 +229,7 @@ def test_cli_drops_bad_text_and_keeps_the_plain_report(capsys, monkeypatch):
     assert code == 0
     assert out.startswith(EXPECTED)
     assert "will be done" not in out
-    assert "AI explanation not shown:" in out
+    assert f"AI explanation not shown: {REASON_NUMBER}" in out
 
 
 def test_cli_api_failure_keeps_the_plain_report(capsys, monkeypatch):
@@ -192,78 +237,6 @@ def test_cli_api_failure_keeps_the_plain_report(capsys, monkeypatch):
     assert code == 0
     assert out.startswith(EXPECTED)
     assert "AI explanation not shown: the API call failed" in out
-
-
-# --- review fixes (PR #22): adversarial texts must fail -----------------------
-
-
-@pytest.mark.parametrize(
-    "text",
-    [
-        # certainty in other words, or the 50% date under another name
-        "The team is going to finish on July 20, 2020.",
-        "Expect delivery on July 20, 2020.",
-        "You can count on July 20, 2020.",
-        "Delivery on July 20, 2020 is assured.",
-        "No doubt: July 20, 2020.",
-        "The 50% date won't slip.",
-        "July 20, 2020 is a lock.",
-        "It is not uncertain that the work ends on July 20, 2020.",
-        "The 50-percent date is sure.",
-        "The 50th percentile date shall hold.",
-        "We promise July 20, 2020.",
-        "e.g. the 50% date. It will happen.",
-        "The 50% date is not certain. It will happen though.",
-        # swapped percentiles
-        "The 50% date is Jul 28.",
-        "The 95% date is Jul 20.",
-        "The median date is 2020-08-02.",
-        # wrong numbers in other forms
-        "The team needs forty-one items.",
-        "It takes three weeks.",
-        "A dozen items remain.",
-        "The work ends on the 3rd of August.",
-        "It used 1e9 runs.",
-        "Release v9 is planned.",
-        "Velocity is -31.5 points.",
-        "About 1/2 of the runs finish later.",
-        "Delivery is next week.",
-        "Delivery is on Monday.",
-        "Delivery is tomorrow.",
-        # method numbers with the wrong meaning
-        "There are 85 items left.",
-        "The team ran 6 runs.",
-        # terminal control characters
-        "The 85% date is Jul 28.\x1b[A\x1b[K",
-    ],
-)
-def test_adversarial_texts_fail(text):
-    assert check_text(text, facts()), text
-
-
-@pytest.mark.parametrize(
-    "text",
-    [
-        "The 50% date is Jul 20 and the 85% date is Jul 28.",
-        "July 28, 2020 is the 85% date; August 2, 2020 is the 95% date.",
-        "The median (50%) date is 2020-07-20, which is not certain.",
-        "The 50% date is not a guarantee: half of the runs finish later.",
-    ],
-)
-def test_correct_bindings_pass(text):
-    assert check_text(text, facts()) == [], check_text(text, facts())
-
-
-def test_the_reason_line_never_repeats_the_ai_text():
-    for bad in ("The 85% date is July 29, 2020.", "It needs 41 items.", "It will happen."):
-        text, reason = explain_checked(facts(), transport=transport(bad), api_key="k")
-        assert text is None
-        assert "29" not in reason and "41" not in reason and "happen" not in reason
-        assert reason in {
-            "a number or date in it is not in the result",
-            "it describes a date as certain",
-            "it holds text that cannot be checked",
-        }
 
 
 def test_cli_computes_the_forecast_once(capsys, monkeypatch):
@@ -277,15 +250,14 @@ def test_cli_computes_the_forecast_once(capsys, monkeypatch):
         return real(args)
 
     monkeypatch.setattr(cli, "_compute_with_load", counting)
-    good = "The 85% date is 2020-07-24, and the 50% date of 2020-07-20 is not certain."
-    run_cli(capsys, monkeypatch, transport(good))
+    run_cli(capsys, monkeypatch, transport(GOOD[0]))
     assert len(calls) == 1
 
 
-def test_prompt_tells_the_model_the_check_rules():
+def test_prompt_states_the_check_rules():
     from mcf.explain.prompt import PROMPT_VERSION, build_prompt
 
     system = build_prompt(facts())["system"].lower()
-    assert PROMPT_VERSION == "2"
-    for words in ("digits", "will", "certain", "relative"):
+    assert PROMPT_VERSION == "3"
+    for words in ("digit", "date", "month", "number word", "will", "certain", "velocity"):
         assert words in system, words
