@@ -324,8 +324,8 @@ Result: pass — no ❌. Items 6 and 8 close when the live run on `main` reports
 | 5 | Each decision ID in the PR is in the Decision Log | ✅ | D01, D08, D19, D33.1 (logged) | — |
 | 6 | AI ticket evaluation | n/a | Not an AI ticket (uses the MCF-22 explanation); the AI call is off by default and cached per forecast | — |
 | 7 | Independent review with a verdict | ✅ | Subagent: "Approve with changes", 0 blockers, 6 should-fix — all fixed with tests; nice-to-have 7–10, 12–14 done; 11 in the README | — |
-| 8 | Each acceptance criterion met | 🟡 | AC1 and AC2: AppTest + browser check. AC3: the webapp-testing skill is not available; `scripts/browser_check.py` (Playwright, desktop + phone) 18 of 18 pass | PM decides if the browser check meets AC3 |
+| 8 | Each acceptance criterion met | ✅ | AC1 and AC2: AppTest + browser check. AC3: the webapp-testing skill is not available; `scripts/browser_check.py` (Playwright, desktop + phone) 18 of 18 pass; the PM accepted it for AC3 (D36, 2026-11-03) | — |
 | 9 | README and rule pages match | ✅ | README "Web page": start folder, what the page shows, AI off by default | — |
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
-Result: pass — no ❌. Item 8 closes when the PM accepts the browser check for AC3.
+Result: pass — no ❌. Item 8 closed by D36.
