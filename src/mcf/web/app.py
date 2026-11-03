@@ -21,6 +21,19 @@ SAMPLE = "Sample file (made-up data)"
 UPLOAD = "Upload a CSV file"
 
 
+class _NoText(Exception):
+    """No approved text. Not cached, so a later rerun can try again."""
+
+
+@st.cache_data(show_spinner="Asking Claude...", max_entries=256, ttl=24 * 3600)
+def _explanation(facts) -> str:
+    """One paid call for each forecast: the result is cached by the facts."""
+    text, reason = logic.ai_explanation(facts)
+    if text is None:
+        raise _NoText(reason)
+    return text
+
+
 def _chart(result: logic.WebForecast) -> alt.LayerChart:
     hist = logic.chart_table(result)
     marks = logic.marker_table(result.facts)
@@ -87,14 +100,15 @@ def main() -> None:
             backlog_points = st.number_input(
                 "Backlog story points", min_value=0.1, value=100.0, key="backlog_points"
             )
-        use_as_of = st.toggle("Forecast from an earlier day", key="use_as_of")
-        as_of = st.date_input("Day t", key="as_of") if use_as_of else None
+        as_of = st.date_input(
+            "Forecast date (empty: the last done day in the file)", value=None, key="as_of"
+        )
         seed = st.number_input("Random seed", min_value=0, value=SEED, step=1, key="seed")
 
     has_key = bool(os.environ.get("ANTHROPIC_API_KEY"))
     explain = st.toggle(
         "Add an AI explanation (Claude picks approved sentences)",
-        value=has_key,
+        value=False,  # off by default: each new forecast is one paid call
         disabled=not has_key,
         key="explain",
     )
@@ -114,7 +128,7 @@ def main() -> None:
             seed=int(seed),
         )
     except logic.WebError as exc:
-        st.error(str(exc))
+        st.error(logic.plain(str(exc)))  # text from the file shows as plain text
         return
 
     f = result.facts
@@ -133,13 +147,14 @@ def main() -> None:
     )
 
     if explain:
-        text, reason = logic.ai_explanation(f)
-        if text is not None:
+        try:
+            text = _explanation(f)
+        except _NoText as exc:
+            st.info(f"AI explanation not shown: {exc}")
+        else:
             st.markdown("#### Explanation")
             st.markdown(text)
             st.caption("AI-selected, approved sentences (D33.1). Code wrote every date above.")
-        else:
-            st.info(f"AI explanation not shown: {reason}")
 
     with st.expander("Full report"):
         st.code(result.report, language=None)

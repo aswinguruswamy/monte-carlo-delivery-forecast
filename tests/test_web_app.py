@@ -151,7 +151,7 @@ def test_upload_a_bad_file_shows_a_clear_error_and_no_stack_trace(app):
     at.run()
     assert not at.exception
     assert len(at.error) == 1
-    assert "missing column(s): Resolution_Date, Story_Point" in at.error[0].value
+    assert logic.plain("missing column(s): Resolution_Date, Story_Point") in at.error[0].value
     assert len(at.metric) == 0
     assert len(at.get("vega_lite_chart")) == 0
 

@@ -104,8 +104,19 @@ def main() -> int:
                     expect(page.get_by_text("Forecast for the next 40 value items")).to_be_visible(
                         timeout=30_000
                     )
-                    for d in (expected.mc50, expected.mc85, expected.mc95, expected.velocity_date):
-                        expect(page.get_by_text(str(d), exact=True).first).to_be_visible()
+                    want = {
+                        "50% date": str(expected.mc50),
+                        "85% date": str(expected.mc85),
+                        "95% date": str(expected.mc95),
+                        "Velocity date": str(expected.velocity_date),
+                    }
+                    metrics = page.locator("[data-testid='stMetric']")
+                    expect(metrics).to_have_count(4, timeout=30_000)
+                    shown = {}
+                    for m in metrics.all():
+                        label = m.locator("[data-testid='stMetricLabel']").inner_text().strip()
+                        shown[label] = m.locator("[data-testid='stMetricValue']").inner_text()
+                    assert shown == want, f"label and date do not match: {shown}"
 
                 def chart(page=page):
                     expect(page.locator("[data-testid='stVegaLiteChart']")).to_be_visible()
@@ -131,13 +142,14 @@ def main() -> int:
                     assert sw <= cw + 1, f"page is {sw}px wide in a {cw}px window"
 
                 def dates_not_cut(page=page):
+                    expect(page.locator("[data-testid='stMetricValue']")).to_have_count(4)
                     cut = page.evaluate(
                         """() => [...document.querySelectorAll("[data-testid='stMetricValue'] *")]
                         .filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent)"""
                     )
                     assert not cut, f"dates cut off: {cut}"
 
-                check(f"{label}: sample shows the 3 dates and the velocity date", sample_dates)
+                check(f"{label}: each date is under its own label", sample_dates)
                 check(f"{label}: dates are not cut off", dates_not_cut)
                 check(f"{label}: chart is drawn", chart)
                 check(f"{label}: the 50% date is not certain", not_certain)

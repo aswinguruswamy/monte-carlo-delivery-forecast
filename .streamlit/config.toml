@@ -4,3 +4,6 @@ maxUploadSize = 10  # MB; the page logic also refuses larger files
 
 [browser]
 gatherUsageStats = false  # send no usage data to Streamlit
+
+[client]
+toolbarMode = "viewer"  # no "Deploy" button or developer menu

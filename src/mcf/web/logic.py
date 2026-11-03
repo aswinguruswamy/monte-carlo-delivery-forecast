@@ -1,6 +1,6 @@
 """The logic of the web page (MCF-24, D01), without Streamlit.
 
-The page uses the same calculation as the CLI (`mcf.cli._compute_full`), so the
+The page uses the same calculation as the CLI (`mcf.cli.compute_full`), so the
 page and the CLI always give the same dates. Errors become a WebError with a
 clear message: no stack trace, no temporary path. The page shows no issue keys
 or file names (RAID C2).
@@ -9,6 +9,10 @@ or file names (RAID C2).
 from __future__ import annotations
 
 import argparse
+import csv
+import io
+import logging
+import re
 import tempfile
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -17,7 +21,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from mcf.cli import _compute_full, render
+from mcf.cli import compute_full, render
 from mcf.data.load import LoadError
 from mcf.data.types import IssueTypeError
 from mcf.explain.check import explain_checked
@@ -38,6 +42,20 @@ _UNKNOWN = (
 )
 
 
+_LOG = logging.getLogger(__name__)
+_OUT_OF_RANGE = "The file cannot be used: a date is too early or too late to forecast from."
+# CLI words that mean nothing on the page -> page words
+_PAGE_WORDS = (
+    ("use another --as-of", "choose another forecast date"),
+    (
+        "Add it to D04 with a new decision, or fix the data.",
+        "Use a known issue type (for example Story, Task, Bug), or fix the data.",
+    ),
+)
+_NOT_UTF8 = re.compile(r"not UTF-8 text: .*")
+_MARKDOWN = re.compile(r"([\\`*_{}\[\]()<>#+!|~])")
+
+
 class WebError(ValueError):
     """A clear message for the page user."""
 
@@ -54,10 +72,32 @@ def sample_bytes() -> bytes | None:
     return SAMPLE_FILE.read_bytes() if SAMPLE_FILE.is_file() else None
 
 
-def _clean(message: str) -> str:
+def plain(text: str) -> str:
+    """Escape Markdown, so text from the file shows as plain text on the page."""
+    return _MARKDOWN.sub(r"\\\1", text)
+
+
+def _keys(data: bytes) -> set[str]:
+    """The issue keys in the file (best effort), to keep them out of messages (RAID C2)."""
+    try:
+        rows = csv.reader(io.StringIO(data.decode("utf-8-sig", errors="replace")))
+        header = next(rows, [])
+        col = header.index("Issue_Key")
+        return {r[col] for r in rows if len(r) > col and r[col].strip()}
+    except (ValueError, csv.Error):
+        return set()
+
+
+def _clean(message: str, keys: set[str]) -> str:
     for prefix in (f"{_TMP_NAME}, ", f"{_TMP_NAME}: "):
         message = message.replace(prefix, "")
-    return message.replace(_TMP_NAME, "the file")
+    message = message.replace(_TMP_NAME, "the file")
+    for cli, page in _PAGE_WORDS:
+        message = message.replace(cli, page)
+    message = _NOT_UTF8.sub("the file is not UTF-8 text. Save the file as CSV UTF-8.", message)
+    for key in sorted(keys, key=len, reverse=True):
+        message = message.replace(key, "an item")
+    return message
 
 
 def forecast_from_bytes(
@@ -89,10 +129,15 @@ def forecast_from_bytes(
             explain=False,
         )
         try:
-            facts, _, days = _compute_full(args)
+            facts, _, days = compute_full(args)
         except _KNOWN as exc:
-            raise WebError(f"The file cannot be used: {_clean(str(exc))}") from None
+            message = _clean(str(exc), _keys(data))
+            raise WebError(f"The file cannot be used: {message}") from None
+        except OverflowError:
+            _LOG.exception("date out of range")
+            raise WebError(_OUT_OF_RANGE) from None
         except Exception:  # never show a stack trace or internal detail on the page
+            _LOG.exception("unexpected error in the forecast")  # server log only
             raise WebError(_UNKNOWN) from None
     return WebForecast(facts=facts, report=render(facts, args), finish_days=days)
 

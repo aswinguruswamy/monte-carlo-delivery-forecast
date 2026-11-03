@@ -150,11 +150,11 @@ def compute(args: argparse.Namespace) -> ForecastFacts:
 
 
 def _compute_with_load(args: argparse.Namespace) -> tuple[ForecastFacts, LoadReport]:
-    facts, load, _ = _compute_full(args)
+    facts, load, _ = compute_full(args)
     return facts, load
 
 
-def _compute_full(
+def compute_full(
     args: argparse.Namespace,
 ) -> tuple[ForecastFacts, LoadReport, np.ndarray]:
     """Return the facts, the load report and the simulated days of each run (for a chart)."""
