@@ -148,7 +148,7 @@ def test_unexpected_error_gives_a_fixed_message(monkeypatch):
     def boom(*a, **k):
         raise KeyError("internal detail")
 
-    monkeypatch.setattr(logic, "_compute_full", boom)
+    monkeypatch.setattr(logic, "compute_full", boom)
     with pytest.raises(WebError) as info:
         forecast_from_bytes(SAMPLE.read_bytes(), backlog=10)
     assert "internal detail" not in str(info.value)
@@ -193,3 +193,86 @@ def test_ci_tests_and_licence_scan_cover_the_web_extra():
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
     assert ci.count('pip install -e ".[dev,web]"') == 2  # tests and security jobs
     assert '/tmp/runtime/bin/pip install --quiet ".[web]"' in ci  # D19 licence scan
+
+
+# --- review fixes (PR #25) -------------------------------------------------------------
+
+
+def test_page_words_replace_cli_words_in_errors():
+    cases = {
+        HEADER.encode() + b"A-1,Story,2020-01-01,3\n": "choose another forecast date",
+        HEADER.encode() + b"A-1,Story,2020-06-30,3\nA-2,Spaceship,,2\n": "known issue type",
+        HEADER.encode() + b"A-1,Story,2020-06-30,3\n\x80\n": "Save the file as CSV UTF-8",
+    }
+    for data, words in cases.items():
+        with pytest.raises(WebError) as info:
+            forecast_from_bytes(data, backlog=10, as_of=date(2020, 12, 31))
+        message = str(info.value)
+        assert words in message, message
+        for cli_word in ("--as-of", "D04", "decision", "codec", "position"):
+            assert cli_word not in message, message
+
+
+def test_a_date_out_of_range_gets_its_own_message_and_is_logged(caplog):
+    data = HEADER.encode() + b"A-1,Story,0001-01-02,3\n"
+    with caplog.at_level("ERROR", logger="mcf.web.logic"):
+        with pytest.raises(WebError, match="a date is too early or too late"):
+            forecast_from_bytes(data, backlog=10)
+    assert any(r.exc_info for r in caplog.records)
+
+
+def test_an_unexpected_error_is_logged_on_the_server(monkeypatch, caplog):
+    def boom(*a, **k):
+        raise KeyError("internal detail")
+
+    monkeypatch.setattr(logic, "compute_full", boom)
+    with caplog.at_level("ERROR", logger="mcf.web.logic"):
+        with pytest.raises(WebError):
+            forecast_from_bytes(SAMPLE.read_bytes(), backlog=10)
+    assert any("internal detail" in (r.exc_text or "") for r in caplog.records)
+
+
+def test_an_error_never_shows_an_issue_key_from_the_file(monkeypatch):
+    from mcf.forecast.throughput import ThroughputError
+
+    def boom(*a, **k):
+        raise ThroughputError("value item SECRET-77 has no done day")
+
+    monkeypatch.setattr(logic, "compute_full", boom)
+    data = HEADER.encode() + b"SECRET-77,Story,2020-06-30,3\n"
+    with pytest.raises(WebError) as info:
+        forecast_from_bytes(data, backlog=10)
+    assert "SECRET-77" not in str(info.value)
+    assert "an item" in str(info.value)
+
+
+def test_error_text_is_escaped_for_markdown():
+    assert logic.plain("a [link](http://x) *b* <i>") == r"a \[link\]\(http://x\) \*b\* \<i\>"
+
+
+def test_the_shared_calculation_has_a_public_name():
+    import mcf.cli
+
+    assert mcf.cli.compute_full is logic.compute_full
+
+
+def test_streamlit_minimum_supports_the_chart_width_argument():
+    import tomllib
+
+    web = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["optional-dependencies"][
+        "web"
+    ]
+    assert "streamlit>=1.51" in web
+
+
+def test_toolbar_hides_the_deploy_button():
+    import tomllib
+
+    cfg = tomllib.loads((ROOT / ".streamlit" / "config.toml").read_text())
+    assert cfg["client"]["toolbarMode"] == "viewer"
+
+
+def test_readme_says_where_to_start_the_page_and_what_it_shows():
+    readme = (ROOT / "README.md").read_text()
+    assert "Start it from the repository root" in readme
+    assert "The forecast and the report show no issue keys or file names" in readme

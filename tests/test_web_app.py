@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -50,6 +51,10 @@ def fake_transport(ids: list[str] | None = None, calls: list | None = None):
 def app(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
 
+    import streamlit as st
+
+    st.cache_data.clear()
+
     def make():
         at = AppTest.from_file(str(APP), default_timeout=60)
         return at.run()
@@ -91,7 +96,10 @@ def test_page_with_a_key_shows_the_approved_explanation(app, monkeypatch):
     monkeypatch.setattr(logic, "TRANSPORT", fake_transport(calls=calls))
     at = app()
     assert not at.exception
-    assert at.toggle(key="explain").value is True
+    assert at.toggle(key="explain").value is False  # off by default: no paid call
+    assert not at.toggle(key="explain").disabled
+    assert len(calls) == 0
+    at.toggle(key="explain").set_value(True).run()
     assert len(calls) == 1
     shown = [m.value for m in at.markdown]
     assert any(
@@ -116,6 +124,7 @@ def test_page_with_a_bad_ai_reply_shows_the_plain_report(app, monkeypatch):
 
     monkeypatch.setattr(logic, "TRANSPORT", bad)
     at = app()
+    at.toggle(key="explain").set_value(True).run()
     assert not at.exception
     assert len(at.metric) == 4
     groups = (at.markdown, at.caption, at.info, at.warning)
@@ -158,12 +167,49 @@ def test_upload_mode_with_no_file_asks_for_one(app):
 def test_optional_inputs_change_the_forecast(app):
     at = app()
     at.toggle(key="points_given").set_value(True).run()
-    at.number_input(key="backlog_points").set_value(100.0)
+    at.number_input(key="backlog_points").set_value(123.0)
     at.number_input(key="seed").set_value(7)
     at.run()
     expected = forecast_from_bytes(
-        SAMPLE.read_bytes(), backlog=40, backlog_points=100.0, seed=7
+        SAMPLE.read_bytes(), backlog=40, backlog_points=123.0, seed=7
     ).facts
     assert metrics(at)["Velocity date"] == str(expected.velocity_date)
     assert metrics(at)["85% date"] == str(expected.mc85)
     assert "seed 7)" in at.code[0].value  # the page uses the seed it was given
+
+
+def test_the_ai_call_is_cached_and_only_made_when_turned_on(app, monkeypatch):
+    calls: list = []
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key-not-real")
+    monkeypatch.setattr(logic, "TRANSPORT", fake_transport(calls=calls))
+    at = app()
+    at.number_input(key="backlog").set_value(41).run()
+    assert len(calls) == 0  # toggle off: no call
+    at.toggle(key="explain").set_value(True).run()
+    at.run()
+    at.run()
+    assert len(calls) == 1  # same forecast: one call
+    at.number_input(key="backlog").set_value(42).run()
+    assert len(calls) == 2  # new forecast: one more call
+    at.number_input(key="backlog").set_value(41).run()
+    assert len(calls) == 2  # back to a forecast seen before: cached
+
+
+def test_the_forecast_date_option(app):
+    at = app()
+    assert at.date_input(key="as_of").value is None  # default: the last done day
+    at.date_input(key="as_of").set_value(date(2026, 8, 31)).run()
+    assert not at.exception and not at.error
+    expected = forecast_from_bytes(SAMPLE.read_bytes(), backlog=40, as_of=date(2026, 8, 31)).facts
+    assert metrics(at)["85% date"] == str(expected.mc85)
+    assert any("from 2026-08-31" in h.value for h in at.subheader)
+
+
+def test_an_error_is_shown_as_plain_text(app):
+    at = app()
+    at.radio(key="source").set_value("Upload a CSV file").run()
+    bad = b"Issue_Key,Type,Resolution_Date,Story_Point\nA-1,Story,[x](http://e),3\n"
+    at.file_uploader(key="upload").set_value(("bad.csv", bad, "text/csv"))
+    at.run()
+    assert len(at.error) == 1
+    assert "\\[x\\]\\(http://e\\)" in at.error[0].value
