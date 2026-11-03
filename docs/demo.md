@@ -13,27 +13,30 @@ The web page runs as a free public demo on **Streamlit Community Cloud** (MCF-26
    - App URL: a short name, for example `mcf-forecast`
 4. Open **Advanced settings**:
    - Python version: 3.12
-   - Secrets: leave empty. **Do not add `ANTHROPIC_API_KEY`.** With no key, the AI explanation is off, so visitors cannot cause paid calls (proposal for the PM, MCF-26 Review).
+   - Secrets: leave empty. **Do not add `ANTHROPIC_API_KEY`.** With no key, the AI explanation is off, so visitors cannot cause paid calls. The PM decides this at the MCF-26 review.
 5. Click **Deploy**. The first start takes a few minutes.
 
-How the install works: Community Cloud uses the first dependency file that it finds, in this order: `uv.lock`, `Pipfile`, `environment.yml`, `requirements.txt`, `pyproject.toml`. This repository has only `requirements.txt` from that list. It installs this package with the `web` extra (`.[web]`), so the versions come from `pyproject.toml`. The settings in `.streamlit/config.toml` (10 MB uploads, no usage data, no Deploy button) apply because the app starts from the repository root.
+How the install works: Community Cloud uses the first dependency file that it finds, in this order: `uv.lock`, `Pipfile`, `environment.yml`, `requirements.txt`, `pyproject.toml`. This repository has only `requirements.txt` from that list. It installs this package as an editable install with the `web` extra (`-e .[web]`), so the versions come from `pyproject.toml` and the page finds the sample file in `examples/`. The settings in `.streamlit/config.toml` (10 MB uploads, no usage data, no Deploy button) apply because the app starts from the repository root.
 
 A private repository: Community Cloud can deploy from a private repository, but then the app is private too. The repository becomes public at the release (MCF-27). Deploy after that, or share the app with named viewers until then.
 
 ## Check the deployed page
 
-Run the browser check against the app address. Add `/~/+/` at the end, so that the check opens the page itself and not the Community Cloud frame:
+1. Open the app in a browser first. If the app sleeps, click the button to wake it, and wait until the forecast shows.
+2. Run the browser check against the app address. Add `/~/+/` at the end, so that the check opens the page itself and not the Community Cloud frame:
 
 ```bash
 python scripts/browser_check.py --url https://mcf-forecast.streamlit.app/~/+/
 ```
+
+If that address does not open the page, use the embed address instead: `https://mcf-forecast.streamlit.app/?embed=true`. (The `/~/+/` path is not in the Streamlit docs; `?embed=true` is.)
 
 All checks must pass. "AI off without a key" passes only when the app has no key.
 
 ## Recorded video (A5)
 
 ```bash
-pip install -e ".[web]" playwright
+pip install -e ".[web]" playwright==1.63.0
 python -m playwright install chromium
 python scripts/record_demo.py --out demo.mp4
 ```

@@ -64,7 +64,7 @@ def main() -> int:
     expected = forecast_from_bytes(sample_bytes(), backlog=40).facts
     server = None
     if args.url:
-        url = args.url.rstrip("/")
+        url = args.url
     else:
         port = free_port()
         url = f"http://127.0.0.1:{port}"
