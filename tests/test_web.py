@@ -213,11 +213,16 @@ def test_page_words_replace_cli_words_in_errors():
             assert cli_word not in message, message
 
 
-def test_a_date_out_of_range_gets_its_own_message_and_is_logged(caplog):
-    data = HEADER.encode() + b"A-1,Story,0001-01-02,3\n"
+def test_a_date_out_of_range_gets_its_own_message_and_is_logged(monkeypatch, caplog):
+    # Year 1 itself is now a clear CLI error (MCF-29); this keeps the page's own
+    # guard for any other date overflow.
+    def boom(*a, **k):
+        raise OverflowError("date value out of range")
+
+    monkeypatch.setattr(logic, "compute_full", boom)
     with caplog.at_level("ERROR", logger="mcf.web.logic"):
         with pytest.raises(WebError, match="a date is too early or too late"):
-            forecast_from_bytes(data, backlog=10)
+            forecast_from_bytes(SAMPLE.read_bytes(), backlog=10)
     assert any(r.exc_info for r in caplog.records)
 
 

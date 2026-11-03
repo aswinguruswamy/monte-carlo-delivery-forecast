@@ -175,7 +175,13 @@ def compute_full(
     else:  # the last done day of any item (value, bug or epic)
         t = max(issues["done_day"])
 
-    start, end = window(t)
+    try:
+        start, end = window(t)
+    except OverflowError:  # MCF-29: day t is in the first 83 days of year 1
+        raise ThroughputError(
+            f"no forecast from {t}: the 84-day history window starts before the first "
+            "calendar date; use a later day"
+        ) from None
     counts = counts_from_ordinals(ordinals, start, end)
     if not counts.any():
         raise MonteCarloError(
