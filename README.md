@@ -2,7 +2,7 @@
 
 Forecast when the next N work items will be done, as dates at 50%, 85% and 95% confidence, from a team's past throughput. The tool also gives the usual velocity date, and a back-test on 29 real open-source projects compares the two methods.
 
-**Status:** version 1.0.0 (release planned 2026-11-06, MCF-27): command line, back-test, web page and AI explanation. Changes: [CHANGELOG.md](CHANGELOG.md).
+**Status:** version 1.0.0, released 2026-11-03: command line, back-test, web page and AI explanation. Changes: [CHANGELOG.md](CHANGELOG.md).
 
 ## Install
 
@@ -64,7 +64,11 @@ Back-test of v1 on the TAWOS extract: 29 projects, N = 10, 25 and 50 items, **7,
 | 1. The 85% date is correct in 75–95% of cases | 69.0% | 75–95% | **FAIL** |
 | 2. Median error: Monte Carlo 50% date vs velocity date | 34 days vs 36 days | Monte Carlo smaller | **PASS** |
 
-Measure 1 did not pass: the 85% date was too early in 31.0% of cases. Measure 2 passes, but the lead is small and not robust (the 95% interval of the difference is 0 to 6 days). 903 of 8,595 cases (10.5%) have no forecast because no item was done in their 84-day window. The method was not changed after the results. Full report, with one row for each project: [docs/backtest-report.md](docs/backtest-report.md).
+Measure 1 did not pass: the 85% date was too early in 31.0% of cases. Measure 2 passes, but the lead is small and not robust (the 95% interval of the difference is 0 to 6 days). 903 of 8,595 cases (10.5%) have no forecast because no item was done in their 84-day window. The method was not changed after the results.
+
+**AI evaluation (measure 3): PASS** on 2026-11-03: 10 cases × 3 runs with Claude, 30 of 30 valid replies, 0 wrong numbers or dates, and the hidden instruction in the injection case was ignored (D35).
+
+Full report, with one row for each project: [docs/backtest-report.md](docs/backtest-report.md).
 
 ## Limits
 

@@ -305,13 +305,13 @@ Result: pass — no ❌.
 | 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
 | 4 | PR adds tests | ✅ | `tests/test_explain_eval.py` (41 tests, fakes only); failing tests committed first twice; the 2 planted bugs the review found now fail the tests (L6) | — |
 | 5 | Each decision ID in the PR is in the Decision Log | ✅ | D33.1, D35 (logged) | — |
-| 6 | AI ticket evaluation | 🟡 | 10 fixed cases cover all 15 bank sentences and each condition value; repeat runs; injection case; prompt version recorded. The live run needs the PM's secret and the workflow on `main` | PM runs the workflow after merge; evidence on MCF-23 |
+| 6 | AI ticket evaluation | ✅ | 10 fixed cases cover all 15 bank sentences and each condition value; repeat runs; injection case; prompt version recorded. Live run on `main` 2026-11-03: PASS, 30 of 30 format, 0 wrong numbers, 0 API errors (evidence on MCF-23) | — |
 | 7 | Independent review with a verdict | ✅ | Subagent: "Approve with changes", 0 blockers, 4 should-fix — all fixed with tests; 4 of 6 nice-to-have done | — |
-| 8 | Each acceptance criterion met | 🟡 | AC1 and AC2 are proved with fakes. AC2 "project name" = the file name and issue keys (the tool has no project-name field). Live proof: the manual run | Live run PASS before Done |
+| 8 | Each acceptance criterion met | ✅ | AC1 and AC2 proved with fakes and with the live run (PASS, injection 3 of 3). AC2 "project name" = the file name and issue keys (the tool has no project-name field) | — |
 | 9 | README and rule pages match | ✅ | README: live run is the manual workflow only; PASS / INCONCLUSIVE rules | — |
 | 10 | Workflow steps followed | ✅ | Brief, decision D35 before the build, tests first, review before approval | — |
 
-Result: pass — no ❌. Items 6 and 8 close when the live run on `main` reports PASS.
+Result: pass — no ❌. Items 6 and 8 closed by the live run PASS (2026-11-03).
 
 ## Ticket MCF-24 — 2026-11-03 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
 

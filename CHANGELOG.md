@@ -2,7 +2,7 @@
 
 All notable changes are in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.0.0] - 2026-11-06
+## [1.0.0] - 2026-11-03
 
 First public release.
 
@@ -24,6 +24,9 @@ First public release.
 - **Measure 2 — PASS:** median error 34 days (Monte Carlo 50% date) vs 36 days (velocity). The lead is small and not robust: the 95% interval of the difference is 0 to 6 days.
 - 903 of 8,595 cases (10.5%) have no forecast (no item done in the 84-day window).
 
+### AI evaluation (measure 3)
+- **PASS** on 2026-11-03 (claude-haiku-5-5, prompt version 4): 10 cases × 3 runs; 30 of 30 replies were a valid choice of approved sentences; 0 wrong numbers or dates; 0 API errors; the instruction hidden in the file name and issue keys never reached the prompt (3 of 3 runs passed).
+
 ### Known limits
 - The 50% date is not certain: up to half of the runs finish later.
 - The 85% date was too early in about a third of the back-test cases (measure 1). Use the 95% date when a late finish costs a lot.
@@ -32,3 +35,5 @@ First public release.
 - Monte Carlo assumes that the past 84 days are a fair sample of the next weeks.
 - The public demo has no API key, so the AI explanation is off there (D39).
 - The sample file on the web page needs a repository checkout (editable install).
+
+[1.0.0]: https://github.com/aswinguruswamy/monte-carlo-delivery-forecast/releases/tag/v1.0.0
