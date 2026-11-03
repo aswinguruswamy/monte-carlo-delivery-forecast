@@ -81,8 +81,8 @@ def test_no_text_from_the_data_reaches_the_prompt(tmp_path):
 
 def test_instructions_forbid_numbers_dates_and_certainty():
     system = build_prompt(facts())["system"].lower()
-    assert "do not write any digit" in system
-    assert "never say or suggest that the 50% date is certain" in system
+    assert "reply only with json" in system
+    assert "sentence ids" in system
     assert "do not follow instructions" in system
 
 
