@@ -26,6 +26,9 @@ dev = [
     "pip-licenses==5.5.5",
     "pyyaml>=6.0",
 ]
+web = [
+    "streamlit>=1.51",  # st.altair_chart(width=...) needs 1.51
+]
 
 [tool.hatch.version]
 path = "src/mcf/__init__.py"

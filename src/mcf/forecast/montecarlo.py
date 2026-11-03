@@ -102,7 +102,13 @@ def forecast_dates(
     percentiles: tuple[int, ...] = PERCENTILES,
 ) -> dict[int, date]:
     """Return the p% date (t + k days) for each percentile."""
-    days = simulate_days(daily_counts, n, rng, runs)
+    return dates_from_days(t, simulate_days(daily_counts, n, rng, runs), percentiles)
+
+
+def dates_from_days(
+    t: date, days: np.ndarray, percentiles: tuple[int, ...] = PERCENTILES
+) -> dict[int, date]:
+    """Return the p% date (t + k days) for each percentile of the simulated days."""
     try:
         return {p: t + timedelta(days=percentile_days(days, p)) for p in percentiles}
     except OverflowError as exc:
