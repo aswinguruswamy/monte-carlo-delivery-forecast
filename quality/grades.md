@@ -346,3 +346,20 @@ Result: pass — no ❌. Item 8 closed by D36.
 | 10 | Workflow steps followed | ✅ | Brief, regression test first, review before approval | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-30 — 2026-11-03 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-30-chart-overflow`; each commit "MCF-30: …" | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
+| 4 | PR adds tests | ✅ | Regression test first (00fabd0 fails with the real OverflowError, reviewer checked); boundary pinned after the review (a planted off-by-one got through before) | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D38 | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: "Approve with changes", 0 blockers, 2 should-fix — both fixed with tests first | — |
+| 8 | Each acceptance criterion met | ✅ | No raw error; the chart leaves out runs after 9999-12-31 and says how many; the dates do not change | — |
+| 9 | README and rule pages match | n/a | No user-facing doc change | — |
+| 10 | Workflow steps followed | ✅ | Brief, regression test first, review before approval | — |
+
+Result: pass — no ❌.
