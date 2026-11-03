@@ -5,6 +5,7 @@ this script runs the same kind of checks in a real browser. It starts the page
 with no API key (no paid call), so the AI part is the "off" state.
 
     python scripts/browser_check.py [--screenshots DIR]
+    python scripts/browser_check.py --url https://APP.streamlit.app/~/+/   (deployed demo)
 
 Exit 0 = all checks pass, 1 = a check failed.
 """
@@ -50,32 +51,41 @@ def wait_for(url: str, seconds: float = 60) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--screenshots", type=Path, default=None)
+    parser.add_argument(
+        "--url",
+        default=None,
+        help="check a deployed page (no key on the server) instead of a local one",
+    )
     args = parser.parse_args()
     shots = args.screenshots
     if shots:
         shots.mkdir(parents=True, exist_ok=True)
 
     expected = forecast_from_bytes(sample_bytes(), backlog=40).facts
-    port = free_port()
-    url = f"http://127.0.0.1:{port}"
-    env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
-    server = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "streamlit",
-            "run",
-            str(ROOT / "streamlit_app.py"),
-            "--server.port",
-            str(port),
-            "--server.headless",
-            "true",
-        ],
-        cwd=ROOT,
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    server = None
+    if args.url:
+        url = args.url
+    else:
+        port = free_port()
+        url = f"http://127.0.0.1:{port}"
+        env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
+        server = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "streamlit",
+                "run",
+                str(ROOT / "streamlit_app.py"),
+                "--server.port",
+                str(port),
+                "--server.headless",
+                "true",
+            ],
+            cwd=ROOT,
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
     results: list[tuple[str, bool, str]] = []
 
     def check(name: str, fn) -> None:
@@ -86,7 +96,8 @@ def main() -> int:
             results.append((name, False, str(exc).splitlines()[0][:200]))
 
     try:
-        wait_for(url)
+        if server is not None:
+            wait_for(url)
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
             for width, label in ((1280, "desktop"), (390, "phone")):
@@ -97,7 +108,7 @@ def main() -> int:
                     "console",
                     lambda m, errors=errors: errors.append(m.text) if m.type == "error" else None,
                 )
-                page.goto(url)
+                page.goto(url, timeout=120_000)  # a sleeping cloud app can take a minute
                 main_area = page.locator("[data-testid='stMain']")
 
                 def sample_dates(page=page):
@@ -183,8 +194,9 @@ def main() -> int:
                 page.close()
             browser.close()
     finally:
-        server.terminate()
-        server.wait(timeout=10)
+        if server is not None:
+            server.terminate()
+            server.wait(timeout=10)
 
     print("===== BROWSER CHECK START =====")
     for name, ok, why in results:

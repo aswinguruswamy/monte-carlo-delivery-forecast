@@ -1,0 +1,4 @@
+# Streamlit Community Cloud installs from this file (MCF-26, docs/demo.md).
+# Editable install: the page then finds examples/sample_team.csv in the checkout.
+# A normal install would put the package in site-packages, without the sample.
+-e .[web]

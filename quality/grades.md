@@ -363,3 +363,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | Brief, regression test first, review before approval | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-26 — 2026-11-03 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-26-demo`; each commit "MCF-26: …" | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_demo.py` (10 tests); failing tests committed first twice; the review's blocker reproduced and fixed (clean install 10 → 18 of 18) | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D01, A5; D39 (no key on the public demo, PM 2026-11-03) | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: "Request changes", 1 blocker (sample file missing on Cloud) + 3 should-fix — all fixed with tests first | — |
+| 8 | Each acceptance criterion met | 🟡 | AC2 (video): done, 18.8 s, 0.2 MB. AC1: ready, but the PM must deploy; then the browser check runs on the live URL | PM deploys |
+| 9 | README and rule pages match | ✅ | README links `docs/demo.md` | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌. Item 5 closed by D39. Item 8 closes after the deploy and the live check.
