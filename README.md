@@ -2,7 +2,7 @@
 
 Forecast when the next N work items will be done, as dates at 50%, 85% and 95% confidence, from a team's past throughput. The tool also gives the usual velocity date, and a back-test on 29 real open-source projects compares the two methods.
 
-**Status:** package version 0.0.1; v1 in development. The MVP (command line and back-test) is complete. The full v1.0.0 release follows the release check (MCF-27).
+**Status:** version 1.0.0 (release planned 2026-11-06, MCF-27): command line, back-test, web page and AI explanation. Changes: [CHANGELOG.md](CHANGELOG.md).
 
 ## Install
 
@@ -12,7 +12,7 @@ Python 3.11 or 3.12.
 git clone https://github.com/aswinguruswamy/monte-carlo-delivery-forecast.git
 cd monte-carlo-delivery-forecast
 python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev]" -c constraints.txt
 pytest
 ```
 

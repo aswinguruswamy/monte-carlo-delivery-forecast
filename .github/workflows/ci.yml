@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+    tags: ["v*"]  # a release tag must equal the package version (MCF-27)
 
 permissions:
   contents: read
@@ -24,13 +25,37 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install
-        run: pip install -e ".[dev,web]"
+        run: pip install -e ".[dev,web]" -c constraints.txt
       - name: Style
         run: |
           ruff check .
           ruff format --check .
       - name: Tests
         run: pytest
+
+  package:
+    name: Clean install of the wheel (MCF-27)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+      - name: Build the wheel
+        run: pip wheel . --no-deps -w dist
+      - name: Install the wheel in a clean environment and run it
+        run: |
+          python -m venv /tmp/clean
+          /tmp/clean/bin/pip install --quiet "$(ls dist/mcf-*.whl)[web]" -c constraints.txt
+          cd /tmp && /tmp/clean/bin/mcf --help
+          /tmp/clean/bin/mcf forecast "$GITHUB_WORKSPACE/examples/sample_team.csv" --backlog 40
+      - name: The tag equals the package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(/tmp/clean/bin/python -c "import mcf; print(mcf.__version__)")
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != version $version"; exit 1; }
 
   security:
     name: Secret, dependency and licence scans
@@ -51,13 +76,13 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install
-        run: pip install -e ".[dev,web]"
+        run: pip install -e ".[dev,web]" -c constraints.txt
       - name: Dependency scan (pip-audit)
         run: pip-audit --skip-editable
       - name: Licence scan of runtime dependencies (pip-licenses, D19)
         run: |
           python -m venv /tmp/runtime
-          /tmp/runtime/bin/pip install --quiet ".[web]"
+          /tmp/runtime/bin/pip install --quiet ".[web]" -c constraints.txt
           pip-licenses --python /tmp/runtime/bin/python \
             --fail-on="${STRONG_COPYLEFT}"
         env:
