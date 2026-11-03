@@ -1,0 +1,3 @@
+# Streamlit Community Cloud installs from this file (MCF-26, docs/demo.md).
+# It installs this package with the web extra; versions come from pyproject.toml.
+.[web]

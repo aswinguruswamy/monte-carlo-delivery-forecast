@@ -41,6 +41,8 @@ pip install -e ".[web]"
 streamlit run streamlit_app.py
 ```
 
+A public demo and a recorded video: [docs/demo.md](docs/demo.md).
+
 Start it from the repository root: the settings in `.streamlit/config.toml` (uploads of 10 MB at most, no usage data sent to Streamlit, no Deploy button) apply only there.
 
 Use the made-up sample file ([examples/sample_team.csv](examples/sample_team.csv), in a repository checkout only) or upload your own CSV (same columns as above). Enter the backlog and see the 50%, 85% and 95% dates, the velocity date, and a chart of the simulated finish dates. The page uses the same code as `mcf forecast`, so the dates are the same. A bad file shows a clear error. The forecast and the report show no issue keys or file names (the upload box shows the name of your own file). The AI explanation needs `ANTHROPIC_API_KEY` on the server. It is off until you turn it on, and the page asks Claude only once for each forecast.
