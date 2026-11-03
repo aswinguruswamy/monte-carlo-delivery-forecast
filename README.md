@@ -30,6 +30,8 @@ The CSV needs the columns `Issue_Key`, `Type`, `Resolution_Date` and `Story_Poin
 - `--seed S`: random seed, default 20261028. The same file and seed give the same dates.
 - `--explain`: add a short explanation. Claude picks sentences from a PM-approved list that fit this forecast (needs `ANTHROPIC_API_KEY`; model from `MCF_MODEL`, D32, D33.1). The sentences hold no numbers or dates; code writes those. If the reply is not a valid choice, or the call fails, only the plain report shows.
 
+**AI evaluation (MCF-23, D35):** the live evaluation runs only by hand in GitHub Actions: Actions → "AI evaluation (manual)" → Run workflow (on `main`). It uses the repository secret `ANTHROPIC_API_KEY` and calls the paid API. It sends 10 fixed cases (one with an instruction hidden in the file name and issue keys) 3 times each to Claude. **PASS** needs all of these: every answered reply is a valid choice of approved sentences, the shown text has no wrong number or date, the hidden instruction never reaches the prompt, and no API call fails after one retry. If calls fail but nothing else fails, the result is **INCONCLUSIVE**: run it again. The result is in the job summary and the `eval-result` artifact. The tests use fakes only; the script (`python -m mcf.explain.eval`) is not for local live runs (D35).
+
 Run `mcf forecast --help` for details. The output gives the Monte Carlo 50%, 85% and 95% dates and the velocity date. **The 50% date is not certain: half of the runs finish later.**
 
 ## How it works
