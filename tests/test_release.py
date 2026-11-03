@@ -59,3 +59,23 @@ def test_ci_installs_with_the_lock_file_and_checks_a_clean_wheel_install():
 def test_readme_names_the_release():
     readme = (ROOT / "README.md").read_text()
     assert f"**Status:** version {VERSION}" in readme
+
+
+def test_changelog_date_equals_the_citation_date():
+    cff = yaml.safe_load((ROOT / "CITATION.cff").read_text())
+    text = (ROOT / "CHANGELOG.md").read_text()
+    assert f"## [{VERSION}] - {cff['date-released']}" in text
+
+
+def test_clean_install_runs_on_both_pythons_with_a_time_limit():
+    ci = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text())
+    job = ci["jobs"]["package"]
+    assert job["strategy"]["matrix"]["python-version"] == ["3.11", "3.12"]
+    assert job["timeout-minutes"] <= 30
+
+
+def test_every_install_command_uses_the_lock_file():
+    readme = (ROOT / "README.md").read_text()
+    assert 'pip install -e ".[web]" -c constraints.txt' in readme
+    evalwf = (ROOT / ".github" / "workflows" / "eval.yml").read_text()
+    assert "pip install -e . -c constraints.txt" in evalwf
