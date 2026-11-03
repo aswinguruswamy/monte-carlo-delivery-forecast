@@ -32,7 +32,8 @@ def test_a_date_near_year_1_gives_a_clear_error(tmp_path, capsys, rows, extra):
     out, err = capsys.readouterr()
     assert code == 1
     assert err.startswith("mcf: error: ")
-    assert "the 84-day history window starts before the first calendar date" in err
+    assert "the 84-day history window starts before 0001-01-01" in err
+    assert "Use --as-of 0001-03-25 or later." in err
     assert "Traceback" not in err and out == ""
 
 
@@ -58,5 +59,16 @@ def test_no_traceback_from_the_installed_command(tmp_path):
 def test_the_web_page_shows_the_same_clear_text():
     from mcf.web.logic import WebError, forecast_from_bytes
 
-    with pytest.raises(WebError, match="history window starts before the first calendar date"):
+    with pytest.raises(WebError) as info:
         forecast_from_bytes((HEADER + "A-1,Story,0001-01-02,3\n").encode(), backlog=10)
+    message = str(info.value)
+    assert "history window starts before 0001-01-01" in message
+    assert "Choose a forecast date of 0001-03-25 or later." in message
+    assert "--as-of" not in message
+
+
+def test_the_first_day_that_works_is_0001_03_25(tmp_path, capsys):
+    path = tmp_path / "team.csv"
+    path.write_text(HEADER + "A-1,Story,0001-03-01,3\n", encoding="utf-8")
+    assert main(["forecast", str(path), "--backlog", "1", "--as-of", "0001-03-24"]) == 1
+    assert main(["forecast", str(path), "--backlog", "1", "--as-of", "0001-03-25"]) == 0
