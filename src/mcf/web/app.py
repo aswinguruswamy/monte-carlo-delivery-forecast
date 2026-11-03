@@ -21,6 +21,15 @@ SAMPLE = "Sample file (made-up data)"
 UPLOAD = "Upload a CSV file"
 
 
+def not_drawn_text(count: int) -> str | None:
+    """The caption for runs that end after 9999-12-31 (MCF-30), or None."""
+    if count == 0:
+        return None
+    if count == 1:
+        return "The chart does not show 1 run that ends after 9999-12-31."
+    return f"The chart does not show {count:,} runs that end after 9999-12-31."
+
+
 class _NoText(Exception):
     """No approved text. Not cached, so a later rerun can try again."""
 
@@ -140,9 +149,9 @@ def main() -> None:
     bottom[1].metric("Velocity date", str(f.velocity_date))
     st.markdown("**The 50% date is not certain: half of the runs finish later.**")
     st.altair_chart(_chart(result), width="stretch")
-    left_out = logic.runs_not_drawn(result)
+    left_out = not_drawn_text(logic.runs_not_drawn(result))
     if left_out:
-        st.caption(f"{left_out:,} runs end after 9999-12-31 and are not drawn.")
+        st.caption(left_out)
     st.caption(
         f"{f.runs:,} simulated runs from {f.items_done} value items done between "
         f"{f.window_start} and {f.window_end}. Bars: runs that finish on each date. "
