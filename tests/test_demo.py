@@ -22,7 +22,8 @@ def test_requirements_installs_this_package_with_the_web_extra():
     ]
     # editable install: the app then finds examples/sample_team.csv in the checkout
     # (a normal install puts the package in site-packages, and the sample is lost)
-    assert lines == ["-e .[web]"]
+    # the public demo uses the release lock file too (D20, D26)
+    assert lines == ["-c constraints.txt", "-e .[web]"]
 
 
 def test_no_dependency_file_takes_priority_over_requirements_txt():

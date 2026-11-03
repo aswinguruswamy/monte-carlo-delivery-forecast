@@ -305,13 +305,13 @@ Result: pass — no ❌.
 | 3 | CI green on the PR | ✅ | Final head checked green before Review | — |
 | 4 | PR adds tests | ✅ | `tests/test_explain_eval.py` (41 tests, fakes only); failing tests committed first twice; the 2 planted bugs the review found now fail the tests (L6) | — |
 | 5 | Each decision ID in the PR is in the Decision Log | ✅ | D33.1, D35 (logged) | — |
-| 6 | AI ticket evaluation | 🟡 | 10 fixed cases cover all 15 bank sentences and each condition value; repeat runs; injection case; prompt version recorded. The live run needs the PM's secret and the workflow on `main` | PM runs the workflow after merge; evidence on MCF-23 |
+| 6 | AI ticket evaluation | ✅ | 10 fixed cases cover all 15 bank sentences and each condition value; repeat runs; injection case; prompt version recorded. Live run on `main` 2026-11-03: PASS, 30 of 30 format, 0 wrong numbers, 0 API errors (evidence on MCF-23) | — |
 | 7 | Independent review with a verdict | ✅ | Subagent: "Approve with changes", 0 blockers, 4 should-fix — all fixed with tests; 4 of 6 nice-to-have done | — |
-| 8 | Each acceptance criterion met | 🟡 | AC1 and AC2 are proved with fakes. AC2 "project name" = the file name and issue keys (the tool has no project-name field). Live proof: the manual run | Live run PASS before Done |
+| 8 | Each acceptance criterion met | ✅ | AC1 and AC2 proved with fakes and with the live run (PASS, injection 3 of 3). AC2 "project name" = the file name and issue keys (the tool has no project-name field) | — |
 | 9 | README and rule pages match | ✅ | README: live run is the manual workflow only; PASS / INCONCLUSIVE rules | — |
 | 10 | Workflow steps followed | ✅ | Brief, decision D35 before the build, tests first, review before approval | — |
 
-Result: pass — no ❌. Items 6 and 8 close when the live run on `main` reports PASS.
+Result: pass — no ❌. Items 6 and 8 closed by the live run PASS (2026-11-03).
 
 ## Ticket MCF-24 — 2026-11-03 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
 
@@ -380,3 +380,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
 Result: pass — no ❌. Item 5 closed by D39. Item 8 closes after the deploy and the live check.
+
+## Ticket MCF-27 — 2026-11-03 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief (release-readiness skill loaded) before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-27-release`; each commit "MCF-27: …" | — |
+| 3 | CI green on the PR | ✅ | Final head checked green before Review (5 jobs incl. the clean-install job on 3.11 and 3.12) | — |
+| 4 | PR adds tests | ✅ | `tests/test_release.py` (9 tests); failing tests committed first twice | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D18, D20, D26, D39; R3 | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: "Approve with changes", 0 blockers, 2 should-fix — fixed (demo lock) or put in the G8 steps (release-day date); gitleaks on all 143 commits: no leaks; pip-audit: none | — |
+| 8 | Each acceptance criterion met | 🟡 | AC1: version 1.0.0 everywhere; clean install on 3.11 and 3.12 in CI; tag check ready. AC2 and the tag need the PM's go (G8) | PM go |
+| 9 | README and rule pages match | ✅ | README status, CHANGELOG, CITATION, demo guide | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌. Item 8 closes at the G8 go: tag, release, public repository.
