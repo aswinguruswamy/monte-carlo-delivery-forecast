@@ -124,8 +124,9 @@ def build_parser() -> argparse.ArgumentParser:
     fc.add_argument(
         "--explain",
         action="store_true",
-        help="add a short explanation by Claude (needs ANTHROPIC_API_KEY). Every number and "
-        "date in it is checked; if a check fails, only the plain report is shown",
+        help="add a short explanation: Claude picks approved sentences that fit this forecast "
+        "(needs ANTHROPIC_API_KEY; D33.1). If the reply is not a valid choice, or the call "
+        "fails, only the plain report is shown",
     )
     return parser
 
@@ -244,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
         if getattr(args, "explain", False):
             text, reason = explain_checked(facts, transport=TRANSPORT)
             if text is not None:
-                print(f"\nExplanation (AI, checked):\n{text}")
+                print(f"\nExplanation (AI-selected, approved sentences):\n{text}")
             else:
                 print(f"\nAI explanation not shown: {reason}")
     except (

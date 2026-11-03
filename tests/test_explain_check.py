@@ -13,8 +13,8 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
-from mcf.explain.bank import BANK, MANDATORY, applicable_ids, qualities
 
+from mcf.explain.bank import BANK, MANDATORY, applicable_ids, qualities
 from mcf.explain.check import (
     REASON_TEXT,
     explain_checked,
@@ -160,7 +160,7 @@ def test_a_valid_selection_renders_the_bank_text():
         good_reply(MANDATORY, "share_85", "made_up"),  # unknown ID
         good_reply(MANDATORY, "share_85", "spread_narrow"),  # does not apply: spread is wide
         good_reply(MANDATORY, "share_85", "velocity_after_95"),  # does not apply
-        '{"sentences": ["%s", "share_85", "use_95"], "note": "x"}' % MANDATORY,  # extra key
+        json.dumps({"sentences": [MANDATORY, "share_85", "use_95"], "note": "x"}),  # extra key
         "Here you go: " + good_reply(MANDATORY, "share_85", "use_95"),  # text around JSON
         json.dumps({"sentences": [MANDATORY, 1, "use_95"]}),
         json.dumps([MANDATORY, "share_85", "use_95"]),
@@ -192,7 +192,10 @@ def test_prompt_lists_only_applicable_sentences_and_qualities_as_words():
         assert sid in user
     assert "spread_narrow" not in user
     assert "wide" in user
-    assert not re.search(r"\d", re.sub(r"\b(50|85|95)%|\b(50|85|95)\b", "", user))
+    rest = user
+    for sid in applicable_ids(facts()):
+        rest = rest.replace(sid, "")
+    assert not re.search(r"\d", re.sub(r"\b(50|85|95)%|\b(50|85|95)\b", "", rest))
 
 
 # --- the safe path (NFR5) -----------------------------------------------------
