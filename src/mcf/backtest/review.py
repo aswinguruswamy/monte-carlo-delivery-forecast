@@ -21,16 +21,26 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
 from dataclasses import dataclass
+from fractions import Fraction
 from pathlib import Path
 
-from mcf.backtest.metrics import calibration_passes, error_passes
+from mcf.backtest import metrics as metrics_module
+from mcf.backtest.metrics import error_passes
 from mcf.backtest.report import ReportError, render_report
 
 ACCEPTED_SHA256 = "b8ae61562465fb71ea234a447534af47f12f1e995895dbf0204f6e89b41f603b"
+# Fixed here, not taken from the code under review (D07, D06, D30, ADR 0002).
+BAND = (Fraction(75, 100), Fraction(95, 100))
+PROJECTS = 29
+ROWS_READ = 47_205
+ROWS_NO_DATE = 19
+BOOTSTRAP_RESAMPLES = 2000
+BOOTSTRAP_SEED = 20261028
 ADR = Path("docs/adr/0002-backtest-method.md")
 METRICS = Path("results/metrics.json")
 REPORT = Path("docs/backtest-report.md")
@@ -44,7 +54,11 @@ SECTIONS = (
     "## Data and method",
     "## Reproduce",
 )
-FUTURE_TESTS = ("tests/test_backtest_run.py", "-k", "future or window or leak")
+FUTURE_TESTS = (
+    "tests/test_backtest_run.py::test_no_future_data_is_used_by_the_forecasts",
+    "tests/test_backtest_run.py::test_velocity_speed_uses_only_the_window",
+    "tests/test_backtest_run.py::test_window_with_no_value_item_is_a_no_forecast_case",
+)
 
 
 @dataclass(frozen=True)
@@ -73,7 +87,11 @@ def _adr_before_run(repo: Path) -> Gap | None:
             capture_output=True,
         )
     except (OSError, subprocess.CalledProcessError):
-        return Gap("adr_before_run", "no git history shows the ADR before the first back-test code")
+        return Gap(
+            "adr_before_run",
+            "no git history shows the ADR before the first back-test code "
+            "(shallow or missing history, or a wrong order)",
+        )
     if adr_commit == run_commit:
         return Gap("adr_before_run", "the ADR changed in the same commit as the back-test code")
     return None
@@ -114,10 +132,28 @@ def review(repo: str | Path, *, run_tests: bool = True) -> list[Gap]:
     if gap:
         gaps.append(gap)
 
-    m1 = calibration_passes(s["calibration_85"])
+    if metrics_module.BAND != BAND:
+        gaps.append(Gap("band_fixed", "the code's pass band is not 75–95% (D07)"))
+    m1 = BAND[0] <= Fraction(s["calibration_85"]) <= BAND[1]
     m2 = error_passes(s["median_error_mc50"], s["median_error_velocity"])
     if (m1, m2) != (s["measure_1_pass"], s["measure_2_pass"]):
         gaps.append(Gap("pass_rules", "a pass or fail in metrics.json does not follow the rules"))
+
+    boot = metrics.get("bootstrap", {})
+    if (boot.get("resamples"), boot.get("seed")) != (BOOTSTRAP_RESAMPLES, BOOTSTRAP_SEED):
+        gaps.append(
+            Gap("fixed_method_values", "the bootstrap is not 2,000 resamples, seed 20261028")
+        )
+    try:
+        info = info_from_report(report)
+        if (info["rows_read"], info["rows_no_date"]) != (ROWS_READ, ROWS_NO_DATE):
+            gaps.append(
+                Gap("fixed_method_values", "the report does not read 47,205 rows with 19 no-date")
+            )
+    except ReportError:
+        pass  # report_matches_metrics reports it
+    if len(metrics["by_project"]) != PROJECTS or s.get("projects") != PROJECTS:
+        gaps.append(Gap("project_count", f"the result does not hold all {PROJECTS} projects (D06)"))
 
     try:
         if render_report(metrics, info_from_report(report)) != report:
@@ -145,13 +181,15 @@ def review(repo: str | Path, *, run_tests: bool = True) -> list[Gap]:
         gaps.append(Gap("project_rows", "sizes with no case are not listed"))
 
     if run_tests:
+        env = {**os.environ, "PYTHONPATH": str((repo / "src").resolve())}
         result = subprocess.run(
-            [sys.executable, "-m", "pytest", "-q", *FUTURE_TESTS],
+            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", *FUTURE_TESTS],
             cwd=repo,
             capture_output=True,
             text=True,
+            env=env,
         )
-        if result.returncode != 0:
+        if result.returncode != 0 or f"{len(FUTURE_TESTS)} passed" not in result.stdout:
             gaps.append(Gap("future_data_tests", "the no-future-data tests fail or are missing"))
     return gaps
 

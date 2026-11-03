@@ -12,8 +12,10 @@ Use this skill to review `docs/backtest-report.md` and `results/metrics.json` in
 Run in the repository root:
 
 ```bash
-python -m mcf.backtest.review --repo .
+PYTHONPATH=src python -m mcf.backtest.review --repo .
 ```
+
+`PYTHONPATH=src` makes the script and its test run use the code under review, not an installed copy.
 
 The script checks: the ADR 0002 lock, the ADR before the first back-test code (git), the pass rules (75–95% band, D07; Monte Carlo median error smaller than velocity, a tie fails), the report against a fresh render of the metrics, a failed measure shown as FAIL, the required sections, one row for each project, sizes with no case, and the "no data after day t" tests. Copy each `GAP` line into your result.
 
@@ -34,6 +36,7 @@ python -m mcf.backtest.metrics --cases results/cases.csv --projects results/proj
 3. **Limits:** the extract (story points only, resolved as completed), 2-week periods, velocity's future points, overlapping cases, case selection.
 4. **Data terms:** TAWOS terms of use, no tracing to individual contributors, citations, no issue rows.
 5. **The 50% date** is never described as certain.
+6. **ADR rules that the script does not check:** data rules 3 and 6 (only the 19 NULL rows removed; unknown types stop the run), the sizes N = 10, 25 and 50, the 84-day window, 10,000 runs and the per-case seed, and that only summary numbers are published, with no issue rows (D08). Check them in the code and in the git history of `src/mcf/backtest/` and `src/mcf/forecast/`.
 
 ## Output
 
