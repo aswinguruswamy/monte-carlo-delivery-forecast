@@ -204,7 +204,7 @@ def test_message_to_sponsor_line():
 
 def test_sidebar_has_the_5_parts_in_order():
     heads = re.findall(r"^#### (.+)$", logic.SIDEBAR, flags=re.M)
-    assert heads == ["You need", "Steps", "Which date to use", "Be careful", "Your data"]
+    assert heads == ["You need", "Steps", "Which date to use", "Be careful", "Privacy"]
     assert "Jira export works" in logic.SIDEBAR
     assert "1 time in 3" in logic.SIDEBAR  # the back-test result (69.0% correct)
 
@@ -268,9 +268,9 @@ def test_the_demo_script_waits_for_text_that_the_page_shows():
 def test_the_help_explains_the_velocity_date():
     """MCF-34 (D45): pace and estimated points are in the Velocity help line."""
     side = logic.SIDEBAR
-    line = next(s for s in side.splitlines() if s.startswith("- **Velocity:**"))
+    line = next(s for s in side.splitlines() if s.startswith("- **Velocity date:**"))
     assert "average pace" in line and "story points" in line
-    assert "estimated" in line and "More options" in line
+    assert "estimates" in line and "More options" in line
 
 
 def test_the_help_names_the_real_options_expander():

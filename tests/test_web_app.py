@@ -116,7 +116,7 @@ def test_page_has_the_plain_labels_and_the_5_part_sidebar(app):
     assert at.text_input(key="backlog").label == "How many work items are left? (backlog)"
     assert not at.text_input(key="backlog").help  # no help button inside the label (#14)
     side = sidebar_text(at)
-    for part in ("You need", "Steps", "Which date to use", "Be careful", "Your data"):
+    for part in ("You need", "Steps", "Which date to use", "Be careful", "Privacy"):
         assert f"#### {part}" in side
     expected = forecast_from_bytes(SAMPLE.read_bytes(), backlog=40).facts
     text = page_text(at)

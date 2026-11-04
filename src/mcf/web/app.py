@@ -17,7 +17,7 @@ import streamlit as st
 from mcf.forecast.montecarlo import SEED
 from mcf.web import logic
 
-SAMPLE = "Sample file (made-up data)"
+SAMPLE = logic.SAMPLE_LABEL
 UPLOAD = "Upload a CSV file"
 
 
@@ -113,23 +113,18 @@ def main() -> None:
     st.caption(logic.BACKLOG_HELP)
     with st.expander("More options"):
         points_given = st.toggle("I know the story points left", key="points_given")
+        st.caption(logic.OPTION_HELP["backlog_points"])
         backlog_points = None
         if points_given:
             backlog_points = st.number_input(
                 "Story points left", min_value=0.1, value=100.0, key="backlog_points"
             )
-        as_of = st.date_input(
-            "Forecast from this date (as-of date). Empty: the last finished item.",
-            value=None,
-            key="as_of",
-        )
+        as_of = st.date_input("Forecast from this date (as-of date)", value=None, key="as_of")
+        st.caption(logic.OPTION_HELP["as_of"])
         seed = st.number_input(
-            "Repeat number (random seed). The same number gives the same dates.",
-            min_value=0,
-            value=SEED,
-            step=1,
-            key="seed",
+            "Repeat number (random seed)", min_value=0, value=SEED, step=1, key="seed"
         )
+        st.caption(logic.OPTION_HELP["seed"])
 
     explain = False
     if os.environ.get("ANTHROPIC_API_KEY"):
@@ -138,8 +133,7 @@ def main() -> None:
             value=False,  # off by default: each new forecast is one paid call
             key="explain",
         )
-    else:
-        st.caption(logic.AI_NOT_AVAILABLE)
+    # PM 2026-11-04: no AI line on a page with no key.
 
     try:
         backlog = logic.parse_backlog(backlog_text)
@@ -168,7 +162,7 @@ def main() -> None:
     st.caption(logic.from_line(f, as_of_given=as_of is not None))
     st.markdown(logic.cards_html(f), unsafe_allow_html=True)  # code-made text only
     st.markdown(f"**{logic.NOT_CERTAIN}**")
-    st.markdown(logic.share_line(f))
+    st.markdown(logic.message_line(f))
     if logic.no_points_line(f):
         st.caption(logic.no_points_line(f))
     st.altair_chart(_chart(result), width="stretch")
@@ -188,7 +182,7 @@ def main() -> None:
             st.markdown(text)
             st.caption("AI-selected, approved sentences (D33.1). Code wrote every date above.")
 
-    with st.expander("Full report"):
+    with st.expander(logic.REPORT_LABEL):
         st.code(result.report, language=None)
 
 
