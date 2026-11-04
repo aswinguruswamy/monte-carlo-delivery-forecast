@@ -27,7 +27,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mcf.web.logic import (  # noqa: E402
-    AI_NOT_AVAILABLE,
     forecast_from_bytes,
     long_date,
     sample_bytes,
@@ -119,10 +118,10 @@ def main() -> int:
                 def sample_dates(page=page):
                     expect(page.get_by_text("40 work items left")).to_be_visible(timeout=30_000)
                     want = {
-                        "50/50 date · P50": long_date(expected.mc50),
-                        "Safer date · P85": long_date(expected.mc85),
-                        "Safest date · P95": long_date(expected.mc95),
-                        "Velocity date · story points": long_date(expected.velocity_date),
+                        "50% chance of completion": long_date(expected.mc50),
+                        "85% chance of completion": long_date(expected.mc85),
+                        "95% chance of completion": long_date(expected.mc95),
+                        "Velocity date": long_date(expected.velocity_date),
                     }
                     cards = page.locator(".mcf-card")
                     expect(cards).to_have_count(4, timeout=30_000)
@@ -154,10 +153,10 @@ def main() -> int:
                     ).to_be_visible()
 
                 def not_certain(page=page):
-                    expect(page.get_by_text("The 50/50 date is not certain").first).to_be_visible()
+                    expect(page.get_by_text("The 50% date is not certain").first).to_be_visible()
 
                 def ai_off(page=page):
-                    expect(page.get_by_text(AI_NOT_AVAILABLE).first).to_be_visible()
+                    expect(page.get_by_text("AI explanation")).to_have_count(0)
 
                 def no_keys(main_area=main_area):
                     assert "SAMPLE-" not in main_area.inner_text()
@@ -180,7 +179,7 @@ def main() -> int:
                 check(f"{label}: help sidebar first in reading order", sidebar_first)
                 check(f"{label}: chart is drawn", chart)
                 check(f"{label}: the 50% date is not certain", not_certain)
-                check(f"{label}: AI off without a key, and says why", ai_off)
+                check(f"{label}: no AI line without a key", ai_off)
                 check(f"{label}: no issue keys on the page", no_keys)
                 check(f"{label}: no horizontal scroll", no_horizontal_scroll)
                 if shots:

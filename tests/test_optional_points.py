@@ -119,7 +119,7 @@ def test_the_page_logic_gives_dates_with_no_points():
     f = result.facts
     assert f.mc50 <= f.mc85 <= f.mc95
     assert f.velocity_date is None and f.items_no_points == 40
-    assert logic.marker_table(f)["label"].tolist() == ["50/50 (P50)", "Safer (P85)", "Safest (P95)"]
+    assert logic.marker_table(f)["label"].tolist() == ["50% chance", "85% chance", "95% chance"]
 
 
 # --- AC2: some story points ------------------------------------------------------------------

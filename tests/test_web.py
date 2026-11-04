@@ -85,7 +85,7 @@ def test_chart_tables():
     assert int(hist["runs"].sum()) == result.facts.runs
     assert hist["finish_date"].is_monotonic_increasing
     marks = logic.marker_table(result.facts)
-    assert list(marks["label"]) == ["50/50 (P50)", "Safer (P85)", "Safest (P95)", "Velocity"]
+    assert list(marks["label"]) == ["50% chance", "85% chance", "95% chance", "Velocity"]
     f = result.facts
     assert list(marks["date"]) == [f.mc50, f.mc85, f.mc95, f.velocity_date]
 
