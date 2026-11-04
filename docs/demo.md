@@ -42,3 +42,5 @@ python scripts/record_demo.py --out demo.mp4
 ```
 
 The script starts the page with no key and records the sample forecast, the chart, a new backlog, the options and a bad file. The video is about 20 seconds and less than 1 MB. It is not stored in the repository; it goes with the GitHub release.
+
+The v1.0.0 video shows the v1.0 page. The page changed in v1.1 (MCF-33: help sidebar, plain labels, written-out dates). The v1.0.0 release keeps its video. Record a new video for a new release only.

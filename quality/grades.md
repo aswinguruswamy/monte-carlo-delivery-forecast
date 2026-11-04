@@ -431,3 +431,20 @@ Result: pass — no ❌. Open point for the PM: `Subtask` vs `Sub-task` (D04.1).
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
 Result: pass — no ❌. Items 6 and 7 have a PM choice in the approval.
+
+## Ticket MCF-33 — 2026-11-04 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-33-page-redesign` (on top of MCF-32); each commit "MCF-33: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_web_redesign.py` and new AppTests; browser check updated (20 of 20, desktop and phone); failing tests committed first twice | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D41, D43, D33.1 | — |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent grade B−, 0 blockers, 3 major (contrast 4.47:1 on the safer card, demo script wait text, phone legend), 6 minor, 3 nits — all majors and minors fixed with tests first | — |
+| 8 | Each acceptance criterion met | 🟡 | Sidebar, labels, typed backlog, colours, date axis, accessibility: done. The 20-second test with 3–5 people is the PM's step | PM runs the 20-second test |
+| 9 | README and rule pages match | ✅ | `docs/demo.md` (v1.0.0 video kept as is) | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌. Item 8 closes after the PM's 20-second test.

@@ -26,7 +26,12 @@ from playwright.sync_api import expect, sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from mcf.web.logic import forecast_from_bytes, sample_bytes  # noqa: E402
+from mcf.web.logic import (  # noqa: E402
+    AI_NOT_AVAILABLE,
+    forecast_from_bytes,
+    long_date,
+    sample_bytes,
+)
 
 BAD = b"Issue_Key,Type\nA-1,Story\n"
 
@@ -112,22 +117,32 @@ def main() -> int:
                 main_area = page.locator("[data-testid='stMain']")
 
                 def sample_dates(page=page):
-                    expect(page.get_by_text("Forecast for the next 40 value items")).to_be_visible(
-                        timeout=30_000
-                    )
+                    expect(page.get_by_text("40 work items left")).to_be_visible(timeout=30_000)
                     want = {
-                        "50% date": str(expected.mc50),
-                        "85% date": str(expected.mc85),
-                        "95% date": str(expected.mc95),
-                        "Velocity date": str(expected.velocity_date),
+                        "50/50 date · P50": long_date(expected.mc50),
+                        "Safer date · P85": long_date(expected.mc85),
+                        "Safest date · P95": long_date(expected.mc95),
+                        "Velocity date · story points": long_date(expected.velocity_date),
                     }
-                    metrics = page.locator("[data-testid='stMetric']")
-                    expect(metrics).to_have_count(4, timeout=30_000)
+                    cards = page.locator(".mcf-card")
+                    expect(cards).to_have_count(4, timeout=30_000)
                     shown = {}
-                    for m in metrics.all():
-                        label = m.locator("[data-testid='stMetricLabel']").inner_text().strip()
-                        shown[label] = m.locator("[data-testid='stMetricValue']").inner_text()
+                    for c in cards.all():
+                        shown[c.locator(".mcf-card-label").inner_text().strip()] = (
+                            c.locator(".mcf-card-value").inner_text().strip()
+                        )
                     assert shown == want, f"label and date do not match: {shown}"
+
+                def sidebar_first(page=page):
+                    first = page.evaluate(
+                        """() => {
+                        const s = document.querySelector("[data-testid='stSidebar']");
+                        const m = document.querySelector("[data-testid='stMain']");
+                        return !!s && !!m &&
+                          !!(s.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING);
+                        }"""
+                    )
+                    assert first, "the help sidebar is not before the main page in reading order"
 
                 def chart(page=page):
                     expect(page.locator("[data-testid='stVegaLiteChart']")).to_be_visible()
@@ -139,10 +154,10 @@ def main() -> int:
                     ).to_be_visible()
 
                 def not_certain(page=page):
-                    expect(page.get_by_text("The 50% date is not certain").first).to_be_visible()
+                    expect(page.get_by_text("The 50/50 date is not certain").first).to_be_visible()
 
                 def ai_off(page=page):
-                    expect(page.get_by_text("AI explanation off").first).to_be_visible()
+                    expect(page.get_by_text(AI_NOT_AVAILABLE).first).to_be_visible()
 
                 def no_keys(main_area=main_area):
                     assert "SAMPLE-" not in main_area.inner_text()
@@ -153,15 +168,16 @@ def main() -> int:
                     assert sw <= cw + 1, f"page is {sw}px wide in a {cw}px window"
 
                 def dates_not_cut(page=page):
-                    expect(page.locator("[data-testid='stMetricValue']")).to_have_count(4)
+                    expect(page.locator(".mcf-card-value")).to_have_count(4)
                     cut = page.evaluate(
-                        """() => [...document.querySelectorAll("[data-testid='stMetricValue'] *")]
+                        """() => [...document.querySelectorAll(".mcf-card-value")]
                         .filter(e => e.scrollWidth > e.clientWidth + 1).map(e => e.textContent)"""
                     )
                     assert not cut, f"dates cut off: {cut}"
 
                 check(f"{label}: each date is under its own label", sample_dates)
                 check(f"{label}: dates are not cut off", dates_not_cut)
+                check(f"{label}: help sidebar first in reading order", sidebar_first)
                 check(f"{label}: chart is drawn", chart)
                 check(f"{label}: the 50% date is not certain", not_certain)
                 check(f"{label}: AI off without a key, and says why", ai_off)
@@ -177,7 +193,7 @@ def main() -> int:
                     )
                     alert = page.locator("[data-testid='stAlertContentError']")
                     expect(alert).to_contain_text(
-                        "missing column(s): Resolution_Date, Story_Point", timeout=30_000
+                        "missing column(s): Resolution_Date.", timeout=30_000
                     )
                     expect(page.locator("[data-testid='stException']")).to_have_count(0)
                     expect(page.locator("[data-testid='stVegaLiteChart']")).to_have_count(0)

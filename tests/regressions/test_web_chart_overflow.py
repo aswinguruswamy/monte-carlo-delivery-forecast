@@ -47,7 +47,7 @@ def test_the_page_draws_the_chart_and_says_how_many_runs_are_left_out():
     at = testing.AppTest.from_file(str(app), default_timeout=60).run()
     at.radio(key="source").set_value("Upload a CSV file").run()
     at.file_uploader(key="upload").set_value(("late.csv", late_file(), "text/csv"))
-    at.number_input(key="backlog").set_value(5)
+    at.text_input(key="backlog").set_value("5")
     at.run()
     assert not at.exception and not at.error
     assert len(at.get("vega_lite_chart")) == 1
