@@ -17,7 +17,8 @@ Rules:
 - Jira export (D42, user-file mode only): the loader also accepts the Jira column
   names in `ALIASES` (any letter case) and the Jira dates "03/Nov/26 4:35 PM",
   "03/Nov/2026 4:35 PM" and "03/Nov/26". The time is ignored, as for ISO dates.
-  Two story point columns are allowed; the row takes the value that is not empty,
+  A 2-digit year is 20YY.
+  Two Jira story point columns are allowed; the row takes the value that is not empty,
   and 2 different values are an error. Repeated columns that the loader does not
   use (for example "Sprint") are ignored. A used column that shows 2 times, or our
   name together with a Jira name for the same column, is an error. The loader
@@ -44,7 +45,7 @@ NO_POINT = {"", "NULL"}
 DATE_TEXT = re.compile(r"\d{4}-\d{2}-\d{2}(?:[ T].*)?")
 POINT_TEXT = re.compile(r"[0-9]+(?:\.[0-9]+)?|\.[0-9]+", re.ASCII)
 JIRA_DATE = re.compile(
-    r"(\d{1,2})/([A-Za-z]{3})/(\d{2}|\d{4})(?:\s+(\d{1,2}):(\d{2})\s*([AaPp][Mm]))?", re.ASCII
+    r"(\d{1,2})/([A-Za-z]{3})/(\d{2}|\d{4})(?: +(\d{1,2}):(\d{2}) *([AaPp][Mm]))?", re.ASCII
 )
 MONTHS = {
     m: i
@@ -141,7 +142,8 @@ def column_indexes(header: list[str], *, user_file: bool) -> dict[str, list[int]
         dupes = sorted({header[i] for i in idx if used.count(names[i]) > 1})
         if dupes:
             raise ValueError(f"duplicate column(s): {', '.join(dupes)}")
-        if len(idx) > 1 and field != "Story_Point":
+        jira_points = field == "Story_Point" and field.lower() not in used
+        if len(idx) > 1 and not jira_points:  # only Jira point columns may repeat
             shown = ", ".join(repr(header[i]) for i in idx)
             raise ValueError(f"{len(idx)} columns for {field}: {shown}. Keep one.")
         found[field] = idx
