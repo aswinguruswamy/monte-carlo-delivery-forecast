@@ -106,7 +106,9 @@ def test_page_with_the_sample_shows_the_3_dates_the_velocity_date_and_the_chart(
 def test_page_without_a_key_shows_no_ai_text_and_says_why(app):
     at = app()
     assert not [t for t in at.toggle if t.key == "explain"]
-    assert "AI explanation" not in page_text(at)  # PM 2026-11-04: no AI line without a key
+    # PM 2026-11-04: no AI line of any wording without a key (review: "AI is off here." passed)
+    shown = [e.value for g in (at.markdown, at.caption, at.info, at.warning) for e in g]
+    assert not [v for v in shown if re.search(r"\bAI\b", v)]
     assert "ANTHROPIC_API_KEY" not in page_text(at)  # no server jargon on the page (#10)
 
 

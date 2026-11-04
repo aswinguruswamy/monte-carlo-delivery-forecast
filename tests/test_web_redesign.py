@@ -323,3 +323,25 @@ def test_each_option_has_a_plain_explanation():
 def test_sample_and_report_labels():
     assert logic.SAMPLE_LABEL == "Sample file (example team, not real data)"
     assert logic.REPORT_LABEL == "Full report (technical)"
+
+
+def test_the_points_option_help_says_off_for_the_toggle():
+    """MCF-35 review: the story points option is a toggle, so the help says "Off"."""
+    assert (
+        logic.OPTION_HELP["backlog_points"]
+        == "For the velocity date. Off: the tool estimates them."
+    )
+
+
+def test_the_demo_script_waits_for_the_cards_not_old_metrics():
+    from pathlib import Path
+
+    script = (Path(__file__).resolve().parents[1] / "scripts" / "record_demo.py").read_text()
+    assert "stMetric" not in script and ".mcf-card" in script
+
+
+def test_the_demo_guide_names_the_current_ai_check():
+    from pathlib import Path
+
+    guide = (Path(__file__).resolve().parents[1] / "docs" / "demo.md").read_text()
+    assert "AI off without a key" not in guide and "no AI line without a key" in guide

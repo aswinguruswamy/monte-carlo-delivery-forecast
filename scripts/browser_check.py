@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -156,7 +157,8 @@ def main() -> int:
                     expect(page.get_by_text("The 50% date is not certain").first).to_be_visible()
 
                 def ai_off(page=page):
-                    expect(page.get_by_text("AI explanation")).to_have_count(0)
+                    main_text = page.locator("[data-testid='stMain']").inner_text()
+                    assert not re.search(r"\bAI\b", main_text), "an AI line shows without a key"
 
                 def no_keys(main_area=main_area):
                     assert "SAMPLE-" not in main_area.inner_text()
