@@ -190,7 +190,7 @@ def marker_table(facts: ForecastFacts) -> pd.DataFrame:
 # Text colours on white; each has 4.5:1 contrast or more (WCAG AA, tested).
 COLORS = {
     "p50": "#2f6db5",
-    "p85": "#a8630f",
+    "p85": "#9a5a0c",
     "p95": "#b8322f",
     "velocity": "#1a7f37",
     "muted": "#5f6370",
@@ -207,7 +207,8 @@ NOT_CERTAIN = "The 50/50 date is not certain: half of the runs finish later."
 CHART_CAPTION = (
     "Each bar: how often the work finished on that day in {runs:,} tries (Monte Carlo simulation)."
 )
-AI_NOT_AVAILABLE = "AI explanation: Not available in this demo."
+AI_NOT_AVAILABLE = "AI explanation: Not turned on for this page."
+PHONE_HELP = "Help: tap » at the top left."
 SIDEBAR = """\
 ### How to use this page
 
@@ -224,7 +225,7 @@ Jira: Filters › Export › CSV (all fields). Open items are skipped. 10 MB max
 - **50/50 (P50):** plan your own work.
 - **Safer (P85):** share with a sponsor or client.
 - **Safest (P95):** use when a late finish costs a lot.
-- **Velocity:** compare with your sprint plan. Needs story points.
+- **Velocity:** compare with your sprint plan (story points).
 
 #### Be careful
 The dates assume your team keeps its recent pace (throughput).
@@ -238,7 +239,7 @@ _MONTHS = (
     "Jan.", "Feb.", "March", "April", "May", "June",
     "July", "Aug.", "Sept.", "Oct.", "Nov.", "Dec.",
 )  # fmt: skip
-_BACKLOG_TEXT = re.compile(r"[0-9]+", re.ASCII)
+_BACKLOG_TEXT = re.compile(r"[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+", re.ASCII)
 
 
 def short_date(d: date) -> str:
@@ -254,9 +255,12 @@ def long_date(d: date) -> str:
 def parse_backlog(text: str) -> int:
     """The typed backlog as a whole number from 1 to 10,000, or a WebError."""
     text = text.strip()
-    if not _BACKLOG_TEXT.fullmatch(text) or not 1 <= int(text) <= MAX_BACKLOG:
+    if not _BACKLOG_TEXT.fullmatch(text):
         raise WebError(BACKLOG_ERROR)
-    return int(text)
+    n = int(text.replace(",", ""))
+    if not 1 <= n <= MAX_BACKLOG:
+        raise WebError(BACKLOG_ERROR)
+    return n
 
 
 @dataclass(frozen=True)
@@ -290,11 +294,15 @@ def cards(facts: ForecastFacts) -> list[Card]:
     ]
 
 
+def card_background(c: Card) -> str:
+    return "#fff8ee" if c.highlight else ("#f0faf3" if c.dashed else "#ffffff")
+
+
 def _card_html(c: Card) -> str:
     e = html.escape
     style = "dashed" if c.dashed else "solid"
     width = 3 if c.highlight else 2
-    back = "#fff8ee" if c.highlight else ("#f0faf3" if c.dashed else "#ffffff")
+    back = card_background(c)
     note = f'<span class="mcf-card-note">{e(c.note)}</span>' if c.note else ""
     return (
         f'<div class="mcf-card{" mcf-card-highlight" if c.highlight else ""}" '
@@ -333,7 +341,31 @@ def from_line(facts: ForecastFacts, *, as_of_given: bool) -> str:
 def share_line(facts: ForecastFacts) -> str:
     fmt = short_date if facts.mc50.year == facts.mc85.year else long_date
     a, b = fmt(facts.mc50), fmt(facts.mc85)
-    return f'Share a range: "{a} to {b} (85% chance by {b})."'
+    return f'Share a range: "{a} to {b} (85% of simulated runs finish by {b})."'
+
+
+def history_line(facts: ForecastFacts) -> str:
+    start = long_date(facts.window_start)
+    if facts.window_start.year == facts.window_end.year:
+        start = short_date(facts.window_start)
+    noun = "work item" if facts.items_done == 1 else "work items"
+    return (
+        f"History: {facts.items_done:,} {noun} done from {start} to "
+        f"{long_date(facts.window_end)} (84 days)."
+    )
+
+
+def axis_format(facts: ForecastFacts) -> str:
+    """The chart date format: add the year when the dates cross a year."""
+    return "%b %-d" if facts.t.year == facts.mc95.year else "%b %-d, %Y"
+
+
+def phone_help_html() -> str:
+    """A help hint shown only on narrow screens, where the sidebar is folded."""
+    return (
+        f'<p class="mcf-phone-help" style="margin:0;font-size:0.9rem">{html.escape(PHONE_HELP)}</p>'
+        "<style>@media (min-width: 641px) {.mcf-phone-help{display:none}}</style>"
+    )
 
 
 def no_points_line(facts: ForecastFacts) -> str | None:

@@ -46,7 +46,9 @@ def _explanation(facts) -> str:
 def _chart(result: logic.WebForecast) -> alt.LayerChart:
     hist = logic.chart_table(result)
     marks = logic.marker_table(result.facts)
-    date_axis = alt.Axis(format="%b %-d", labelAngle=0, title="Finish date", tickCount=6)
+    date_axis = alt.Axis(
+        format=logic.axis_format(result.facts), labelAngle=0, title="Finish date", tickCount=6
+    )
     bars = (
         alt.Chart(hist)
         .mark_bar(color="#c3d0e2")
@@ -65,7 +67,7 @@ def _chart(result: logic.WebForecast) -> alt.LayerChart:
                 "label:N",
                 title=None,
                 scale=alt.Scale(domain=list(marks["label"]), range=list(marks["color"])),
-                legend=alt.Legend(orient="bottom"),
+                legend=alt.Legend(orient="bottom", columns=2),  # all 4 fit on a phone
             ),
             strokeDash=alt.condition(
                 alt.datum.label == "Velocity", alt.value([6, 4]), alt.value([1, 0])
@@ -91,6 +93,7 @@ def main() -> None:
         initial_sidebar_state="auto",  # open on a desktop, folded on a phone
     )
     _sidebar()
+    st.markdown(logic.phone_help_html(), unsafe_allow_html=True)  # fixed text only
     st.caption("MONTE CARLO DELIVERY FORECAST")
     st.title("When will your work be done?")
     st.markdown(logic.INTRO)
@@ -173,6 +176,7 @@ def main() -> None:
     if left_out:
         st.caption(left_out)
     st.caption(logic.CHART_CAPTION.format(runs=f.runs))
+    st.caption(logic.history_line(f))
 
     if explain:
         try:

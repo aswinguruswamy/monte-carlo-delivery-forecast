@@ -26,7 +26,12 @@ from playwright.sync_api import expect, sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from mcf.web.logic import forecast_from_bytes, long_date, sample_bytes  # noqa: E402
+from mcf.web.logic import (  # noqa: E402
+    AI_NOT_AVAILABLE,
+    forecast_from_bytes,
+    long_date,
+    sample_bytes,
+)
 
 BAD = b"Issue_Key,Type\nA-1,Story\n"
 
@@ -152,9 +157,7 @@ def main() -> int:
                     expect(page.get_by_text("The 50/50 date is not certain").first).to_be_visible()
 
                 def ai_off(page=page):
-                    expect(
-                        page.get_by_text("AI explanation: Not available in this demo.").first
-                    ).to_be_visible()
+                    expect(page.get_by_text(AI_NOT_AVAILABLE).first).to_be_visible()
 
                 def no_keys(main_area=main_area):
                     assert "SAMPLE-" not in main_area.inner_text()

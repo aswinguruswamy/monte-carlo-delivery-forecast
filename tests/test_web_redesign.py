@@ -183,7 +183,8 @@ def test_heading_and_from_line():
 
 def test_share_a_range_line():
     assert (
-        logic.share_line(facts()) == 'Share a range: "Nov. 17 to Nov. 25 (85% chance by Nov. 25)."'
+        logic.share_line(facts())
+        == 'Share a range: "Nov. 17 to Nov. 25 (85% of simulated runs finish by Nov. 25)."'
     )
     across = facts(mc50=date(2026, 12, 28), mc85=date(2027, 1, 4), mc95=date(2027, 1, 9))
     assert logic.share_line(across) == (
