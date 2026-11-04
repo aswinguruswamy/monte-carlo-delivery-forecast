@@ -516,3 +516,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-38 — 2026-11-04 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-38-subtask`; each commit "MCF-38: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | Type, Jira export and TAWOS tests; failing tests committed first; the TAWOS check ran with the 29 downloaded files (no "Subtask" rows) | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D04.2 is logged at this approval (D04.1 struck through) | PM approves |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent grade A−, no blocker; not a back-test change after results (TAWOS has no "Subtask"); weak exit-code test made exact; stale "D04.1" in `throughput.py` fixed | — |
+| 8 | Each acceptance criterion met | ✅ | "Subtask" is a value item on done and open rows; other spellings stay errors; back-test unchanged | — |
+| 9 | README and rule pages match | ✅ | `docs/method.md` lists 13 value types | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌. Closes the MCF-31 open point "Subtask vs Sub-task".
