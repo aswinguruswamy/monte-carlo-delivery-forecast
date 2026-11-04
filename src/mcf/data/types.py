@@ -1,4 +1,4 @@
-"""Sort issue types into value, bug and not counted (D04, ADR 0002 Data rules 6-7).
+"""Sort issue types into value, bug and not counted (D04.2, ADR 0002 Data rules 6-7).
 
 Only value items count in throughput and velocity. Bugs show as a share only.
 Epics are containers and do not count. Type names are matched exactly, as
@@ -33,6 +33,7 @@ D04_KIND = {
             "Technical Debt",
             "Wish",
             "Question",
+            "Subtask",  # Jira Cloud's name for Sub-task (MCF-38, D04.2)
         ],
         VALUE,
     ),
