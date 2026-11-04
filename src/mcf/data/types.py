@@ -61,8 +61,14 @@ class TypeSummary:
         return self.bug / work if work else None
 
 
-def sort_types(issues: pd.DataFrame, file: str) -> tuple[pd.DataFrame, TypeSummary]:
-    """Return a copy of the issues with a `kind` column, and a summary."""
+def sort_types(
+    issues: pd.DataFrame, file: str, *, points_required: bool = True
+) -> tuple[pd.DataFrame, TypeSummary]:
+    """Return a copy of the issues with a `kind` column, and a summary.
+
+    The back-test needs a story point on each value item (ADR 0002). A user file
+    may have none (MCF-32, D43, `points_required=False`).
+    """
     kind = issues["type"].map(D04_KIND)
     unknown = issues.loc[kind.isna(), "type"]
     if not unknown.empty:
@@ -78,7 +84,7 @@ def sort_types(issues: pd.DataFrame, file: str) -> tuple[pd.DataFrame, TypeSumma
 
     value_rows = issues[kind == VALUE]
     no_point = value_rows["story_point"].isna()
-    if no_point.any():
+    if points_required and no_point.any():
         row = value_rows[no_point].iloc[0]
         raise IssueTypeError(
             f"{file}: value item {row['issue_key']} ({row['type']}) has no story point"

@@ -24,6 +24,8 @@ Rules:
   name together with a Jira name for the same column, is an error. The loader
   never reads the other columns, so names and titles never load (RAID C2). The
   back-test path keeps the strict rules above (ADR 0002).
+- Story points are optional in user-file mode (MCF-32, D43): with no point column,
+  each story_point is missing (NaN).
 - A bad value stops the load with an error that names the file and the real
   line in the file (line 1 is the header).
 """
@@ -66,7 +68,9 @@ ALIASES = {
         "custom field (story point estimate)",
     ),
 }
-JIRA_HINT = "A Jira export needs the columns Issue key, Issue Type, Resolved and Story Points."
+JIRA_HINT = (
+    "A Jira export needs the columns Issue key, Issue Type and Resolved (Story Points is optional)."
+)
 DATE_HINT = "Use YYYY-MM-DD or the Jira form 03/Nov/26 4:35 PM."
 
 
@@ -136,7 +140,9 @@ def column_indexes(header: list[str], *, user_file: bool) -> dict[str, list[int]
     for field in REQUIRED:
         idx = [i for i, n in enumerate(names) if n in ALIASES[field]]
         if not idx:
-            missing.append(field)
+            if field != "Story_Point":  # MCF-32 (D43): points are optional here
+                missing.append(field)
+            found[field] = []
             continue
         used = [names[i] for i in idx]
         dupes = sorted({header[i] for i in idx if used.count(names[i]) > 1})
@@ -202,7 +208,7 @@ def load_issues(path: str | Path, *, open_items: bool = False) -> tuple[pd.DataF
                 cols = column_indexes(header, user_file=open_items)
             except ValueError as exc:
                 raise LoadError(f"{name}: {exc}") from None
-            col = {c: i[0] for c, i in cols.items()}
+            col = {c: i[0] for c, i in cols.items() if i}
             width = len(header)
 
             for row in reader:

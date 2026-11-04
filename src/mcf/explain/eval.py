@@ -83,6 +83,7 @@ def _facts(**over) -> ForecastFacts:
         open_items=0,
         rows_no_date=0,
         bug_share_percent=10,
+        items_no_points=0,
     )
     base.update(over)
     return ForecastFacts(**base)

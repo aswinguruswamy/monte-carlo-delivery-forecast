@@ -232,7 +232,8 @@ def test_the_page_hides_jira_issue_keys_in_messages():
 def test_the_page_error_for_a_jira_file_hides_the_issue_key():
     from mcf.web.logic import WebError, forecast_from_bytes
 
-    data = b"Issue key,Issue Type,Resolved,Story Points\nSECRET-9,Story,2026-09-30,\n"
+    # MCF-32: a missing point is no longer an error, so use a key in the date cell.
+    data = b"Issue key,Issue Type,Resolved,Story Points\nSECRET-9,Story,SECRET-9,3\n"
     with pytest.raises(WebError) as err:
         forecast_from_bytes(data, backlog=5)
     assert "SECRET-9" not in str(err.value) and "an item" in str(err.value)

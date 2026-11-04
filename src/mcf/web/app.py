@@ -146,7 +146,13 @@ def main() -> None:
     top[0].metric("50% date", str(f.mc50))
     top[1].metric("85% date", str(f.mc85))
     bottom[0].metric("95% date", str(f.mc95))
-    bottom[1].metric("Velocity date", str(f.velocity_date))
+    if f.velocity_date is None:
+        bottom[1].metric("Velocity date", "Not available", help="Needs story points.")
+        bottom[1].caption("Not available: needs story points")
+    else:
+        bottom[1].metric("Velocity date", str(f.velocity_date))
+    if logic.no_points_line(f):
+        st.caption(logic.no_points_line(f))
     st.markdown("**The 50% date is not certain: half of the runs finish later.**")
     st.altair_chart(_chart(result), width="stretch")
     left_out = not_drawn_text(logic.runs_not_drawn(result))
@@ -155,7 +161,8 @@ def main() -> None:
     st.caption(
         f"{f.runs:,} simulated runs from {f.items_done} value items done between "
         f"{f.window_start} and {f.window_end}. Bars: runs that finish on each date. "
-        "Lines: the 50%, 85% and 95% dates and the velocity date."
+        "Lines: the 50%, 85% and 95% dates"
+        + (" and the velocity date." if f.velocity_date is not None else ".")
     )
 
     if explain:

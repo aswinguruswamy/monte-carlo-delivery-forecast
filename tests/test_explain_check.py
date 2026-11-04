@@ -43,6 +43,7 @@ def facts(**over) -> ForecastFacts:
         open_items=3,
         rows_no_date=1,
         bug_share_percent=21,
+        items_no_points=0,
     )
     base.update(over)
     return ForecastFacts(**base)
@@ -223,7 +224,7 @@ def test_prompt_lists_only_applicable_sentences_and_qualities_as_words():
     from mcf.explain.prompt import PROMPT_VERSION, build_prompt
 
     prompt = build_prompt(facts())
-    assert PROMPT_VERSION == "4"
+    assert PROMPT_VERSION == "5"  # MCF-32: qualities may be "none"
     user = prompt["messages"][0]["content"]
     for sid in applicable_ids(facts()):
         assert sid in user

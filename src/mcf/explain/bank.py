@@ -63,7 +63,9 @@ def qualities(facts: ForecastFacts) -> dict[str, str]:
     lead = (facts.mc50 - facts.t).days
     spread = (facts.mc95 - facts.mc50).days
     v = facts.velocity_date
-    if v < facts.mc50:
+    if v is None:  # MCF-32: no story points, so no velocity sentence applies
+        velocity = "none"
+    elif v < facts.mc50:
         velocity = "before 50"
     elif v <= facts.mc85:
         velocity = "between 50 and 85"
@@ -78,7 +80,7 @@ def qualities(facts: ForecastFacts) -> dict[str, str]:
     return {
         "spread": "wide" if lead > 0 and spread / lead >= WIDE_RATIO else "narrow",
         "velocity": velocity,
-        "points": "estimated" if facts.points_estimated else "given",
+        "points": "none" if v is None else ("estimated" if facts.points_estimated else "given"),
         "open_items": "some" if facts.open_items > 0 else "none",
         "bugs": bugs,
     }

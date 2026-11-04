@@ -10,7 +10,7 @@ from __future__ import annotations
 from mcf.explain.bank import BANK, MANDATORY, applicable_ids, qualities
 from mcf.result import ForecastFacts
 
-PROMPT_VERSION = "4"
+PROMPT_VERSION = "5"  # MCF-32: "velocity" and "points" may be "none"
 MIN_SENTENCES = 3
 MAX_SENTENCES = 6
 

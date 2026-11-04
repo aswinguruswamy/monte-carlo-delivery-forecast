@@ -167,12 +167,26 @@ def chart_table(result: WebForecast) -> pd.DataFrame:
 
 
 def marker_table(facts: ForecastFacts) -> pd.DataFrame:
-    return pd.DataFrame(
-        {
-            "label": ["50%", "85%", "95%", "Velocity"],
-            "date": [facts.mc50, facts.mc85, facts.mc95, facts.velocity_date],
-        }
+    """The chart lines. No velocity line when there is no velocity date (MCF-32)."""
+    marks = [("50%", facts.mc50), ("85%", facts.mc85), ("95%", facts.mc95)]
+    if facts.velocity_date is not None:
+        marks.append(("Velocity", facts.velocity_date))
+    return pd.DataFrame({"label": [m[0] for m in marks], "date": [m[1] for m in marks]})
+
+
+def no_points_line(facts: ForecastFacts) -> str | None:
+    """MCF-32: how many value items in the history have no story points."""
+    n = facts.items_no_points
+    if not n:
+        return None
+    noun, verb = ("value item", "has") if n == 1 else ("value items", "have")
+    text = (
+        f"{n} {noun} done between {facts.window_start} and {facts.window_end} "
+        f"{verb} no story points."
     )
+    if facts.velocity_date is not None:
+        text += " The velocity date leaves them out."
+    return text
 
 
 def ai_explanation(facts: ForecastFacts) -> tuple[str | None, str | None]:

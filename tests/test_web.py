@@ -109,7 +109,7 @@ def test_report_shows_no_issue_keys():
     "data, expected",
     [
         (b"", "empty file"),
-        (b"Issue_Key,Type\nA-1,Story\n", "missing column(s): Resolution_Date, Story_Point"),
+        (b"Issue_Key,Type\nA-1,Story\n", "missing column(s): Resolution_Date. "),
         (HEADER.encode() + b"A-1,Story,not a date,3\n", "line 2: bad Resolution_Date"),
         (HEADER.encode() + b"A-1,Story,2020-06-30,lots\n", "line 2: bad Story_Point"),
         (HEADER.encode() + b"A-1,Spaceship,2020-06-30,3\n", "Spaceship"),

@@ -40,6 +40,7 @@ def facts(**over) -> ForecastFacts:
         open_items=3,
         rows_no_date=1,
         bug_share_percent=21,
+        items_no_points=0,
     )
     base.update(over)
     return ForecastFacts(**base)
