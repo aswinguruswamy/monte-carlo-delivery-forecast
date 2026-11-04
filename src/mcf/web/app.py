@@ -58,26 +58,28 @@ def _chart(result: logic.WebForecast) -> alt.LayerChart:
             tooltip=[alt.Tooltip("finish_date:T", title="Date", format="%b %-d, %Y"), "runs:Q"],
         )
     )
-    rules = (
-        alt.Chart(marks)
-        .mark_rule(strokeWidth=3)
-        .encode(
-            x="date:T",
-            color=alt.Color(
-                "label:N",
-                title=None,
-                scale=alt.Scale(domain=list(marks["label"]), range=list(marks["color"])),
-                legend=alt.Legend(orient="bottom", columns=2),  # all 4 fit on a phone
-            ),
-            strokeDash=alt.condition(
-                alt.datum.label == "Velocity", alt.value([6, 4]), alt.value([1, 0])
-            ),
-            tooltip=[
-                alt.Tooltip("label:N", title="Line"),
-                alt.Tooltip("date:T", title="Date", format="%b %-d, %Y"),
-            ],
+    scale = alt.Scale(domain=list(marks["label"]), range=list(marks["color"]))
+    layers = []
+    for row in marks.itertuples():  # one layer per line, so 2 lines on 1 day sit side by side
+        layers.append(
+            alt.Chart(marks[marks["label"] == row.label])
+            .mark_rule(strokeWidth=3, xOffset=int(row.offset))
+            .encode(
+                x="date:T",
+                color=alt.Color(
+                    "label:N",
+                    title=None,
+                    scale=scale,
+                    legend=alt.Legend(orient="bottom", columns=2),  # all 4 fit on a phone
+                ),
+                strokeDash=alt.value([6, 4] if row.label == "Velocity" else [1, 0]),
+                tooltip=[
+                    alt.Tooltip("label:N", title="Line"),
+                    alt.Tooltip("date:T", title="Date", format="%b %-d, %Y"),
+                ],
+            )
         )
-    )
+    rules = alt.layer(*layers)
     return (bars + rules).properties(height=300)
 
 
@@ -93,47 +95,52 @@ def main() -> None:
         initial_sidebar_state="auto",  # open on a desktop, folded on a phone
     )
     _sidebar()
+    st.markdown(logic.page_css(), unsafe_allow_html=True)  # fixed text only
     st.markdown(logic.phone_help_html(), unsafe_allow_html=True)  # fixed text only
     st.caption("MONTE CARLO DELIVERY FORECAST")
     st.title("When will your work be done?")
     st.markdown(logic.INTRO)
 
-    sample = logic.sample_bytes()
-    sources = [SAMPLE, UPLOAD] if sample is not None else [UPLOAD]
-    source = st.radio("Data", sources, key="source", horizontal=True)
-    data: bytes | None = sample if source == SAMPLE else None
-    if source == UPLOAD:
-        uploaded = st.file_uploader("CSV file (a Jira export works)", type=["csv"], key="upload")
-        if uploaded is not None:
-            data = uploaded.getvalue()
-
-    backlog_text = st.text_input(
-        "How many work items are left? (backlog)", value="40", key="backlog"
-    )
-    st.caption(logic.BACKLOG_HELP)
-    with st.expander("More options"):
-        points_given = st.toggle("I know the story points left", key="points_given")
-        st.caption(logic.OPTION_HELP["backlog_points"])
-        backlog_points = None
-        if points_given:
-            backlog_points = st.number_input(
-                "Story points left", min_value=0.1, value=100.0, key="backlog_points"
+    with st.container(border=True):
+        _section_head(logic.INPUTS_SECTION)
+        sample = logic.sample_bytes()
+        sources = [SAMPLE, UPLOAD] if sample is not None else [UPLOAD]
+        source = st.radio("Data", sources, key="source", horizontal=True)
+        data: bytes | None = sample if source == SAMPLE else None
+        if source == UPLOAD:
+            uploaded = st.file_uploader(
+                "CSV file (a Jira export works)", type=["csv"], key="upload"
             )
-        as_of = st.date_input("Forecast from this date (as-of date)", value=None, key="as_of")
-        st.caption(logic.OPTION_HELP["as_of"])
-        seed = st.number_input(
-            "Repeat number (random seed)", min_value=0, value=SEED, step=1, key="seed"
-        )
-        st.caption(logic.OPTION_HELP["seed"])
+            if uploaded is not None:
+                data = uploaded.getvalue()
 
-    explain = False
-    if os.environ.get("ANTHROPIC_API_KEY"):
-        explain = st.toggle(
-            "Add an AI explanation (Claude picks approved sentences)",
-            value=False,  # off by default: each new forecast is one paid call
-            key="explain",
+        backlog_text = st.text_input(
+            "How many work items are left? (backlog)", value="40", key="backlog"
         )
-    # PM 2026-11-04: no AI line on a page with no key.
+        st.caption(logic.BACKLOG_HELP)
+        with st.expander("More options"):
+            points_given = st.toggle("I know the story points left", key="points_given")
+            st.caption(logic.OPTION_HELP["backlog_points"])
+            backlog_points = None
+            if points_given:
+                backlog_points = st.number_input(
+                    "Story points left", min_value=0.1, value=100.0, key="backlog_points"
+                )
+            as_of = st.date_input("Forecast from this date (as-of date)", value=None, key="as_of")
+            st.caption(logic.OPTION_HELP["as_of"])
+            seed = st.number_input(
+                "Repeat number (random seed)", min_value=0, value=SEED, step=1, key="seed"
+            )
+            st.caption(logic.OPTION_HELP["seed"])
+
+        explain = False
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            explain = st.toggle(
+                "Add an AI explanation (Claude picks approved sentences)",
+                value=False,  # off by default: each new forecast is one paid call
+                key="explain",
+            )
+        # PM 2026-11-04: no AI line on a page with no key.
 
     try:
         backlog = logic.parse_backlog(backlog_text)
@@ -157,41 +164,52 @@ def main() -> None:
         return
 
     f = result.facts
-    st.divider()
-    st.subheader(logic.result_heading(f))
-    st.caption(logic.from_line(f, as_of_given=as_of is not None))
-    st.markdown(logic.cards_html(f), unsafe_allow_html=True)  # code-made text only
-    st.markdown(f"**{logic.NOT_CERTAIN}**")
-    st.markdown(logic.message_line(f))
-    if logic.no_points_line(f):
-        st.caption(logic.no_points_line(f))
-    st.altair_chart(_chart(result), width="stretch")
-    left_out = not_drawn_text(logic.runs_not_drawn(result))
-    if left_out:
-        st.caption(left_out)
-    st.caption(logic.CHART_CAPTION.format(runs=f.runs))
-    st.caption(logic.history_line(f))
+    _, result_section, chart_section, how_section = logic.sections(f)
+    with st.container(border=True):
+        st.subheader(result_section.heading)
+        st.caption(logic.from_line(f, as_of_given=as_of is not None))
+        st.caption(logic.history_line(f))
+        st.caption(result_section.description)
+        st.markdown(logic.cards_html(f), unsafe_allow_html=True)  # code-made text only
+        st.markdown(f"**{logic.NOT_CERTAIN}**")
+        st.markdown(logic.message_line(f))
+        if logic.no_points_line(f):
+            st.caption(logic.no_points_line(f))
+        if explain:
+            try:
+                text = _explanation(f)
+            except _NoText as exc:
+                st.info(f"AI explanation not shown: {exc}")
+            else:
+                st.markdown("#### Explanation")
+                st.markdown(text)
+                st.caption("AI-selected, approved sentences (D33.1). Code wrote every date above.")
 
-    if explain:
-        try:
-            text = _explanation(f)
-        except _NoText as exc:
-            st.info(f"AI explanation not shown: {exc}")
-        else:
-            st.markdown("#### Explanation")
-            st.markdown(text)
-            st.caption("AI-selected, approved sentences (D33.1). Code wrote every date above.")
+    with st.container(border=True):
+        _section_head(chart_section)
+        st.altair_chart(_chart(result), width="stretch")
+        left_out = not_drawn_text(logic.runs_not_drawn(result))
+        if left_out:
+            st.caption(left_out)
+        if logic.same_day_note(f):
+            st.caption(logic.same_day_note(f))
 
-    st.subheader(logic.HOW_IT_WORKS_HEADING)
-    for part in logic.how_it_works():
-        with st.expander(part.title):
-            st.markdown(part.body)  # code-made text only
+    with st.container(border=True):
+        _section_head(how_section)
+        for part in logic.how_it_works():
+            with st.expander(part.title):
+                st.markdown(part.body)  # code-made text only
 
     with st.expander(logic.REPORT_LABEL):
         st.code(result.report, language=None)
 
     st.divider()
     st.markdown(logic.footer_markdown())
+
+
+def _section_head(section: logic.Section) -> None:
+    st.subheader(section.heading)
+    st.caption(section.description)
 
 
 if __name__ == "__main__":

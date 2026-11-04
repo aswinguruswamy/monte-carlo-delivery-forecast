@@ -170,21 +170,20 @@ def chart_table(result: WebForecast) -> pd.DataFrame:
 
 
 def marker_table(facts: ForecastFacts) -> pd.DataFrame:
-    """The chart lines, in the card colours (MCF-33). No velocity line without a date (MCF-32)."""
+    """The chart lines, in the card colours (MCF-33). No velocity line without a date (MCF-32).
+
+    MCF-37: when the velocity date is the 50% date, the 2 lines sit side by side
+    (`offset` in px), so both show.
+    """
+    same = facts.velocity_date is not None and facts.velocity_date == facts.mc50
     marks = [
-        ("50% chance", facts.mc50, COLORS["p50"]),
-        ("85% chance", facts.mc85, COLORS["p85"]),
-        ("95% chance", facts.mc95, COLORS["p95"]),
+        ("50% chance", facts.mc50, COLORS["p50"], -3 if same else 0),
+        ("85% chance", facts.mc85, COLORS["p85"], 0),
+        ("95% chance", facts.mc95, COLORS["p95"], 0),
     ]
     if facts.velocity_date is not None:
-        marks.append(("Velocity", facts.velocity_date, COLORS["velocity"]))
-    return pd.DataFrame(
-        {
-            "label": [m[0] for m in marks],
-            "date": [m[1] for m in marks],
-            "color": [m[2] for m in marks],
-        }
-    )
+        marks.append(("Velocity", facts.velocity_date, COLORS["velocity"], 3 if same else 0))
+    return pd.DataFrame(marks, columns=["label", "date", "color", "offset"])
 
 
 # --- MCF-33 (D41): plain-language page text ------------------------------------------------
@@ -326,7 +325,7 @@ def _card_html(c: Card) -> str:
         f'flex-direction:column;gap:2px;min-width:0">'
         f'<span class="mcf-card-label" style="font-size:0.85rem;font-weight:600;'
         f'color:{c.color}">{e(c.label)}</span>'
-        f'<span class="mcf-card-value" style="font-size:1.45rem;font-weight:700;'
+        f'<span class="mcf-card-value" style="font-size:1.2rem;font-weight:700;'
         f'color:{COLORS["ink"]};white-space:nowrap">{e(c.value)}</span>'
         f"{note}</div>"
     )
@@ -339,13 +338,66 @@ def cards_html(facts: ForecastFacts) -> str:
         '<div class="mcf-cards" style="display:grid;gap:10px;margin-bottom:16px;'
         'grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">'
         f"{inner}</div>"
-        f"<style>.mcf-card-note{{font-size:0.82rem;color:{COLORS['muted']}}}</style>"
+        f"<style>.mcf-card-note{{font-size:0.82rem;color:{COLORS['muted']}}}"
+        "@media (max-width: 640px){.mcf-cards{grid-template-columns:1fr !important}}</style>"
     )
 
 
 def result_heading(facts: ForecastFacts) -> str:
     noun = "work item" if facts.backlog == 1 else "work items"
-    return f"{facts.backlog:,} {noun} left"
+    return f"2. When the {facts.backlog:,} {noun} will be done"
+
+
+# --- MCF-37: numbered sections in boxes ---------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Section:
+    heading: str
+    description: str
+
+
+INPUTS_SECTION = Section(
+    "1. Your inputs", "Choose the work items to forecast from, and the work left."
+)
+
+
+def sections(facts: ForecastFacts) -> list[Section]:
+    n = facts.backlog
+    noun = "item" if n == 1 else "items"
+    return [
+        INPUTS_SECTION,
+        Section(
+            result_heading(facts),
+            f"Each card shows the chance of completion of all {n:,} {noun} by that date.",
+        ),
+        Section(
+            "3. All possible finish dates",
+            CHART_CAPTION.format(runs=facts.runs) + " The lines show the dates above.",
+        ),
+        Section(
+            "4. " + HOW_IT_WORKS_HEADING, "Open each part for the method and the test results."
+        ),
+    ]
+
+
+def same_day_note(facts: ForecastFacts) -> str | None:
+    if facts.velocity_date is not None and facts.velocity_date == facts.mc50:
+        return "The velocity date is the same day as the 50% date, so the two lines touch."
+    return None
+
+
+def page_css() -> str:
+    """Grey page, white boxes (MCF-37). Fixed text only."""
+    return (
+        "<style>"
+        '[data-testid="stAppViewContainer"],[data-testid="stMain"],'
+        '[data-testid="stHeader"]{background:#f5f6f8}'
+        # A bordered st.container is a stVerticalBlock inside a stLayoutWrapper (1.66).
+        '[data-testid="stLayoutWrapper"]>[data-testid="stVerticalBlock"],'
+        '[data-testid="stExpander"] details{background:#ffffff}'
+        "</style>"
+    )
 
 
 def from_line(facts: ForecastFacts, *, as_of_given: bool) -> str:
@@ -366,8 +418,8 @@ def history_line(facts: ForecastFacts) -> str:
         start = short_date(facts.window_start)
     noun = "work item" if facts.items_done == 1 else "work items"
     return (
-        f"History: {facts.items_done:,} {noun} done from {start} to "
-        f"{long_date(facts.window_end)} (84 days)."
+        f"History used: {facts.items_done:,} {noun} (not bugs or epics) finished from {start} "
+        f"to {long_date(facts.window_end)} (84 days)."
     )
 
 

@@ -287,8 +287,19 @@ def test_the_chart_legend_has_room_for_all_4_lines(app):
 
     result = forecast_from_bytes(SAMPLE.read_bytes(), backlog=40)
     spec = page._chart(result).to_dict()
-    legend = spec["layer"][1]["encoding"]["color"]["legend"]
-    assert legend["orient"] == "bottom" and legend["columns"] == 2
+
+    def legends(node):  # MCF-37: one layer per line, so legends sit deeper in the spec
+        if isinstance(node, dict):
+            if "legend" in node and isinstance(node["legend"], dict):
+                yield node["legend"]
+            for v in node.values():
+                yield from legends(v)
+        elif isinstance(node, list):
+            for v in node:
+                yield from legends(v)
+
+    found = list(legends(spec))
+    assert found and all(lg["orient"] == "bottom" and lg["columns"] == 2 for lg in found)
 
 
 def test_page_shows_the_new_labels_and_option_help(app):
