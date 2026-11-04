@@ -95,27 +95,31 @@ def test_backlog_rejects_other_input_with_a_clear_message(text):
 
 
 def test_the_4_cards_have_the_agreed_labels_dates_notes_and_colours():
-    got = [(c.label, c.value, c.note) for c in logic.cards(facts())]
+    got = [(c.label, c.value, c.notes) for c in logic.cards(facts())]
     assert got == [
-        ("50/50 date · P50", "Nov. 17, 2026", "As likely early as late"),
-        ("Safer date · P85", "Nov. 25, 2026", "Recommended to share"),
-        ("Safest date · P95", "Dec. 1, 2026", ""),  # design: no note; the sidebar says when
-        ("Velocity date · story points", "Nov. 17, 2026", ""),  # MCF-34: explained in the help
+        ("50% chance of completion", "Nov. 17, 2026", ("P50",)),
+        (
+            "85% chance of completion",
+            "Nov. 25, 2026",
+            ("P85 · Recommended to share", "If a delay costs a lot, use 95%."),
+        ),
+        ("95% chance of completion", "Nov. 25, 2026".replace("Nov. 25", "Dec. 1"), ("P95",)),
+        ("Velocity date", "Nov. 17, 2026", ("Uses story points",)),  # MCF-35
     ]
     by_label = {c.label: c for c in logic.cards(facts())}
-    assert [c.label for c in logic.cards(facts()) if c.highlight] == ["Safer date · P85"]
-    assert by_label["Velocity date · story points"].dashed
+    assert [c.label for c in logic.cards(facts()) if c.highlight] == ["85% chance of completion"]
+    assert by_label["Velocity date"].dashed
 
 
 def test_the_velocity_card_has_no_pace_line_and_says_not_available():
-    """MCF-34 (D45): the "Average pace" line moved from the card to the help sidebar."""
+    """MCF-34 (D45): the "Average pace" line stays in the help sidebar."""
     for estimated in (True, False):
         card = logic.cards(facts(points_estimated=estimated))[3]
-        assert card.note == ""
+        assert card.notes == ("Uses story points",)
     html = logic.cards_html(facts())
     assert "Average pace" not in html and "points left" not in html
     none = logic.cards(facts(velocity_date=None, velocity_per_sprint=None, points_needed=None))[3]
-    assert (none.value, none.note) == ("Not available", "Needs story points")
+    assert (none.value, none.notes) == ("Not available", ("Needs story points",))
 
 
 def test_card_and_chart_line_colours_match():
@@ -124,9 +128,9 @@ def test_card_and_chart_line_colours_match():
     for card, line in zip(logic.cards(f), lines, strict=True):
         assert card.color == lines[line]
     assert lines == {
-        "50/50 (P50)": logic.COLORS["p50"],
-        "Safer (P85)": logic.COLORS["p85"],
-        "Safest (P95)": logic.COLORS["p95"],
+        "50% chance": logic.COLORS["p50"],
+        "85% chance": logic.COLORS["p85"],
+        "95% chance": logic.COLORS["p95"],
         "Velocity": logic.COLORS["velocity"],
     }
 
@@ -178,28 +182,29 @@ def test_heading_and_from_line():
     assert logic.result_heading(f) == "40 work items left"
     assert logic.result_heading(replace(f, backlog=1)) == "1 work item left"
     assert logic.from_line(f, as_of_given=False) == (
-        "Forecast from the last finished item in the file: Sept. 30, 2026"
+        "Dates count from Sept. 30, 2026, the day the last item in your file was finished."
     )
     assert (
-        logic.from_line(f, as_of_given=True) == "Forecast from the date you chose: Sept. 30, 2026"
+        logic.from_line(f, as_of_given=True)
+        == "Dates count from Sept. 30, 2026, the date you chose."
     )
 
 
-def test_share_a_range_line():
+def test_message_to_sponsor_line():
     assert (
-        logic.share_line(facts())
-        == 'Share a range: "Nov. 17 to Nov. 25 (85% of simulated runs finish by Nov. 25)."'
+        logic.message_line(facts())
+        == 'Message to sponsor: "Nov. 17 to Nov. 25 (85% chance of completion by Nov. 25)."'
     )
     across = facts(mc50=date(2026, 12, 28), mc85=date(2027, 1, 4), mc95=date(2027, 1, 9))
-    assert logic.share_line(across) == (
-        'Share a range: "Dec. 28, 2026 to Jan. 4, 2027 '
-        '(85% of simulated runs finish by Jan. 4, 2027)."'
+    assert logic.message_line(across) == (
+        'Message to sponsor: "Dec. 28, 2026 to Jan. 4, 2027 '
+        '(85% chance of completion by Jan. 4, 2027)."'
     )
 
 
 def test_sidebar_has_the_5_parts_in_order():
     heads = re.findall(r"^#### (.+)$", logic.SIDEBAR, flags=re.M)
-    assert heads == ["You need", "Steps", "Which date to use", "Be careful", "Your data"]
+    assert heads == ["You need", "Steps", "Which date to use", "Be careful", "Privacy"]
     assert "Jira export works" in logic.SIDEBAR
     assert "1 time in 3" in logic.SIDEBAR  # the back-test result (69.0% correct)
 
@@ -213,8 +218,8 @@ def test_no_sentence_repeats_between_the_sidebar_and_the_page():
     page = " ".join([logic.INTRO, logic.BACKLOG_HELP, logic.CHART_CAPTION, logic.NOT_CERTAIN])
     none = facts(velocity_date=None, velocity_per_sprint=None, points_needed=None)
     for f in (facts(), none):
-        page += " " + " ".join(c.note for c in logic.cards(f))
-    page += " " + logic.AI_NOT_AVAILABLE + " " + logic.PHONE_HELP
+        page += " " + " ".join(n for c in logic.cards(f) for n in c.notes)
+    page += " " + " ".join(logic.OPTION_HELP.values()) + " " + logic.PHONE_HELP
     assert not _sentences(logic.SIDEBAR) & _sentences(page)
 
 
@@ -223,8 +228,9 @@ def test_the_page_never_calls_the_50_date_certain():
     assert "certain" not in text.lower().replace("not certain", "")
 
 
-def test_the_ai_line_does_not_say_demo():
-    assert logic.AI_NOT_AVAILABLE == "AI explanation: Not turned on for this page."
+def test_the_page_has_no_ai_line_text():
+    """PM 2026-11-04: no AI line on a page with no key."""
+    assert not hasattr(logic, "AI_NOT_AVAILABLE")
 
 
 def test_phone_help_hint_shows_only_on_narrow_screens():
@@ -262,9 +268,9 @@ def test_the_demo_script_waits_for_text_that_the_page_shows():
 def test_the_help_explains_the_velocity_date():
     """MCF-34 (D45): pace and estimated points are in the Velocity help line."""
     side = logic.SIDEBAR
-    line = next(s for s in side.splitlines() if s.startswith("- **Velocity:**"))
+    line = next(s for s in side.splitlines() if s.startswith("- **Velocity date:**"))
     assert "average pace" in line and "story points" in line
-    assert "estimated" in line and "More options" in line
+    assert "estimates" in line and "More options" in line
 
 
 def test_the_help_names_the_real_options_expander():
@@ -274,3 +280,68 @@ def test_the_help_names_the_real_options_expander():
     app = (Path(logic.__file__).parent / "app.py").read_text()
     assert 'st.expander("More options")' in app
     assert '"Story points left"' in app
+
+
+# --- MCF-35: plain wording for sponsors ----------------------------------------------------
+
+
+def test_the_page_says_chance_of_completion_not_50_50_or_simulated_runs():
+    text = " ".join(
+        [logic.INTRO, logic.NOT_CERTAIN, logic.SIDEBAR, logic.cards_html(facts())]
+        + [logic.message_line(facts())]
+    )
+    assert "chance of completion" in logic.INTRO
+    for old in ("50/50", "Safer date", "Safest date", "simulated runs", "Share a range"):
+        assert old not in text, old
+
+
+def test_intro_and_not_certain_text():
+    assert logic.INTRO == (
+        "Upload your team's finished work items, or try the sample file. See the dates with "
+        "a 50%, 85% and 95% chance of completion, from your team's real pace (throughput)."
+    )
+    assert (
+        logic.NOT_CERTAIN
+        == "The 50% date is not certain: half of the time the work finishes later."
+    )
+
+
+def test_sidebar_has_4_steps_and_a_privacy_part():
+    side = logic.SIDEBAR
+    assert "4. Copy the message to your sponsor." in side
+    assert "#### Privacy" in side and "#### Your data" not in side
+    assert "Choose the sample file (an example team) or upload your file." in side
+    assert "A Jira export works with no changes." in side
+
+
+def test_each_option_has_a_plain_explanation():
+    assert set(logic.OPTION_HELP) == {"backlog_points", "as_of", "seed"}
+    assert "same dates again" in logic.OPTION_HELP["seed"]
+    assert "last item in your file" in logic.OPTION_HELP["as_of"]
+
+
+def test_sample_and_report_labels():
+    assert logic.SAMPLE_LABEL == "Sample file (example team, not real data)"
+    assert logic.REPORT_LABEL == "Full report (technical)"
+
+
+def test_the_points_option_help_says_off_for_the_toggle():
+    """MCF-35 review: the story points option is a toggle, so the help says "Off"."""
+    assert (
+        logic.OPTION_HELP["backlog_points"]
+        == "For the velocity date. Off: the tool estimates them."
+    )
+
+
+def test_the_demo_script_waits_for_the_cards_not_old_metrics():
+    from pathlib import Path
+
+    script = (Path(__file__).resolve().parents[1] / "scripts" / "record_demo.py").read_text()
+    assert "stMetric" not in script and ".mcf-card" in script
+
+
+def test_the_demo_guide_names_the_current_ai_check():
+    from pathlib import Path
+
+    guide = (Path(__file__).resolve().parents[1] / "docs" / "demo.md").read_text()
+    assert "AI off without a key" not in guide and "no AI line without a key" in guide

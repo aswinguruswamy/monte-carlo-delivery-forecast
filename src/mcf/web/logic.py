@@ -170,9 +170,9 @@ def chart_table(result: WebForecast) -> pd.DataFrame:
 def marker_table(facts: ForecastFacts) -> pd.DataFrame:
     """The chart lines, in the card colours (MCF-33). No velocity line without a date (MCF-32)."""
     marks = [
-        ("50/50 (P50)", facts.mc50, COLORS["p50"]),
-        ("Safer (P85)", facts.mc85, COLORS["p85"]),
-        ("Safest (P95)", facts.mc95, COLORS["p95"]),
+        ("50% chance", facts.mc50, COLORS["p50"]),
+        ("85% chance", facts.mc85, COLORS["p85"]),
+        ("95% chance", facts.mc95, COLORS["p95"]),
     ]
     if facts.velocity_date is not None:
         marks.append(("Velocity", facts.velocity_date, COLORS["velocity"]))
@@ -200,40 +200,53 @@ MAX_BACKLOG = 10_000
 BACKLOG_ERROR = "Type a whole number from 1 to 10,000."
 BACKLOG_HELP = "Type any whole number from 1 to 10,000."
 INTRO = (
-    "Upload your team's finished work items. See a 50/50 date, a safer date and a safest "
-    "date, from your team's real pace (throughput)."
+    "Upload your team's finished work items, or try the sample file. See the dates with "
+    "a 50%, 85% and 95% chance of completion, from your team's real pace (throughput)."
 )
-NOT_CERTAIN = "The 50/50 date is not certain: half of the runs finish later."
+NOT_CERTAIN = "The 50% date is not certain: half of the time the work finishes later."
 CHART_CAPTION = (
     "Each bar: how often the work finished on that day in {runs:,} tries (Monte Carlo simulation)."
 )
-AI_NOT_AVAILABLE = "AI explanation: Not turned on for this page."
+SAMPLE_LABEL = "Sample file (example team, not real data)"
+REPORT_LABEL = "Full report (technical)"
+# MCF-35: a plain explanation under each option in "More options".
+OPTION_HELP = {
+    "backlog_points": "For the velocity date. Off: the tool estimates them.",
+    "as_of": "Empty: the day the last item in your file was finished.",
+    "seed": "Use the same number to get the same dates again.",
+}
 PHONE_HELP = "Help: tap » at the top left."
 SIDEBAR = """\
 ### How to use this page
 
 #### You need
-A CSV export of your work items. A Jira export works as it is.
-Jira: Filters › Export › CSV (all fields). Open items are skipped. 10 MB max.
+A CSV file of your team's work items. A Jira export works with no changes.
+
+To export from Jira: Filters › Export › CSV (all fields). The tool skips open items. \
+The file can be up to 10 MB.
 
 #### Steps
-1. Choose the sample or upload your file.
+1. Choose the sample file (an example team) or upload your file.
 2. Enter how many work items are left (backlog). Do not count bugs or epics.
-3. Read the dates.
+3. Read the dates in the result.
+4. Copy the message to your sponsor.
 
 #### Which date to use
-- **50/50 (P50):** plan your own work.
-- **Safer (P85):** share with a sponsor or client.
-- **Safest (P95):** use when a late finish costs a lot.
-- **Velocity:** compare with your sprint plan. This date uses your team's average pace \
-in story points. The story points left are estimated unless you enter them in More options.
+- **50% chance of completion:** use it to plan your own work.
+- **85% chance of completion:** use it for the date you give a sponsor or client.
+- **95% chance of completion:** use it when a late finish costs a lot.
+- **Velocity date:** use it to compare with your sprint plan. It uses your team's average \
+pace in story points. If you do not enter the story points left in More options, the tool \
+estimates them.
 
 #### Be careful
 The dates assume your team keeps its recent pace (throughput).
-In our test on 29 projects, the 85% date was too early 1 time in 3.
 
-#### Your data
-Used only for this forecast. Not stored. No issue keys shown.
+The 85% date can be too early. In our test on 29 projects, the work finished later than \
+the 85% date about 1 time in 3.
+
+#### Privacy
+The tool uses your file only for this forecast. It does not store the file or show issue keys.
 """
 
 _MONTHS = (
@@ -268,7 +281,7 @@ def parse_backlog(text: str) -> int:
 class Card:
     label: str
     value: str
-    note: str
+    notes: tuple[str, ...]
     color: str
     highlight: bool = False
     dashed: bool = False
@@ -279,18 +292,18 @@ def cards(facts: ForecastFacts) -> list[Card]:
     if facts.velocity_date is None:
         v_value, v_note = "Not available", "Needs story points"
     else:  # MCF-34 (D45): pace and estimated points are explained in the help sidebar
-        v_value, v_note = long_date(facts.velocity_date), ""
+        v_value, v_note = long_date(facts.velocity_date), "Uses story points"
     return [
-        Card("50/50 date · P50", long_date(facts.mc50), "As likely early as late", COLORS["p50"]),
+        Card("50% chance of completion", long_date(facts.mc50), ("P50",), COLORS["p50"]),
         Card(
-            "Safer date · P85",
+            "85% chance of completion",
             long_date(facts.mc85),
-            "Recommended to share",
+            ("P85 · Recommended to share", "If a delay costs a lot, use 95%."),
             COLORS["p85"],
             highlight=True,
         ),
-        Card("Safest date · P95", long_date(facts.mc95), "", COLORS["p95"]),
-        Card("Velocity date · story points", v_value, v_note, COLORS["velocity"], dashed=True),
+        Card("95% chance of completion", long_date(facts.mc95), ("P95",), COLORS["p95"]),
+        Card("Velocity date", v_value, (v_note,), COLORS["velocity"], dashed=True),
     ]
 
 
@@ -303,7 +316,7 @@ def _card_html(c: Card) -> str:
     style = "dashed" if c.dashed else "solid"
     width = 3 if c.highlight else 2
     back = card_background(c)
-    note = f'<span class="mcf-card-note">{e(c.note)}</span>' if c.note else ""
+    note = "".join(f'<span class="mcf-card-note">{e(n)}</span>' for n in c.notes)
     return (
         f'<div class="mcf-card{" mcf-card-highlight" if c.highlight else ""}" '
         f'data-label="{e(c.label)}" style="border:{width}px {style} {c.color};'
@@ -334,14 +347,15 @@ def result_heading(facts: ForecastFacts) -> str:
 
 
 def from_line(facts: ForecastFacts, *, as_of_given: bool) -> str:
-    where = "the date you chose" if as_of_given else "the last finished item in the file"
-    return f"Forecast from {where}: {long_date(facts.t)}"
+    why = "the date you chose" if as_of_given else "the day the last item in your file was finished"
+    return f"Dates count from {long_date(facts.t)}, {why}."
 
 
-def share_line(facts: ForecastFacts) -> str:
+def message_line(facts: ForecastFacts) -> str:
+    """A ready-made sentence for the sponsor (MCF-35)."""
     fmt = short_date if facts.mc50.year == facts.mc85.year else long_date
     a, b = fmt(facts.mc50), fmt(facts.mc85)
-    return f'Share a range: "{a} to {b} (85% of simulated runs finish by {b})."'
+    return f'Message to sponsor: "{a} to {b} (85% chance of completion by {b})."'
 
 
 def history_line(facts: ForecastFacts) -> str:

@@ -465,3 +465,20 @@ Result: pass — no ❌. Item 8 closes after the PM's 20-second test.
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-35 — 2026-11-04 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-35-plain-wording`; each commit "MCF-35: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | New and changed tests in `tests/test_web_redesign.py` and `tests/test_web_app.py`; failing tests committed first twice; browser check 20 of 20 | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D41, D44, D45 logged. **D46** ("chance of completion" back on the page) is decided at this approval | PM decides D46 |
+| 6 | AI ticket evaluation | n/a | No AI change (the sentence bank is not touched) | — |
+| 7 | Independent review with a verdict | ✅ | Subagent grade B−, no blocker; weak AI-line test, "Empty" for a toggle, stale demo guide and demo script fixed with tests first; honesty point, bank wording and card layout go to the PM (see PR) | PM decides |
+| 8 | Each acceptance criterion met | ✅ | All MCF-35 criteria; numbers and CLI unchanged | — |
+| 9 | README and rule pages match | ✅ | `docs/demo.md` check name updated | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌. Item 5 closes with D46.

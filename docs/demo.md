@@ -31,7 +31,7 @@ python scripts/browser_check.py --url https://mcf-forecast.streamlit.app/~/+/
 
 If that address does not open the page, use the embed address instead: `https://mcf-forecast.streamlit.app/?embed=true`. (The `/~/+/` path is not in the Streamlit docs; `?embed=true` is.)
 
-All checks must pass. "AI off without a key" passes only when the app has no key.
+All checks must pass. "no AI line without a key" passes only when the app has no key.
 
 ## Recorded video (A5)
 

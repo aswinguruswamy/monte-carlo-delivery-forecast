@@ -92,10 +92,10 @@ def test_page_with_the_sample_shows_the_3_dates_the_velocity_date_and_the_chart(
     assert not at.error
     expected = forecast_from_bytes(SAMPLE.read_bytes(), backlog=40).facts
     assert metrics(at) == {
-        "50/50 date · P50": ld(expected.mc50),
-        "Safer date · P85": ld(expected.mc85),
-        "Safest date · P95": ld(expected.mc95),
-        "Velocity date · story points": ld(expected.velocity_date),
+        "50% chance of completion": ld(expected.mc50),
+        "85% chance of completion": ld(expected.mc85),
+        "95% chance of completion": ld(expected.mc95),
+        "Velocity date": ld(expected.velocity_date),
     }
     assert len(at.get("vega_lite_chart")) == 1
     text = " ".join(e.value for group in (at.markdown, at.caption) for e in group)
@@ -106,7 +106,9 @@ def test_page_with_the_sample_shows_the_3_dates_the_velocity_date_and_the_chart(
 def test_page_without_a_key_shows_no_ai_text_and_says_why(app):
     at = app()
     assert not [t for t in at.toggle if t.key == "explain"]
-    assert any("AI explanation: Not turned on for this page." in c.value for c in at.caption)
+    # PM 2026-11-04: no AI line of any wording without a key (review: "AI is off here." passed)
+    shown = [e.value for g in (at.markdown, at.caption, at.info, at.warning) for e in g]
+    assert not [v for v in shown if re.search(r"\bAI\b", v)]
     assert "ANTHROPIC_API_KEY" not in page_text(at)  # no server jargon on the page (#10)
 
 
@@ -116,12 +118,12 @@ def test_page_has_the_plain_labels_and_the_5_part_sidebar(app):
     assert at.text_input(key="backlog").label == "How many work items are left? (backlog)"
     assert not at.text_input(key="backlog").help  # no help button inside the label (#14)
     side = sidebar_text(at)
-    for part in ("You need", "Steps", "Which date to use", "Be careful", "Your data"):
+    for part in ("You need", "Steps", "Which date to use", "Be careful", "Privacy"):
         assert f"#### {part}" in side
     expected = forecast_from_bytes(SAMPLE.read_bytes(), backlog=40).facts
     text = page_text(at)
-    assert logic.share_line(expected) in text
-    assert "Forecast from the last finished item in the file: " + ld(expected.t) in text
+    assert logic.message_line(expected) in text
+    assert logic.from_line(expected, as_of_given=False) in text
     assert "40 work items left" in text
 
 
@@ -185,7 +187,7 @@ def test_upload_a_good_file(app):
     at.run()
     assert not at.exception and not at.error
     expected = compute(cli_args(FIXTURE, 25))
-    assert metrics(at)["Safer date · P85"] == ld(expected.mc85)
+    assert metrics(at)["85% chance of completion"] == ld(expected.mc85)
 
 
 def test_upload_a_bad_file_shows_a_clear_error_and_no_stack_trace(app):
@@ -217,8 +219,8 @@ def test_optional_inputs_change_the_forecast(app):
     expected = forecast_from_bytes(
         SAMPLE.read_bytes(), backlog=40, backlog_points=123.0, seed=7
     ).facts
-    assert metrics(at)["Velocity date · story points"] == ld(expected.velocity_date)
-    assert metrics(at)["Safer date · P85"] == ld(expected.mc85)
+    assert metrics(at)["Velocity date"] == ld(expected.velocity_date)
+    assert metrics(at)["85% chance of completion"] == ld(expected.mc85)
     assert "seed 7)" in at.code[0].value  # the page uses the seed it was given
 
 
@@ -245,8 +247,8 @@ def test_the_forecast_date_option(app):
     at.date_input(key="as_of").set_value(date(2026, 8, 31)).run()
     assert not at.exception and not at.error
     expected = forecast_from_bytes(SAMPLE.read_bytes(), backlog=40, as_of=date(2026, 8, 31)).facts
-    assert metrics(at)["Safer date · P85"] == ld(expected.mc85)
-    assert "Forecast from the date you chose: Aug. 31, 2026" in page_text(at)
+    assert metrics(at)["85% chance of completion"] == ld(expected.mc85)
+    assert "Dates count from Aug. 31, 2026, the date you chose." in page_text(at)
 
 
 def test_an_error_is_shown_as_plain_text(app):
@@ -273,7 +275,7 @@ def test_upload_with_no_story_points_shows_dates_and_no_velocity(app):
     assert not at.exception and not at.error
     shown = metrics(at)
     assert len(shown) == 4
-    assert shown["Velocity date · story points"] == "Not available"
+    assert shown["Velocity date"] == "Not available"
     text = page_text(at)
     assert "Needs story points" in text
     assert "40 work items done between" in text
@@ -287,3 +289,15 @@ def test_the_chart_legend_has_room_for_all_4_lines(app):
     spec = page._chart(result).to_dict()
     legend = spec["layer"][1]["encoding"]["color"]["legend"]
     assert legend["orient"] == "bottom" and legend["columns"] == 2
+
+
+def test_page_shows_the_new_labels_and_option_help(app):
+    """MCF-35: sample label, option explanations, report label, sidebar privacy part."""
+    at = app()
+    assert not at.exception
+    assert at.radio(key="source").options[0] == logic.SAMPLE_LABEL
+    text = page_text(at)
+    for help_text in logic.OPTION_HELP.values():
+        assert help_text in text
+    assert [e.label for e in at.expander] == ["More options", logic.REPORT_LABEL]
+    assert "#### Privacy" in sidebar_text(at)
