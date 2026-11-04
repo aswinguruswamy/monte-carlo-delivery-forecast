@@ -116,6 +116,28 @@ def main() -> int:
                 page.goto(url, timeout=120_000)  # a sleeping cloud app can take a minute
                 main_area = page.locator("[data-testid='stMain']")
 
+                def boxes_and_captions(page=page):
+                    """MCF-37 review: white boxes on a grey page; captions 4.5:1 or more."""
+                    got = page.evaluate(
+                        """() => {
+                        const boxes = [...document.querySelectorAll(
+                          "[data-testid='stVerticalBlock']")].filter(e => {
+                            const s = getComputedStyle(e);
+                            return parseFloat(s.borderTopWidth) > 0
+                              && s.backgroundColor === 'rgb(255, 255, 255)';});
+                        const main = getComputedStyle(
+                          document.querySelector("[data-testid='stMain']")).backgroundColor;
+                        const caps = [...document.querySelectorAll(
+                          "[data-testid='stMain'] [data-testid='stCaptionContainer']")]
+                          .map(e => { const s = getComputedStyle(e);
+                            return s.color + '|' + s.opacity; });
+                        return {boxes: boxes.length, main, caps: [...new Set(caps)]};
+                        }"""
+                    )
+                    assert got["boxes"] >= 5, f"white bordered boxes: {got['boxes']}"
+                    assert got["main"] == "rgb(245, 246, 248)", got["main"]
+                    assert got["caps"] == ["rgb(95, 99, 112)|1"], got["caps"]
+
                 def sample_dates(page=page):
                     expect(
                         page.get_by_text("2. When the 40 work items will be done")
@@ -181,6 +203,7 @@ def main() -> int:
                 check(f"{label}: each date is under its own label", sample_dates)
                 check(f"{label}: dates are not cut off", dates_not_cut)
                 check(f"{label}: help sidebar first in reading order", sidebar_first)
+                check(f"{label}: white boxes on a grey page, readable captions", boxes_and_captions)
                 check(f"{label}: chart is drawn", chart)
                 check(f"{label}: the 50% date is not certain", not_certain)
                 check(f"{label}: no AI line without a key", ai_off)

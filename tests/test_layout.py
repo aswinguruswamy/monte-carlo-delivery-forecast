@@ -72,6 +72,12 @@ def test_the_page_style_gives_a_grey_page_and_white_boxes():
     assert "<script" not in css
 
 
+def test_captions_get_a_4_5_to_1_colour():
+    """Review MCF-37: Streamlit's caption (60% opacity) was 3.7:1 on white."""
+    css = logic.page_css()
+    assert '[data-testid="stCaptionContainer"]{color:#5f6370;opacity:1}' in css
+
+
 def test_cards_stack_one_per_line_on_a_phone():
     html = logic.cards_html(facts())
     assert "@media (max-width: 640px)" in html and "grid-template-columns:1fr" in html
@@ -82,7 +88,8 @@ def test_cards_stack_one_per_line_on_a_phone():
 
 def test_same_day_note_only_when_the_dates_are_equal():
     assert logic.same_day_note(facts()) == (
-        "The velocity date is the same day as the 50% date, so the two lines touch."
+        "The velocity date is the same day as the 50% date, so the two lines are drawn "
+        "side by side."
     )
     assert logic.same_day_note(facts(velocity_date=date(2026, 11, 20))) is None
     none = facts(velocity_date=None, velocity_per_sprint=None, points_needed=None)
@@ -128,3 +135,16 @@ def test_page_puts_the_history_line_in_section_2(app):
     history = next(i for i, t in enumerate(texts) if t.startswith("History used:"))
     chart_caption = next(i for i, t in enumerate(texts) if t.startswith("Each bar:"))
     assert history < chart_caption
+
+
+def test_section_2_description_comes_right_after_its_heading(app):
+    """Review MCF-37: every box starts with heading, then its one-line description."""
+    texts = [c.value for c in app.caption]
+    desc = next(i for i, t in enumerate(texts) if t.startswith("Each card shows"))
+    dates = next(i for i, t in enumerate(texts) if t.startswith("Dates count from"))
+    assert desc < dates
+
+
+def test_the_full_report_box_has_a_description(app):
+    texts = [c.value for c in app.caption]
+    assert logic.REPORT_DESCRIPTION in texts
