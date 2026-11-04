@@ -182,8 +182,16 @@ def main() -> None:
             st.markdown(text)
             st.caption("AI-selected, approved sentences (D33.1). Code wrote every date above.")
 
+    st.subheader(logic.HOW_IT_WORKS_HEADING)
+    for part in logic.how_it_works():
+        with st.expander(part.title):
+            st.markdown(part.body)  # code-made text only
+
     with st.expander(logic.REPORT_LABEL):
         st.code(result.report, language=None)
+
+    st.divider()
+    st.markdown(logic.footer_markdown())
 
 
 if __name__ == "__main__":

@@ -57,7 +57,7 @@ def test_about_one_in(later, text):
 def test_the_section_has_2_parts_and_keeps_monte_carlo_and_the_backtest_apart():
     parts = logic.how_it_works()
     assert [p.title for p in parts][0] == "How the dates are made (Monte Carlo)"
-    assert parts[1].title.startswith("How accurate is it? (back-test)")
+    assert parts[1].title.startswith("How accurate is it? (back-test")
     monte_carlo, backtest = parts[0].body, parts[1].body
     assert "10,000 tries" in monte_carlo and "back-test" not in monte_carlo.lower()
     assert "29 real open-source projects" in backtest and "10,000 tries" not in backtest

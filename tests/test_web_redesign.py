@@ -206,7 +206,7 @@ def test_sidebar_has_the_5_parts_in_order():
     heads = re.findall(r"^#### (.+)$", logic.SIDEBAR, flags=re.M)
     assert heads == ["You need", "Steps", "Which date to use", "Be careful", "Privacy"]
     assert "Jira export works" in logic.SIDEBAR
-    assert "1 time in 3" in logic.SIDEBAR  # the back-test result (69.0% correct)
+    assert "How accurate is it?" in logic.SIDEBAR  # MCF-36: the result is on the page
 
 
 def _sentences(text: str) -> set[str]:
