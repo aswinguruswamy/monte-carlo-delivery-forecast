@@ -100,16 +100,20 @@ def test_the_4_cards_have_the_agreed_labels_dates_notes_and_colours():
         ("50/50 date · P50", "Nov. 17, 2026", "As likely early as late"),
         ("Safer date · P85", "Nov. 25, 2026", "Recommended to share"),
         ("Safest date · P95", "Dec. 1, 2026", ""),  # design: no note; the sidebar says when
-        ("Velocity date · story points", "Nov. 17, 2026", "Average pace · points left estimated"),
+        ("Velocity date · story points", "Nov. 17, 2026", ""),  # MCF-34: explained in the help
     ]
     by_label = {c.label: c for c in logic.cards(facts())}
     assert [c.label for c in logic.cards(facts()) if c.highlight] == ["Safer date · P85"]
     assert by_label["Velocity date · story points"].dashed
 
 
-def test_the_velocity_card_says_given_points_and_not_available():
-    given = logic.cards(facts(points_estimated=False))[3]
-    assert given.note == "Average pace · points left given"
+def test_the_velocity_card_has_no_pace_line_and_says_not_available():
+    """MCF-34 (D45): the "Average pace" line moved from the card to the help sidebar."""
+    for estimated in (True, False):
+        card = logic.cards(facts(points_estimated=estimated))[3]
+        assert card.note == ""
+    html = logic.cards_html(facts())
+    assert "Average pace" not in html and "points left" not in html
     none = logic.cards(facts(velocity_date=None, velocity_per_sprint=None, points_needed=None))[3]
     assert (none.value, none.note) == ("Not available", "Needs story points")
 
@@ -253,3 +257,11 @@ def test_the_demo_script_waits_for_text_that_the_page_shows():
     for text in waits:
         stem = re.sub(r"^\d+ ", "", text)  # "80 work items left" -> "work items left"
         assert stem in page_src or stem in logic.result_heading(facts()), text
+
+
+def test_the_help_explains_the_velocity_date():
+    """MCF-34 (D45): pace and estimated points are in the Velocity help line."""
+    side = logic.SIDEBAR
+    line = next(s for s in side.splitlines() if s.startswith("- **Velocity:**"))
+    assert "average pace" in line and "story points" in line
+    assert "estimated" in line and "More options" in line
