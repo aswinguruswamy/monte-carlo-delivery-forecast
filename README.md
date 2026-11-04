@@ -1,5 +1,7 @@
 # Monte Carlo Delivery Forecast (MCF)
 
+Try it: mcf-forecast.streamlit.app — no install, sample data included.
+
 Forecast when the next N work items will be done, as dates at 50%, 85% and 95% confidence, from a team's past throughput. The tool also gives the usual velocity date, and a back-test on 29 real open-source projects compares the two methods.
 
 **Status:** version 1.0.0, released 2026-11-03: command line, back-test, web page and AI explanation. Changes: [CHANGELOG.md](CHANGELOG.md).
