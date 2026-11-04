@@ -65,7 +65,7 @@ class ForecastFacts:
     open_items: int
     rows_no_date: int
     bug_share_percent: int | None
-    items_no_points: int = 0  # value items in the history window with no story point
+    items_no_points: int  # value items in the history window with no story point (MCF-32)
 
     def __post_init__(self) -> None:
         for f in fields(self):
@@ -81,6 +81,10 @@ class ForecastFacts:
                 raise ValueError(f"{f.name}: must be 0 or more, got {value!r}")
         if len({getattr(self, n) is None for n in VELOCITY_FIELDS}) > 1:
             raise ValueError(f"{', '.join(VELOCITY_FIELDS)} must be all set or all None")
+        if self.items_no_points > self.items_done:
+            raise ValueError("items_no_points must be at most items_done")
+        if self.velocity_per_sprint is not None and self.velocity_per_sprint <= 0:
+            raise ValueError("velocity_per_sprint must be above 0 when there is a velocity date")
         if self.backlog < 1 or self.runs < 1:
             raise ValueError("backlog and runs must be 1 or more")
         if self.bug_share_percent is not None and self.bug_share_percent > 100:

@@ -181,7 +181,7 @@ def test_the_key_is_never_in_the_result():
 
 def test_the_result_records_the_prompt_version_model_and_runs():
     result = ev.run_eval(ev.cases(), runs=1, transport=FakeTransport(), api_key=KEY, model="m-1")
-    assert result["prompt_version"] == "4"
+    assert result["prompt_version"] == "5"
     assert result["model"] == "m-1"
     assert result["runs_per_case"] == 1
 

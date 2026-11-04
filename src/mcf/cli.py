@@ -248,9 +248,10 @@ def forecast(args: argparse.Namespace) -> str:
 NO_VELOCITY = "Not available: needs story points"
 
 
-def _velocity_line(f: ForecastFacts, points_note: str) -> str:
+def _velocity_line(f: ForecastFacts, points_note: str, points_given: bool) -> str:
     if f.velocity_date is None:
-        return f"Velocity: {NO_VELOCITY}"
+        unused = "; --backlog-points not used" if points_given else ""
+        return f"Velocity: {NO_VELOCITY} in the history{unused}"
     return (
         f"Velocity: {f.velocity_date} ({_num(f.velocity_per_sprint)} points per 2 weeks; "
         f"{_num(f.points_needed)} points needed, {points_note})"
@@ -270,7 +271,7 @@ def render(f: ForecastFacts, args: argparse.Namespace) -> str:
         *(f"  {p}%: {d}" for p, d in ((50, f.mc50), (85, f.mc85), (95, f.mc95))),
         "  The 50% date is not certain: half of the runs finish later.",
         "",
-        _velocity_line(f, points_note),
+        _velocity_line(f, points_note, getattr(args, "backlog_points", None) is not None),
         *(
             [
                 f"Value items with no story points ({f.window_start} to {f.window_end}): "
