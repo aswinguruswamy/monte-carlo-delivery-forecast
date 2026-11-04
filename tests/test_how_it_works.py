@@ -127,3 +127,29 @@ def test_readme_has_the_try_it_line_under_the_title():
         "**Try it:** [mcf-forecast.streamlit.app](https://mcf-forecast.streamlit.app)"
         " — no install, sample data included."
     )
+
+
+# --- review fixes --------------------------------------------------------------------------
+
+
+def test_method_figures_come_from_the_code_constants(monkeypatch):
+    """Review MCF-36: "84 days" and "10,000 tries" must follow WINDOW_DAYS and RUNS."""
+    from mcf.web import logic as page
+
+    monkeypatch.setattr(page, "WINDOW_DAYS", 90)
+    monkeypatch.setattr(page, "RUNS", 5_000)
+    body = page.how_it_works()[0].body
+    assert "each of the last 90 days" in body and "Do 5,000 tries" in body
+
+
+def test_the_backtest_part_counts_the_cases_with_no_forecast():
+    s = METRICS["summary"]
+    assert BACKTEST.no_forecast == s["no_forecast_cases"] == 903
+    body = logic.how_it_works()[1].body
+    assert "**903** more had too little history to forecast" in body
+
+
+def test_the_backtest_steps_include_the_forecast_day():
+    body = logic.how_it_works()[1].body
+    assert "Use only the work done up to that date." in body
+    assert "work items (not bugs or epics)" in body
