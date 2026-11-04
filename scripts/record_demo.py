@@ -71,7 +71,9 @@ def record(url: str, video_dir: Path) -> tuple[Path, float]:
         backlog = page.get_by_label("How many work items are left? (backlog)")
         backlog.fill("80")
         backlog.press("Enter")
-        expect(page.get_by_text("80 work items left")).to_be_visible(timeout=30_000)
+        expect(page.get_by_text("2. When the 80 work items will be done")).to_be_visible(
+            timeout=30_000
+        )
         page.wait_for_timeout(1500)
         _show(page, "stVegaLiteChart")
         page.wait_for_timeout(3500)

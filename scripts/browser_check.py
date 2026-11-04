@@ -117,7 +117,9 @@ def main() -> int:
                 main_area = page.locator("[data-testid='stMain']")
 
                 def sample_dates(page=page):
-                    expect(page.get_by_text("40 work items left")).to_be_visible(timeout=30_000)
+                    expect(
+                        page.get_by_text("2. When the 40 work items will be done")
+                    ).to_be_visible(timeout=30_000)
                     want = {
                         "50% chance of completion": long_date(expected.mc50),
                         "85% chance of completion": long_date(expected.mc85),
