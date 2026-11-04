@@ -14,6 +14,16 @@ Rules:
   is no time zone conversion (ADR 0002 rule 5).
 - Story_Point is a decimal number above 0. An empty or "NULL" value stays missing
   (NaN); MCF-12 decides when a missing point is an error.
+- Jira export (D42, user-file mode only): the loader also accepts the Jira column
+  names in `ALIASES` (any letter case) and the Jira dates "03/Nov/26 4:35 PM",
+  "03/Nov/2026 4:35 PM" and "03/Nov/26". The time is ignored, as for ISO dates.
+  A 2-digit year is 20YY.
+  Two Jira story point columns are allowed; the row takes the value that is not empty,
+  and 2 different values are an error. Repeated columns that the loader does not
+  use (for example "Sprint") are ignored. A used column that shows 2 times, or our
+  name together with a Jira name for the same column, is an error. The loader
+  never reads the other columns, so names and titles never load (RAID C2). The
+  back-test path keeps the strict rules above (ADR 0002).
 - A bad value stops the load with an error that names the file and the real
   line in the file (line 1 is the header).
 """
@@ -34,6 +44,30 @@ NO_DATE = "NULL"
 NO_POINT = {"", "NULL"}
 DATE_TEXT = re.compile(r"\d{4}-\d{2}-\d{2}(?:[ T].*)?")
 POINT_TEXT = re.compile(r"[0-9]+(?:\.[0-9]+)?|\.[0-9]+", re.ASCII)
+JIRA_DATE = re.compile(
+    r"(\d{1,2})/([A-Za-z]{3})/(\d{2}|\d{4})(?: +(\d{1,2}):(\d{2}) *([AaPp][Mm]))?", re.ASCII
+)
+MONTHS = {
+    m: i
+    for i, m in enumerate(
+        ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1
+    )
+}
+# User-file mode only (D42): the column names we accept, in lower case.
+ALIASES = {
+    "Issue_Key": ("issue_key", "issue key"),
+    "Type": ("type", "issue type"),
+    "Resolution_Date": ("resolution_date", "resolved"),
+    "Story_Point": (
+        "story_point",
+        "story points",
+        "story point estimate",
+        "custom field (story points)",
+        "custom field (story point estimate)",
+    ),
+}
+JIRA_HINT = "A Jira export needs the columns Issue key, Issue Type, Resolved and Story Points."
+DATE_HINT = "Use YYYY-MM-DD or the Jira form 03/Nov/26 4:35 PM."
 
 
 class LoadError(ValueError):
@@ -62,6 +96,62 @@ def _done_day(text: str) -> date | None:
         return None
 
 
+def _jira_day(text: str) -> date | None:
+    """A Jira export date, or ISO; None if the text is neither (user-file mode only)."""
+    text = text.strip()
+    day = _done_day(text)
+    if day is not None:
+        return day
+    m = JIRA_DATE.fullmatch(text)
+    if not m or m[2].lower() not in MONTHS:
+        return None
+    if m[4] is not None and not (1 <= int(m[4]) <= 12 and int(m[5]) <= 59):
+        return None
+    year = int(m[3]) + (2000 if len(m[3]) == 2 else 0)
+    try:
+        return date(year, MONTHS[m[2].lower()], int(m[1]))
+    except ValueError:
+        return None
+
+
+def column_indexes(header: list[str], *, user_file: bool) -> dict[str, list[int]]:
+    """The header position(s) of each required column, or a LoadError message.
+
+    Strict (back-test) mode: our exact names, one position each. User-file mode
+    (D42): our names or the Jira names, any letter case; Story_Point may have more
+    than one column with different names.
+    """
+    if not user_file:
+        dupes = sorted({c for c in header if header.count(c) > 1})
+        if dupes:
+            raise ValueError(f"duplicate column(s): {', '.join(dupes)}")
+        missing = [c for c in REQUIRED if c not in header]
+        if missing:
+            raise ValueError(f"missing column(s): {', '.join(missing)}")
+        return {c: [header.index(c)] for c in REQUIRED}
+
+    names = [c.strip().lower() for c in header]
+    found: dict[str, list[int]] = {}
+    missing = []
+    for field in REQUIRED:
+        idx = [i for i, n in enumerate(names) if n in ALIASES[field]]
+        if not idx:
+            missing.append(field)
+            continue
+        used = [names[i] for i in idx]
+        dupes = sorted({header[i] for i in idx if used.count(names[i]) > 1})
+        if dupes:
+            raise ValueError(f"duplicate column(s): {', '.join(dupes)}")
+        jira_points = field == "Story_Point" and field.lower() not in used
+        if len(idx) > 1 and not jira_points:  # only Jira point columns may repeat
+            shown = ", ".join(repr(header[i]) for i in idx)
+            raise ValueError(f"{len(idx)} columns for {field}: {shown}. Keep one.")
+        found[field] = idx
+    if missing:
+        raise ValueError(f"missing column(s): {', '.join(missing)}. {JIRA_HINT}")
+    return found
+
+
 def _story_point(text: str) -> float | None:
     """Return the point value, NaN for no value, or None if the value is bad."""
     if text.strip() in NO_POINT:
@@ -72,6 +162,23 @@ def _story_point(text: str) -> float | None:
     if not math.isfinite(value) or value <= 0:
         return None
     return value
+
+
+def _row_point(row: list[str], idx: list[int], name: str, line: int) -> float:
+    """The row's story point: the one value that is not empty, or NaN."""
+    values = []
+    for i in idx:
+        value = _story_point(row[i])
+        if value is None:
+            raise LoadError(f"{name}, line {line}: bad Story_Point {row[i]!r}")
+        if not math.isnan(value):
+            values.append(value)
+    if len(set(values)) > 1:
+        raise LoadError(
+            f"{name}, line {line}: 2 different story points ({', '.join(map(str, values))}). "
+            "Keep one story point column, or make the values the same."
+        )
+    return values[0] if values else math.nan
 
 
 def load_issues(path: str | Path, *, open_items: bool = False) -> tuple[pd.DataFrame, LoadReport]:
@@ -91,13 +198,11 @@ def load_issues(path: str | Path, *, open_items: bool = False) -> tuple[pd.DataF
             header = next(reader, None)
             if header is None:
                 raise LoadError(f"{name}: empty file")
-            dupes = sorted({c for c in header if header.count(c) > 1})
-            if dupes:
-                raise LoadError(f"{name}: duplicate column(s): {', '.join(dupes)}")
-            missing = [c for c in REQUIRED if c not in header]
-            if missing:
-                raise LoadError(f"{name}: missing column(s): {', '.join(missing)}")
-            col = {c: header.index(c) for c in REQUIRED}
+            try:
+                cols = column_indexes(header, user_file=open_items)
+            except ValueError as exc:
+                raise LoadError(f"{name}: {exc}") from None
+            col = {c: i[0] for c, i in cols.items()}
             width = len(header)
 
             for row in reader:
@@ -114,19 +219,18 @@ def load_issues(path: str | Path, *, open_items: bool = False) -> tuple[pd.DataF
                     rows_no_date += 1
                     continue
                 if open_items and resolution == "":
-                    point_text = row[col["Story_Point"]]
-                    if _story_point(point_text) is None:
-                        raise LoadError(f"{name}, line {line}: bad Story_Point {point_text!r}")
+                    _row_point(row, cols["Story_Point"], name, line)  # still checked (D25)
                     rows_open += 1
                     open_types.append(row[col["Type"]])
                     continue
-                day = _done_day(resolution)
+                day = _jira_day(resolution) if open_items else _done_day(resolution)
                 if day is None:
-                    raise LoadError(f"{name}, line {line}: bad Resolution_Date {resolution!r}")
-                point_text = row[col["Story_Point"]]
-                point = _story_point(point_text)
-                if point is None:
-                    raise LoadError(f"{name}, line {line}: bad Story_Point {point_text!r}")
+                    hint = f" in column {header[col['Resolution_Date']]!r}. {DATE_HINT}"
+                    raise LoadError(
+                        f"{name}, line {line}: bad Resolution_Date {resolution!r}"
+                        + (hint if open_items else "")
+                    )
+                point = _row_point(row, cols["Story_Point"], name, line)
                 keys.append(row[col["Issue_Key"]])
                 types.append(row[col["Type"]])
                 days.append(day)

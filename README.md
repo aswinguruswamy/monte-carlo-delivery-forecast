@@ -22,7 +22,7 @@ pytest
 mcf forecast team.csv --backlog 40
 ```
 
-The CSV needs the columns `Issue_Key`, `Type`, `Resolution_Date` and `Story_Point`. An empty `Resolution_Date` means an open item: it is skipped and counted (D25). Options (D28):
+The CSV needs the columns `Issue_Key`, `Type`, `Resolution_Date` and `Story_Point`. A Jira CSV export also works with no editing (D42): `Issue key`, `Issue Type`, `Resolved` and `Story Points` or `Story point estimate`, with dates such as `03/Nov/26 4:35 PM`. The tool reads only these 4 columns, never names or titles. An empty `Resolution_Date` means an open item: it is skipped and counted (D25). Options (D28):
 
 - `--backlog N` (required): the number of value items still to do.
 - `--as-of YYYY-MM-DD`: day t, the forecast date. Default: the last done day in the file. Items done after day t are not used.

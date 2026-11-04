@@ -397,3 +397,20 @@ Result: pass — no ❌. Item 5 closed by D39. Item 8 closes after the deploy an
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
 Result: pass — no ❌. Item 8 closes at the G8 go: tag, release, public repository.
+
+## Ticket MCF-31 — 2026-11-04 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-31-jira-export`; each commit "MCF-31: …" | — |
+| 3 | CI green on the PR | ✅ | PR #30 head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_jira_export.py` (42 tests) and a made-up 133-row fixture; failing tests committed first twice | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D42, D25, ADR 0002, RAID C2 | — |
+| 6 | AI ticket evaluation | n/a | Not an AI ticket | — |
+| 7 | Independent review with a verdict | ✅ | Subagent grade B+, 0 blockers, 1 major (our point name plus a Jira one), 3 minor, 2 nits — all fixed or pinned with tests first; back-test loader compared old vs new on 77 inputs: no difference; 5 planted bugs caught | — |
+| 8 | Each acceptance criterion met | ✅ | Jira names, Jira dates, repeated columns, point columns, no names or titles, back-test unchanged | — |
+| 9 | README and rule pages match | ✅ | README data section and the loader docstring | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌. Open point for the PM: `Subtask` vs `Sub-task` (D04.1).
