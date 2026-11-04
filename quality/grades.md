@@ -414,3 +414,20 @@ Result: pass — no ❌. Item 8 closes at the G8 go: tag, release, public reposi
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
 Result: pass — no ❌. Open point for the PM: `Subtask` vs `Sub-task` (D04.1).
+
+## Ticket MCF-32 — 2026-11-04 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-32-optional-points` (on top of MCF-31); each commit "MCF-32: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_optional_points.py` (25 tests) and a page AppTest; failing tests committed first twice | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D43, D33.1 (no new sentence), ADR 0002 | — |
+| 6 | AI ticket evaluation | 🟡 | Prompt version 4 → 5: the template is the same; "velocity" and "points" may now be "none". The 10 eval cases are unchanged. No eval case without points yet | PM decides |
+| 7 | Independent review with a verdict | ✅ | Subagent grade B, 0 blockers, 1 major, 4 minor, 2 nits — 6 fixed with tests first; the major (points needed with partial points) is kept by design, see the PR | PM decides |
+| 8 | Each acceptance criterion met | ✅ | No points: 3 dates and "Not available: needs story points"; some points: count shown on the CLI and page; back-test unchanged | — |
+| 9 | README and rule pages match | ✅ | Loader docstring | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌. Items 6 and 7 have a PM choice in the approval.
