@@ -128,6 +128,9 @@ def test_two_story_point_columns_with_different_values_are_an_error(tmp_path):
         ("03/Nov/26", date(2026, 11, 3)),
         ("2026-11-03 16:35", date(2026, 11, 3)),
         ("2026-11-03", date(2026, 11, 3)),
+        ("03/Nov/26 12:00 AM", date(2026, 11, 3)),
+        ("03/Nov/26 12:59 PM", date(2026, 11, 3)),
+        ("03/Nov/99 4:35 PM", date(2099, 11, 3)),  # D42: a 2-digit year is 20YY
     ],
 )
 def test_jira_and_iso_dates_are_read(tmp_path, text, day):
@@ -137,7 +140,19 @@ def test_jira_and_iso_dates_are_read(tmp_path, text, day):
 
 
 @pytest.mark.parametrize(
-    "text", ["11/03/2026", "Nov 3 2026", "31/Feb/26 1:00 PM", "03/Nov/26 13:00 PM"]
+    "text",
+    [
+        "11/03/2026",
+        "Nov 3 2026",
+        "31/Feb/26 1:00 PM",
+        "03/Nov/26 13:00 PM",
+        "03/Nov/26 00:30 AM",
+        "03/Nov/26 4:35:10 PM",
+        "03/Sept/26 4:35 PM",
+        "03/Nov/26\t4:35 PM",  # review: only spaces between the date and the time
+        "\u0660\u0663/Nov/26",  # Arabic-Indic digits
+        " ",  # spaces are not an open item (as test_cli)
+    ],
 )
 def test_other_dates_are_a_clear_error_with_the_line(tmp_path, text):
     p = write(tmp_path, f"Issue key,Issue Type,Resolved,Story Points\nA-1,Story,{text},3\n")
@@ -162,12 +177,24 @@ def test_a_repeated_column_we_use_is_still_an_error(tmp_path):
         load_issues(p, open_items=True)
 
 
-def test_our_name_and_a_jira_name_for_the_same_column_is_an_error(tmp_path):
-    p = write(
-        tmp_path,
-        "Issue_Key,Issue key,Type,Resolution_Date,Story_Point\nA-1,A-1,Story,2026-09-30,3\n",
-    )
-    with pytest.raises(LoadError, match="2 columns for Issue_Key"):
+@pytest.mark.parametrize(
+    "field, ours, jira, value",
+    [
+        ("Issue_Key", "Issue_Key", "Issue key", "A-1"),
+        ("Type", "Type", "Issue Type", "Story"),
+        ("Resolution_Date", "Resolution_Date", "Resolved", "2026-09-30"),
+        ("Story_Point", "Story_Point", "Story Points", "3"),
+    ],
+)
+def test_our_name_and_a_jira_name_for_the_same_column_is_an_error(
+    tmp_path, field, ours, jira, value
+):
+    base = {"Issue_Key": "A-1", "Type": "Story", "Resolution_Date": "2026-09-30"}
+    base["Story_Point"] = "3"
+    head = [c for c in base if c != field] + [ours, jira]
+    row = [base[c] for c in base if c != field] + [value, value]
+    p = write(tmp_path, ",".join(head) + "\n" + ",".join(row) + "\n")
+    with pytest.raises(LoadError, match=f"2 columns for {field}"):
         load_issues(p, open_items=True)
 
 
@@ -200,6 +227,15 @@ def test_the_page_hides_jira_issue_keys_in_messages():
 
     keys = logic._keys(JIRA.read_bytes())
     assert "DEMO-101" in keys and len(keys) == 133
+
+
+def test_the_page_error_for_a_jira_file_hides_the_issue_key():
+    from mcf.web.logic import WebError, forecast_from_bytes
+
+    data = b"Issue key,Issue Type,Resolved,Story Points\nSECRET-9,Story,2026-09-30,\n"
+    with pytest.raises(WebError) as err:
+        forecast_from_bytes(data, backlog=5)
+    assert "SECRET-9" not in str(err.value) and "an item" in str(err.value)
 
 
 def test_the_fixture_is_small_and_made_up():
