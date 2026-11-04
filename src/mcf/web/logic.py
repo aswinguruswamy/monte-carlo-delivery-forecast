@@ -211,7 +211,7 @@ SAMPLE_LABEL = "Sample file (example team, not real data)"
 REPORT_LABEL = "Full report (technical)"
 # MCF-35: a plain explanation under each option in "More options".
 OPTION_HELP = {
-    "backlog_points": "For the velocity date. Empty: the tool estimates them.",
+    "backlog_points": "For the velocity date. Off: the tool estimates them.",
     "as_of": "Empty: the day the last item in your file was finished.",
     "seed": "Use the same number to get the same dates again.",
 }

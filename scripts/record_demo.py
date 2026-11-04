@@ -59,7 +59,7 @@ def record(url: str, video_dir: Path) -> tuple[Path, float]:
         start = time.monotonic()
         page = context.new_page()
         page.goto(url)
-        expect(page.locator("[data-testid='stMetric']")).to_have_count(4, timeout=60_000)
+        expect(page.locator(".mcf-card")).to_have_count(4, timeout=60_000)
         expect(page.locator("[data-testid='stVegaLiteChart']")).to_be_visible(timeout=30_000)
         page.wait_for_timeout(1000)
         ready = time.monotonic() - start
