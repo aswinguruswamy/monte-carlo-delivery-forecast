@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import html
 import io
 import logging
 import re
@@ -38,7 +39,7 @@ _TMP_NAME = "upload.csv"
 _KNOWN = (LoadError, IssueTypeError, ThroughputError, MonteCarloError, VelocityError)
 _UNKNOWN = (
     "The file could not be read. Use a UTF-8 CSV file with the columns "
-    "Issue_Key, Type, Resolution_Date and Story_Point."
+    "Issue_Key, Type and Resolution_Date (Story_Point is optional), or a Jira export."
 )
 
 
@@ -167,22 +168,183 @@ def chart_table(result: WebForecast) -> pd.DataFrame:
 
 
 def marker_table(facts: ForecastFacts) -> pd.DataFrame:
-    """The chart lines. No velocity line when there is no velocity date (MCF-32)."""
-    marks = [("50%", facts.mc50), ("85%", facts.mc85), ("95%", facts.mc95)]
+    """The chart lines, in the card colours (MCF-33). No velocity line without a date (MCF-32)."""
+    marks = [
+        ("50/50 (P50)", facts.mc50, COLORS["p50"]),
+        ("Safer (P85)", facts.mc85, COLORS["p85"]),
+        ("Safest (P95)", facts.mc95, COLORS["p95"]),
+    ]
     if facts.velocity_date is not None:
-        marks.append(("Velocity", facts.velocity_date))
-    return pd.DataFrame({"label": [m[0] for m in marks], "date": [m[1] for m in marks]})
+        marks.append(("Velocity", facts.velocity_date, COLORS["velocity"]))
+    return pd.DataFrame(
+        {
+            "label": [m[0] for m in marks],
+            "date": [m[1] for m in marks],
+            "color": [m[2] for m in marks],
+        }
+    )
+
+
+# --- MCF-33 (D41): plain-language page text ------------------------------------------------
+
+# Text colours on white; each has 4.5:1 contrast or more (WCAG AA, tested).
+COLORS = {
+    "p50": "#2f6db5",
+    "p85": "#a8630f",
+    "p95": "#b8322f",
+    "velocity": "#1a7f37",
+    "muted": "#5f6370",
+    "ink": "#31333f",
+}
+MAX_BACKLOG = 10_000
+BACKLOG_ERROR = "Type a whole number from 1 to 10,000."
+BACKLOG_HELP = "Type any whole number from 1 to 10,000."
+INTRO = (
+    "Upload your team's finished work items. See a 50/50 date, a safer date and a safest "
+    "date, from your team's real pace (throughput)."
+)
+NOT_CERTAIN = "The 50/50 date is not certain: half of the runs finish later."
+CHART_CAPTION = (
+    "Each bar: how often the work finished on that day in {runs:,} tries (Monte Carlo simulation)."
+)
+AI_NOT_AVAILABLE = "AI explanation: Not available in this demo."
+SIDEBAR = """\
+### How to use this page
+
+#### You need
+A CSV export of your work items. A Jira export works as it is.
+Jira: Filters › Export › CSV (all fields). Open items are skipped. 10 MB max.
+
+#### Steps
+1. Choose the sample or upload your file.
+2. Enter how many work items are left (backlog). Do not count bugs or epics.
+3. Read the dates.
+
+#### Which date to use
+- **50/50 (P50):** plan your own work.
+- **Safer (P85):** share with a sponsor or client.
+- **Safest (P95):** use when a late finish costs a lot.
+- **Velocity:** compare with your sprint plan. Needs story points.
+
+#### Be careful
+The dates assume your team keeps its recent pace (throughput).
+In our test on 29 projects, the 85% date was too early 1 time in 3.
+
+#### Your data
+Used only for this forecast. Not stored. No issue keys shown.
+"""
+
+_MONTHS = (
+    "Jan.", "Feb.", "March", "April", "May", "June",
+    "July", "Aug.", "Sept.", "Oct.", "Nov.", "Dec.",
+)  # fmt: skip
+_BACKLOG_TEXT = re.compile(r"[0-9]+", re.ASCII)
+
+
+def short_date(d: date) -> str:
+    """A written-out date with no year: "Nov. 17" (page only; the CLI keeps ISO)."""
+    return f"{_MONTHS[d.month - 1]} {d.day}"
+
+
+def long_date(d: date) -> str:
+    """A written-out date: "Nov. 17, 2026" (page only; the CLI keeps ISO)."""
+    return f"{short_date(d)}, {d.year}"
+
+
+def parse_backlog(text: str) -> int:
+    """The typed backlog as a whole number from 1 to 10,000, or a WebError."""
+    text = text.strip()
+    if not _BACKLOG_TEXT.fullmatch(text) or not 1 <= int(text) <= MAX_BACKLOG:
+        raise WebError(BACKLOG_ERROR)
+    return int(text)
+
+
+@dataclass(frozen=True)
+class Card:
+    label: str
+    value: str
+    note: str
+    color: str
+    highlight: bool = False
+    dashed: bool = False
+
+
+def cards(facts: ForecastFacts) -> list[Card]:
+    """The 4 date cards, in the order and colours of the chart lines."""
+    if facts.velocity_date is None:
+        v_value, v_note = "Not available", "Needs story points"
+    else:
+        how = "estimated" if facts.points_estimated else "given"
+        v_value, v_note = long_date(facts.velocity_date), f"Average pace · points left {how}"
+    return [
+        Card("50/50 date · P50", long_date(facts.mc50), "As likely early as late", COLORS["p50"]),
+        Card(
+            "Safer date · P85",
+            long_date(facts.mc85),
+            "Recommended to share",
+            COLORS["p85"],
+            highlight=True,
+        ),
+        Card("Safest date · P95", long_date(facts.mc95), "", COLORS["p95"]),
+        Card("Velocity date · story points", v_value, v_note, COLORS["velocity"], dashed=True),
+    ]
+
+
+def _card_html(c: Card) -> str:
+    e = html.escape
+    style = "dashed" if c.dashed else "solid"
+    width = 3 if c.highlight else 2
+    back = "#fff8ee" if c.highlight else ("#f0faf3" if c.dashed else "#ffffff")
+    note = f'<span class="mcf-card-note">{e(c.note)}</span>' if c.note else ""
+    return (
+        f'<div class="mcf-card{" mcf-card-highlight" if c.highlight else ""}" '
+        f'data-label="{e(c.label)}" style="border:{width}px {style} {c.color};'
+        f"background:{back};border-radius:10px;padding:12px 14px;display:flex;"
+        f'flex-direction:column;gap:2px;min-width:0">'
+        f'<span class="mcf-card-label" style="font-size:0.85rem;font-weight:600;'
+        f'color:{c.color}">{e(c.label)}</span>'
+        f'<span class="mcf-card-value" style="font-size:1.45rem;font-weight:700;'
+        f'color:{COLORS["ink"]};white-space:nowrap">{e(c.value)}</span>'
+        f"{note}</div>"
+    )
+
+
+def cards_html(facts: ForecastFacts) -> str:
+    """The cards as HTML. Only code-made text goes in (no text from the file)."""
+    inner = "".join(_card_html(c) for c in cards(facts))
+    return (
+        '<div class="mcf-cards" style="display:grid;gap:10px;margin-bottom:16px;'
+        'grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">'
+        f"{inner}</div>"
+        f"<style>.mcf-card-note{{font-size:0.82rem;color:{COLORS['muted']}}}</style>"
+    )
+
+
+def result_heading(facts: ForecastFacts) -> str:
+    noun = "work item" if facts.backlog == 1 else "work items"
+    return f"{facts.backlog:,} {noun} left"
+
+
+def from_line(facts: ForecastFacts, *, as_of_given: bool) -> str:
+    where = "the date you chose" if as_of_given else "the last finished item in the file"
+    return f"Forecast from {where}: {long_date(facts.t)}"
+
+
+def share_line(facts: ForecastFacts) -> str:
+    fmt = short_date if facts.mc50.year == facts.mc85.year else long_date
+    a, b = fmt(facts.mc50), fmt(facts.mc85)
+    return f'Share a range: "{a} to {b} (85% chance by {b})."'
 
 
 def no_points_line(facts: ForecastFacts) -> str | None:
-    """MCF-32: how many value items in the history have no story points."""
+    """MCF-32: how many work items in the history have no story points."""
     n = facts.items_no_points
     if not n:
         return None
-    noun, verb = ("value item", "has") if n == 1 else ("value items", "have")
+    noun, verb = ("work item", "has") if n == 1 else ("work items", "have")
     text = (
-        f"{n} {noun} done between {facts.window_start} and {facts.window_end} "
-        f"{verb} no story points."
+        f"{n} {noun} done between {long_date(facts.window_start)} and "
+        f"{long_date(facts.window_end)} {verb} no story points."
     )
     if facts.velocity_date is not None:
         text += " The velocity date leaves them out."

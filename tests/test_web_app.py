@@ -64,7 +64,7 @@ def app(monkeypatch):
     return make
 
 
-CARD = re.compile(r'data-label="([^"]+)".*?class="mcf-card-value">([^<]+)<', re.S)
+CARD = re.compile(r'data-label="([^"]+)".*?class="mcf-card-value"[^>]*>([^<]+)<', re.S)
 
 
 def metrics(at) -> dict[str, str]:
@@ -99,7 +99,7 @@ def test_page_with_the_sample_shows_the_3_dates_the_velocity_date_and_the_chart(
     }
     assert len(at.get("vega_lite_chart")) == 1
     text = " ".join(e.value for group in (at.markdown, at.caption) for e in group)
-    assert "The 50% date is not certain" in text
+    assert logic.NOT_CERTAIN in text
     assert "SAMPLE-" not in text
 
 
@@ -114,7 +114,7 @@ def test_page_has_the_plain_labels_and_the_5_part_sidebar(app):
     at = app()
     assert at.title[0].value == "When will your work be done?"
     assert at.text_input(key="backlog").label == "How many work items are left? (backlog)"
-    assert at.text_input(key="backlog").help is None  # no help button inside the label (#14)
+    assert not at.text_input(key="backlog").help  # no help button inside the label (#14)
     side = sidebar_text(at)
     for part in ("You need", "Steps", "Which date to use", "Be careful", "Your data"):
         assert f"#### {part}" in side

@@ -36,6 +36,7 @@ def facts(**kw) -> ForecastFacts:
         open_items=0,
         rows_no_date=0,
         bug_share_percent=None,
+        items_no_points=0,
     )
     base.update(kw)
     return ForecastFacts(**base)
@@ -142,7 +143,7 @@ def test_the_highlight_is_not_red():
 def test_card_html_escapes_text_and_shows_no_iso_date():
     html = logic.cards_html(facts())
     assert "Nov. 25, 2026" in html and "2026-11-25" not in html
-    assert html.count('class="mcf-card') == 4
+    assert html.count("data-label=") == 4
     assert "<script" not in html
 
 

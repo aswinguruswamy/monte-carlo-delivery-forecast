@@ -149,7 +149,7 @@ def main() -> int:
                     ).to_be_visible()
 
                 def not_certain(page=page):
-                    expect(page.get_by_text("The 50% date is not certain").first).to_be_visible()
+                    expect(page.get_by_text("The 50/50 date is not certain").first).to_be_visible()
 
                 def ai_off(page=page):
                     expect(

@@ -101,7 +101,7 @@ def test_one_item_with_no_points_is_singular(tmp_path, capsys):
     from mcf.web import logic
 
     f = logic.forecast_from_bytes(rows(["2"] * 39 + [""]).encode(), backlog=10).facts
-    assert logic.no_points_line(f).startswith("1 value item done between")
+    assert logic.no_points_line(f).startswith("1 work item done between")  # MCF-33 words
 
 
 def test_points_only_outside_the_history_window_is_not_available(tmp_path, capsys):

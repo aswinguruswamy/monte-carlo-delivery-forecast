@@ -68,7 +68,7 @@ def record(url: str, video_dir: Path) -> tuple[Path, float]:
         page.wait_for_timeout(4000)
         _show(page, "stHeading")
 
-        backlog = page.get_by_label("Backlog: value items still to do")
+        backlog = page.get_by_label("How many work items are left? (backlog)")
         backlog.fill("80")
         backlog.press("Enter")
         expect(page.get_by_text("Forecast for the next 80 value items")).to_be_visible(
