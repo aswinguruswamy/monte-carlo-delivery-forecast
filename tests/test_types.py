@@ -15,6 +15,7 @@ from mcf.data.types import BUG, NOT_COUNTED, VALUE, IssueTypeError, sort_types
 D04_VALUE = [
     "Story", "Task", "Improvement", "New Feature", "Suggestion", "Enhancement Request",
     "Sub-task", "Technical task", "Documentation", "Technical Debt", "Wish", "Question",
+    "Subtask",  # MCF-38, D04.2
 ]  # fmt: skip
 D04_BUG = ["Bug", "Build Failure", "Problem Ticket", "Incident"]
 D04_NOT_COUNTED = ["Epic"]
@@ -39,15 +40,15 @@ def issues(types: list[str], points: list[float] | None = None) -> pd.DataFrame:
     + [(t, BUG) for t in D04_BUG]
     + [(t, NOT_COUNTED) for t in D04_NOT_COUNTED],
 )
-def test_each_of_the_17_types_maps_as_in_d04(type_name, kind):
+def test_each_of_the_18_types_maps_as_in_d04(type_name, kind):
     sorted_, _ = sort_types(issues([type_name]), file="P.csv")
     assert sorted_["kind"].iloc[0] == kind
 
 
-def test_the_map_has_exactly_17_types():
+def test_the_map_has_exactly_18_types():
     from mcf.data.types import D04_KIND
 
-    assert len(D04_KIND) == 17
+    assert len(D04_KIND) == 18  # D04.2 added "Subtask"
     assert set(D04_KIND) == set(D04_VALUE + D04_BUG + D04_NOT_COUNTED)
 
 
@@ -104,7 +105,10 @@ def test_tawos_types_are_all_known_and_value_items_have_points():
         df, _ = load_issues(p)
         sort_types(df, file=p.name)  # raises on an unknown type or a missing point
         seen |= set(df["type"])
-    assert seen == set(D04_VALUE + D04_BUG + D04_NOT_COUNTED)
+    # MCF-38 (D04.2): "Subtask" was added for Jira Cloud exports. TAWOS never uses it,
+    # so the back-test sorts every row exactly as before.
+    assert "Subtask" not in seen
+    assert seen == set(D04_VALUE + D04_BUG + D04_NOT_COUNTED) - {"Subtask"}
 
 
 # --- review findings ---------------------------------------------------------
@@ -129,3 +133,18 @@ def test_any_missing_point_on_a_value_item_is_a_clear_error(missing):
     df.loc[1, "story_point"] = missing
     with pytest.raises(IssueTypeError, match=r"value item P-1 \(Task\) has no story point"):
         sort_types(df, file="P.csv")
+
+
+# --- MCF-38 (D04.2): Jira Cloud "Subtask" --------------------------------------------------
+
+
+def test_subtask_is_a_value_item_like_sub_task():
+    sorted_, summary = sort_types(issues(["Subtask", "Sub-task", "Bug"]), file="P.csv")
+    assert list(sorted_["kind"]) == [VALUE, VALUE, BUG]
+    assert summary.value == 2
+
+
+@pytest.mark.parametrize("other", ["subtask", "Sub task", "SubTask", "Sub-Task"])
+def test_other_spellings_are_still_unknown(other):
+    with pytest.raises(IssueTypeError, match="unknown issue type"):
+        sort_types(issues([other]), file="P.csv")
