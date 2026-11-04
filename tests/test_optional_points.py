@@ -73,7 +73,35 @@ def test_no_points_and_given_backlog_points_is_still_not_available(tmp_path, cap
     p = write(tmp_path, rows([""] * 40))
     code, out, _ = run(capsys, "forecast", str(p), "--backlog", "10", "--backlog-points", "50")
     assert code == 0
-    assert f"Velocity: {NOT_AVAILABLE}" in out
+    assert f"Velocity: {NOT_AVAILABLE} in the history; --backlog-points not used" in out
+
+
+def test_the_not_available_line_names_the_history(tmp_path, capsys):
+    p = write(tmp_path, rows([""] * 40))
+    _, out, _ = run(capsys, "forecast", str(p), "--backlog", "10")
+    assert f"Velocity: {NOT_AVAILABLE} in the history\n" in out
+
+
+def test_the_no_points_count_includes_both_window_ends(tmp_path, capsys):
+    # 3 items with no points: the day before the window, its first day, its last day (T).
+    start = T - timedelta(days=83)
+    lines = ["Issue_Key,Type,Resolution_Date,Story_Point"]
+    lines += [f"A-{i},Story,{d},2" for i, d in enumerate([start, T], 1)]
+    lines += [f"B-{i},Story,{d}," for i, d in enumerate([start - timedelta(days=1), start, T], 1)]
+    lines += ["C-1,Bug,2026-09-01,", "C-2,Story,,"]  # a bug and an open item are not counted
+    p = write(tmp_path, "\n".join(lines) + "\n")
+    _, out, err = run(capsys, "forecast", str(p), "--backlog", "10")
+    assert "Value items with no story points (2026-07-09 to 2026-09-30): 2" in out, err
+
+
+def test_one_item_with_no_points_is_singular(tmp_path, capsys):
+    p = write(tmp_path, rows(["2"] * 39 + [""]))
+    _, out, _ = run(capsys, "forecast", str(p), "--backlog", "10")
+    assert "Value items with no story points (2026-07-09 to 2026-09-30): 1" in out
+    from mcf.web import logic
+
+    f = logic.forecast_from_bytes(rows(["2"] * 39 + [""]).encode(), backlog=10).facts
+    assert logic.no_points_line(f).startswith("1 value item done between")
 
 
 def test_points_only_outside_the_history_window_is_not_available(tmp_path, capsys):
@@ -172,6 +200,37 @@ def test_items_no_points_is_a_whole_number_of_0_or_more():
         facts(items_no_points=-1)
     with pytest.raises(TypeError):
         facts(items_no_points=1.0)
+
+
+def test_items_no_points_is_required_and_at_most_items_done():
+    with pytest.raises(ValueError, match="items_no_points"):
+        facts(items_no_points=41)
+    base = facts().__dict__ | {}
+    del base["items_no_points"]
+    with pytest.raises(TypeError):
+        ForecastFacts(**base)
+
+
+def test_a_velocity_date_needs_a_velocity_above_0():
+    with pytest.raises(ValueError, match="velocity_per_sprint"):
+        facts(velocity_date=T + timedelta(days=9), velocity_per_sprint=0.0, points_needed=3.0)
+
+
+def test_the_prompt_version_is_5_for_the_none_qualities():
+    from mcf.explain.check import parse_selection
+    from mcf.explain.prompt import PROMPT_VERSION
+
+    assert PROMPT_VERSION == "5"
+    reply = '{"sentences": ["fifty_not_certain", "share_85", "velocity_50_85"]}'
+    text, reason = parse_selection(reply, facts())
+    assert text is None and reason  # a velocity sentence is refused with no velocity date
+
+
+def test_the_page_says_nothing_about_a_velocity_date_it_does_not_have():
+    from mcf.web import logic
+
+    f = logic.forecast_from_bytes(rows([""] * 40).encode(), backlog=10).facts
+    assert "velocity date" not in logic.no_points_line(f).lower()
 
 
 # --- AC3: the back-test path does not change (ADR 0002) ----------------------------------------
