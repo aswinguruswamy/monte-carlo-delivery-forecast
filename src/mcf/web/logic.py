@@ -211,6 +211,7 @@ CHART_CAPTION = (
 )
 SAMPLE_LABEL = "Sample file (example team, not real data)"
 REPORT_LABEL = "Full report (technical)"
+REPORT_DESCRIPTION = "The same forecast as plain text, as the command line prints it."
 # MCF-35: a plain explanation under each option in "More options".
 OPTION_HELP = {
     "backlog_points": "For the velocity date. Off: the tool estimates them.",
@@ -383,7 +384,10 @@ def sections(facts: ForecastFacts) -> list[Section]:
 
 def same_day_note(facts: ForecastFacts) -> str | None:
     if facts.velocity_date is not None and facts.velocity_date == facts.mc50:
-        return "The velocity date is the same day as the 50% date, so the two lines touch."
+        return (
+            "The velocity date is the same day as the 50% date, so the two lines are drawn "
+            "side by side."
+        )
     return None
 
 
@@ -396,6 +400,8 @@ def page_css() -> str:
         # A bordered st.container is a stVerticalBlock inside a stLayoutWrapper (1.66).
         '[data-testid="stLayoutWrapper"]>[data-testid="stVerticalBlock"],'
         '[data-testid="stExpander"] details{background:#ffffff}'
+        # Streamlit's caption is 60% opacity: 3.7:1 on white. This colour is 5.9:1.
+        '[data-testid="stCaptionContainer"]{color:#5f6370;opacity:1}'
         "</style>"
     )
 

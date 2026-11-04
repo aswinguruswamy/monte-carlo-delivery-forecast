@@ -118,6 +118,12 @@ def main() -> int:
 
                 def boxes_and_captions(page=page):
                     """MCF-37 review: white boxes on a grey page; captions 4.5:1 or more."""
+                    page.wait_for_function(  # the boxes below the chart render a moment later
+                        """() => [...document.querySelectorAll("[data-testid='stVerticalBlock']")]
+                        .filter(e => parseFloat(getComputedStyle(e).borderTopWidth) > 0)
+                        .length >= 5""",
+                        timeout=30_000,
+                    )
                     got = page.evaluate(
                         """() => {
                         const boxes = [...document.querySelectorAll(

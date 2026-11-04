@@ -166,10 +166,9 @@ def main() -> None:
     f = result.facts
     _, result_section, chart_section, how_section = logic.sections(f)
     with st.container(border=True):
-        st.subheader(result_section.heading)
+        _section_head(result_section)
         st.caption(logic.from_line(f, as_of_given=as_of is not None))
         st.caption(logic.history_line(f))
-        st.caption(result_section.description)
         st.markdown(logic.cards_html(f), unsafe_allow_html=True)  # code-made text only
         st.markdown(f"**{logic.NOT_CERTAIN}**")
         st.markdown(logic.message_line(f))
@@ -200,8 +199,10 @@ def main() -> None:
             with st.expander(part.title):
                 st.markdown(part.body)  # code-made text only
 
-    with st.expander(logic.REPORT_LABEL):
-        st.code(result.report, language=None)
+    with st.container(border=True):
+        st.caption(logic.REPORT_DESCRIPTION)
+        with st.expander(logic.REPORT_LABEL):
+            st.code(result.report, language=None)
 
     st.divider()
     st.markdown(logic.footer_markdown())
