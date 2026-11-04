@@ -22,15 +22,17 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from mcf import __version__
 from mcf.cli import compute_full, render
 from mcf.data.load import LoadError, column_indexes
 from mcf.data.types import IssueTypeError
 from mcf.explain.check import explain_checked
 from mcf.explain.client import Transport, urllib_transport
-from mcf.forecast.montecarlo import SEED, MonteCarloError
-from mcf.forecast.throughput import ThroughputError
+from mcf.forecast.montecarlo import RUNS, SEED, MonteCarloError
+from mcf.forecast.throughput import WINDOW_DAYS, ThroughputError
 from mcf.forecast.velocity import VelocityError
 from mcf.result import ForecastFacts
+from mcf.web.backtest_facts import BACKTEST
 
 TRANSPORT: Transport = urllib_transport  # replaced by a fake in tests (NFR8)
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # also set in .streamlit/config.toml
@@ -168,21 +170,20 @@ def chart_table(result: WebForecast) -> pd.DataFrame:
 
 
 def marker_table(facts: ForecastFacts) -> pd.DataFrame:
-    """The chart lines, in the card colours (MCF-33). No velocity line without a date (MCF-32)."""
+    """The chart lines, in the card colours (MCF-33). No velocity line without a date (MCF-32).
+
+    MCF-37: when the velocity date is the 50% date, the 2 lines sit side by side
+    (`offset` in px), so both show.
+    """
+    same = facts.velocity_date is not None and facts.velocity_date == facts.mc50
     marks = [
-        ("50% chance", facts.mc50, COLORS["p50"]),
-        ("85% chance", facts.mc85, COLORS["p85"]),
-        ("95% chance", facts.mc95, COLORS["p95"]),
+        ("50% chance", facts.mc50, COLORS["p50"], -3 if same else 0),
+        ("85% chance", facts.mc85, COLORS["p85"], 0),
+        ("95% chance", facts.mc95, COLORS["p95"], 0),
     ]
     if facts.velocity_date is not None:
-        marks.append(("Velocity", facts.velocity_date, COLORS["velocity"]))
-    return pd.DataFrame(
-        {
-            "label": [m[0] for m in marks],
-            "date": [m[1] for m in marks],
-            "color": [m[2] for m in marks],
-        }
-    )
+        marks.append(("Velocity", facts.velocity_date, COLORS["velocity"], 3 if same else 0))
+    return pd.DataFrame(marks, columns=["label", "date", "color", "offset"])
 
 
 # --- MCF-33 (D41): plain-language page text ------------------------------------------------
@@ -205,10 +206,12 @@ INTRO = (
 )
 NOT_CERTAIN = "The 50% date is not certain: half of the time the work finishes later."
 CHART_CAPTION = (
-    "Each bar: how often the work finished on that day in {runs:,} tries (Monte Carlo simulation)."
+    "Each bar: how often the work finished on that day in {runs:,} tries "
+    '(Monte Carlo simulation, see "How this forecast works").'
 )
 SAMPLE_LABEL = "Sample file (example team, not real data)"
 REPORT_LABEL = "Full report (technical)"
+REPORT_DESCRIPTION = "The same forecast as plain text, as the command line prints it."
 # MCF-35: a plain explanation under each option in "More options".
 OPTION_HELP = {
     "backlog_points": "For the velocity date. Off: the tool estimates them.",
@@ -242,8 +245,7 @@ estimates them.
 #### Be careful
 The dates assume your team keeps its recent pace (throughput).
 
-The 85% date can be too early. In our test on 29 projects, the work finished later than \
-the 85% date about 1 time in 3.
+The 85% date can be too early. See "How accurate is it?" on the page.
 
 #### Privacy
 The tool uses your file only for this forecast. It does not store the file or show issue keys.
@@ -324,7 +326,7 @@ def _card_html(c: Card) -> str:
         f'flex-direction:column;gap:2px;min-width:0">'
         f'<span class="mcf-card-label" style="font-size:0.85rem;font-weight:600;'
         f'color:{c.color}">{e(c.label)}</span>'
-        f'<span class="mcf-card-value" style="font-size:1.45rem;font-weight:700;'
+        f'<span class="mcf-card-value" style="font-size:1.2rem;font-weight:700;'
         f'color:{COLORS["ink"]};white-space:nowrap">{e(c.value)}</span>'
         f"{note}</div>"
     )
@@ -337,13 +339,71 @@ def cards_html(facts: ForecastFacts) -> str:
         '<div class="mcf-cards" style="display:grid;gap:10px;margin-bottom:16px;'
         'grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">'
         f"{inner}</div>"
-        f"<style>.mcf-card-note{{font-size:0.82rem;color:{COLORS['muted']}}}</style>"
+        f"<style>.mcf-card-note{{font-size:0.82rem;color:{COLORS['muted']}}}"
+        "@media (max-width: 640px){.mcf-cards{grid-template-columns:1fr !important}}</style>"
     )
 
 
 def result_heading(facts: ForecastFacts) -> str:
     noun = "work item" if facts.backlog == 1 else "work items"
-    return f"{facts.backlog:,} {noun} left"
+    return f"2. When the {facts.backlog:,} {noun} will be done"
+
+
+# --- MCF-37: numbered sections in boxes ---------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Section:
+    heading: str
+    description: str
+
+
+INPUTS_SECTION = Section(
+    "1. Your inputs", "Choose the work items to forecast from, and the work left."
+)
+
+
+def sections(facts: ForecastFacts) -> list[Section]:
+    n = facts.backlog
+    noun = "item" if n == 1 else "items"
+    return [
+        INPUTS_SECTION,
+        Section(
+            result_heading(facts),
+            f"Each card shows the chance of completion of all {n:,} {noun} by that date.",
+        ),
+        Section(
+            "3. All possible finish dates",
+            CHART_CAPTION.format(runs=facts.runs) + " The lines show the dates above.",
+        ),
+        Section(
+            "4. " + HOW_IT_WORKS_HEADING, "Open each part for the method and the test results."
+        ),
+    ]
+
+
+def same_day_note(facts: ForecastFacts) -> str | None:
+    if facts.velocity_date is not None and facts.velocity_date == facts.mc50:
+        return (
+            "The velocity date is the same day as the 50% date, so the two lines are drawn "
+            "side by side."
+        )
+    return None
+
+
+def page_css() -> str:
+    """Grey page, white boxes (MCF-37). Fixed text only."""
+    return (
+        "<style>"
+        '[data-testid="stAppViewContainer"],[data-testid="stMain"],'
+        '[data-testid="stHeader"]{background:#f5f6f8}'
+        # A bordered st.container is a stVerticalBlock inside a stLayoutWrapper (1.66).
+        '[data-testid="stLayoutWrapper"]>[data-testid="stVerticalBlock"],'
+        '[data-testid="stExpander"] details{background:#ffffff}'
+        # Streamlit's caption is 60% opacity: 3.7:1 on white. This colour is 5.9:1.
+        '[data-testid="stCaptionContainer"]{color:#5f6370;opacity:1}'
+        "</style>"
+    )
 
 
 def from_line(facts: ForecastFacts, *, as_of_given: bool) -> str:
@@ -364,8 +424,8 @@ def history_line(facts: ForecastFacts) -> str:
         start = short_date(facts.window_start)
     noun = "work item" if facts.items_done == 1 else "work items"
     return (
-        f"History: {facts.items_done:,} {noun} done from {start} to "
-        f"{long_date(facts.window_end)} (84 days)."
+        f"History used: {facts.items_done:,} {noun} (not bugs or epics) finished from {start} "
+        f"to {long_date(facts.window_end)} (84 days)."
     )
 
 
@@ -379,6 +439,86 @@ def phone_help_html() -> str:
     return (
         f'<p class="mcf-phone-help" style="margin:0;font-size:0.9rem">{html.escape(PHONE_HELP)}</p>'
         "<style>@media (min-width: 641px) {.mcf-phone-help{display:none}}</style>"
+    )
+
+
+# --- MCF-36: "How this forecast works" and the footer ---------------------------------------
+
+HOW_IT_WORKS_HEADING = "How this forecast works"
+REPO_URL = "https://github.com/aswinguruswamy/monte-carlo-delivery-forecast"
+
+
+@dataclass(frozen=True)
+class Part:
+    title: str
+    body: str  # Markdown, code-made text only
+
+
+def done_by_85_of_100() -> int:
+    """Back-test: how many of 100 forecasts were done by the 85% date."""
+    return round(BACKTEST.calibration_85 * 100)
+
+
+def later_than_85_of_100() -> int:
+    return 100 - done_by_85_of_100()
+
+
+def about_one_in(per_100: int) -> str:
+    """31 of 100 -> "about 1 in 3"."""
+    return f"about 1 in {round(100 / per_100)}"
+
+
+def how_it_works() -> list[Part]:
+    """The 2 closed parts: how the dates are made, and how accurate they were."""
+    later = about_one_in(later_than_85_of_100())
+    monte_carlo = (
+        "The tool does not use one average pace. It replays your team's real good days and "
+        "bad days many times.\n\n"
+        f"1. Count how many work items the team finished on each of the last {WINDOW_DAYS} "
+        "days.\n"
+        "2. Make one try: for each future day, pick one of those past days at random and use "
+        "its count.\n"
+        "3. Add the counts until all the work left is done. That day is the finish date of "
+        "this try.\n"
+        f"4. Do {RUNS:,} tries. Each try gives a different finish date.\n"
+        "5. Sort the finish dates. The 50% date is the day by which half of the tries finish. "
+        "The 85% and 95% dates work the same way.\n\n"
+        "Story points are not needed for these dates. The velocity date uses story points, "
+        "for comparison."
+    )
+    backtest = (
+        f"We tested the tool on the history of {BACKTEST.projects} real open-source projects. "
+        "A forecast is one prediction of when the next 10, 25 or 50 work items (not bugs or "
+        "epics) will be done."
+        "\n\n"
+        "1. Pick a past date in a project. Use only the work done up to that date.\n"
+        "2. Make the forecast.\n"
+        "3. Compare it with the date the work was really done.\n\n"
+        f"- **{BACKTEST.cases:,}** past forecasts checked "
+        f"(**{BACKTEST.no_forecast:,}** more had too little history to forecast)\n"
+        f"- **{done_by_85_of_100()} of 100** done by the 85% date (target: 75 to 95 of 100)\n"
+        f"- **{later.capitalize()}** finished later than the 85% date\n\n"
+        "So the 85% date is often too early. Use the 95% date when a late finish costs a lot. "
+        "The result is published as it is, although it missed the target."
+    )
+    return [
+        Part("How the dates are made (Monte Carlo)", monte_carlo),
+        Part(
+            f"How accurate is it? (back-test: the 85% date was too early {later} times)", backtest
+        ),
+    ]
+
+
+def footer_markdown() -> str:
+    return (
+        "**About this project**\n\n"
+        "Built by Aswin Guruswamy with Claude. Python and Streamlit. Open source (Apache 2.0)."
+        "\n\n"
+        f"Test data: TAWOS, {BACKTEST.projects} open-source projects "
+        "(Tawosi et al., MSR 2022).\n\n"
+        f"[Source code on GitHub]({REPO_URL}) · "
+        f"[Full back-test report]({REPO_URL}/blob/main/docs/backtest-report.md)\n\n"
+        f"Version {__version__}"
     )
 
 

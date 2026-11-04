@@ -483,6 +483,40 @@ Result: pass — no ❌.
 
 Result: pass — no ❌. Item 5 closes with D46.
 
+## Ticket MCF-36 — 2026-11-04 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-36-how-it-works`; each commit "MCF-36: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_how_it_works.py` (21 tests) and an AppTest; failing tests committed first twice; browser check 20 of 20 | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D46 (warning on the page: closed by this ticket), R3 | — |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent grade B+, no blocker; typed "84 days" / "10,000" now from `WINDOW_DAYS` / `RUNS` (planted change was not caught before), 903 no-forecast cases added, "up to that date", "not bugs or epics" — all with tests first | — |
+| 8 | Each acceptance criterion met | ✅ | Section with 2 parts, figures from tested facts, footer, chart caption, README "Try it" | — |
+| 9 | README and rule pages match | ✅ | README "Try it" line | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
+
+## Ticket MCF-37 — 2026-11-04 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-37-layout` (on top of MCF-36); each commit "MCF-37: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_layout.py` and a new browser-check step; failing tests committed first twice; browser check 22 of 22 | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D41, D46 (layout only, no new decision) | — |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent grade C+, no blocker; caption contrast 3.7:1 → 5.9:1; a broken box selector passed every check → new browser step fails on it (planted again: caught); "touch" → "side by side"; section 2 order; Full report description | — |
+| 8 | Each acceptance criterion met | ✅ | 4 numbered boxes plus Full report, grey page, history in section 2, cards stack on a phone, same-day lines and note, other states, fixed sidebar | — |
+| 9 | README and rule pages match | ✅ | No doc names the old layout | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
+
 ## Ticket MCF-38 — 2026-11-04 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
 
 | # | Criterion | Grade | Evidence | Fix |

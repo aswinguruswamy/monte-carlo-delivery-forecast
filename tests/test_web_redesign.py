@@ -179,8 +179,8 @@ def test_card_html_escapes_text_and_shows_no_iso_date():
 
 def test_heading_and_from_line():
     f = facts()
-    assert logic.result_heading(f) == "40 work items left"
-    assert logic.result_heading(replace(f, backlog=1)) == "1 work item left"
+    assert logic.result_heading(f) == "2. When the 40 work items will be done"
+    assert logic.result_heading(replace(f, backlog=1)) == "2. When the 1 work item will be done"
     assert logic.from_line(f, as_of_given=False) == (
         "Dates count from Sept. 30, 2026, the day the last item in your file was finished."
     )
@@ -206,7 +206,7 @@ def test_sidebar_has_the_5_parts_in_order():
     heads = re.findall(r"^#### (.+)$", logic.SIDEBAR, flags=re.M)
     assert heads == ["You need", "Steps", "Which date to use", "Be careful", "Privacy"]
     assert "Jira export works" in logic.SIDEBAR
-    assert "1 time in 3" in logic.SIDEBAR  # the back-test result (69.0% correct)
+    assert "How accurate is it?" in logic.SIDEBAR  # MCF-36: the result is on the page
 
 
 def _sentences(text: str) -> set[str]:
@@ -240,7 +240,8 @@ def test_phone_help_hint_shows_only_on_narrow_screens():
 
 def test_history_line():
     assert logic.history_line(facts()) == (
-        "History: 60 work items done from July 9 to Sept. 30, 2026 (84 days)."
+        "History used: 60 work items (not bugs or epics) finished from July 9 to "
+        "Sept. 30, 2026 (84 days)."
     )
 
 
@@ -261,8 +262,9 @@ def test_the_demo_script_waits_for_text_that_the_page_shows():
         (Path(logic.__file__).parent / n).read_text() for n in ("logic.py", "app.py")
     )
     for text in waits:
-        stem = re.sub(r"^\d+ ", "", text)  # "80 work items left" -> "work items left"
-        assert stem in page_src or stem in logic.result_heading(facts()), text
+        stem = re.sub(r"\d+", "#", text)  # numbers vary: compare the words
+        heading = re.sub(r"\d+", "#", logic.result_heading(facts()))
+        assert stem in re.sub(r"\d+", "#", page_src) or stem == heading, text
 
 
 def test_the_help_explains_the_velocity_date():
