@@ -167,12 +167,11 @@ def chart_table(result: WebForecast) -> pd.DataFrame:
 
 
 def marker_table(facts: ForecastFacts) -> pd.DataFrame:
-    return pd.DataFrame(
-        {
-            "label": ["50%", "85%", "95%", "Velocity"],
-            "date": [facts.mc50, facts.mc85, facts.mc95, facts.velocity_date],
-        }
-    )
+    """The chart lines. No velocity line when there is no velocity date (MCF-32)."""
+    marks = [("50%", facts.mc50), ("85%", facts.mc85), ("95%", facts.mc95)]
+    if facts.velocity_date is not None:
+        marks.append(("Velocity", facts.velocity_date))
+    return pd.DataFrame({"label": [m[0] for m in marks], "date": [m[1] for m in marks]})
 
 
 def ai_explanation(facts: ForecastFacts) -> tuple[str | None, str | None]:

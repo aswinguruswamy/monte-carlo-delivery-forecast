@@ -151,7 +151,7 @@ def test_upload_a_bad_file_shows_a_clear_error_and_no_stack_trace(app):
     at.run()
     assert not at.exception
     assert len(at.error) == 1
-    assert logic.plain("missing column(s): Resolution_Date, Story_Point") in at.error[0].value
+    assert logic.plain("missing column(s): Resolution_Date. ") in at.error[0].value
     assert len(at.metric) == 0
     assert len(at.get("vega_lite_chart")) == 0
 
@@ -213,3 +213,23 @@ def test_an_error_is_shown_as_plain_text(app):
     at.run()
     assert len(at.error) == 1
     assert "\\[x\\]\\(http://e\\)" in at.error[0].value
+
+
+def test_upload_with_no_story_points_shows_dates_and_no_velocity(app):
+    """MCF-32 (D43): the page works for a team with no story points."""
+    from datetime import timedelta
+
+    t = date(2026, 9, 30)
+    lines = ["Issue_Key,Type,Resolution_Date"]
+    lines += [f"A-{i},Story,{t - timedelta(days=i)}" for i in range(40)]
+    at = app()
+    at.radio(key="source").set_value("Upload a CSV file").run()
+    at.file_uploader(key="upload").set_value(("team.csv", "\n".join(lines).encode(), "text/csv"))
+    at.run()
+    assert not at.exception and not at.error
+    shown = metrics(at)
+    assert shown["50% date"] <= shown["85% date"] <= shown["95% date"]
+    assert shown["Velocity date"] == "Not available"
+    captions = " ".join(c.value for c in at.caption)
+    assert "Not available: needs story points" in captions
+    assert "40 value items done between" in captions

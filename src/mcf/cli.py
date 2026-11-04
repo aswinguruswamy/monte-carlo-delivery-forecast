@@ -167,7 +167,7 @@ def compute_full(
         )
     if issues.empty:
         raise LoadError(f"{load.file}: no done item (all rows are open or have no date)")
-    issues, _ = sort_types(issues, load.file)
+    issues, _ = sort_types(issues, load.file, points_required=False)
     ordinals = done_ordinals(issues)
 
     if args.as_of is not None:
@@ -192,13 +192,22 @@ def compute_full(
     days = simulate_days(counts, args.backlog, rng)
     dates = dates_from_days(t, days)
 
-    velocity = window_velocity(issues, t)
-    if args.backlog_points is not None:
-        points = args.backlog_points
+    # MCF-32 (D43): velocity uses the value items that have a story point.
+    no_point = (issues["kind"] == VALUE) & issues["story_point"].isna()
+    in_history = issues["done_day"].map(lambda d: start <= d <= end).astype(bool)
+    items_no_points = int((no_point & in_history).sum())
+    velocity = window_velocity(issues[~no_point], t)
+    if velocity == 0:  # no value item in the history has a story point
+        v_date = velocity_per_sprint = points_needed = None
     else:
-        mean_points = velocity * 6 / int(counts.sum())
-        points = mean_points * args.backlog
-    v_date = velocity_date(t, velocity, points)
+        if args.backlog_points is not None:
+            points = args.backlog_points
+        else:
+            mean_points = velocity * 6 / int(counts.sum())
+            points = mean_points * args.backlog
+        v_date = velocity_date(t, velocity, points)
+        velocity_per_sprint = report_number(float(velocity))
+        points_needed = report_number(float(points))
 
     in_window = issues["done_day"].map(lambda d: start <= d <= end)
     kinds = issues.loc[in_window, "kind"]
@@ -219,12 +228,13 @@ def compute_full(
             mc95=dates[95],
             runs=RUNS,
             velocity_date=v_date,
-            velocity_per_sprint=report_number(float(velocity)),
-            points_needed=report_number(float(points)),
+            velocity_per_sprint=velocity_per_sprint,
+            points_needed=points_needed,
             points_estimated=args.backlog_points is None,
             open_items=load.rows_open,
             rows_no_date=load.rows_no_date,
             bug_share_percent=None if bug_share is None else report_percent(bug_share),
+            items_no_points=items_no_points,
         ),
         load,
         days,
@@ -233,6 +243,18 @@ def compute_full(
 
 def forecast(args: argparse.Namespace) -> str:
     return render(_compute_with_load(args)[0], args)
+
+
+NO_VELOCITY = "Not available: needs story points"
+
+
+def _velocity_line(f: ForecastFacts, points_note: str) -> str:
+    if f.velocity_date is None:
+        return f"Velocity: {NO_VELOCITY}"
+    return (
+        f"Velocity: {f.velocity_date} ({_num(f.velocity_per_sprint)} points per 2 weeks; "
+        f"{_num(f.points_needed)} points needed, {points_note})"
+    )
 
 
 def render(f: ForecastFacts, args: argparse.Namespace) -> str:
@@ -248,8 +270,15 @@ def render(f: ForecastFacts, args: argparse.Namespace) -> str:
         *(f"  {p}%: {d}" for p, d in ((50, f.mc50), (85, f.mc85), (95, f.mc95))),
         "  The 50% date is not certain: half of the runs finish later.",
         "",
-        f"Velocity: {f.velocity_date} ({_num(f.velocity_per_sprint)} points per 2 weeks; "
-        f"{_num(f.points_needed)} points needed, {points_note})",
+        _velocity_line(f, points_note),
+        *(
+            [
+                f"Value items with no story points ({f.window_start} to {f.window_end}): "
+                f"{f.items_no_points}"
+            ]
+            if f.items_no_points
+            else []
+        ),
         "",
         f"Open items skipped: {f.open_items}",
         f"Rows with no date (NULL): {f.rows_no_date}",
