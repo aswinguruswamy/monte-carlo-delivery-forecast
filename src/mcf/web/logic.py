@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 from mcf.cli import compute_full, render
-from mcf.data.load import LoadError
+from mcf.data.load import LoadError, column_indexes
 from mcf.data.types import IssueTypeError
 from mcf.explain.check import explain_checked
 from mcf.explain.client import Transport, urllib_transport
@@ -83,7 +83,7 @@ def _keys(data: bytes) -> set[str]:
     try:
         rows = csv.reader(io.StringIO(data.decode("utf-8-sig", errors="replace")))
         header = next(rows, [])
-        col = header.index("Issue_Key")
+        col = column_indexes(header, user_file=True)["Issue_Key"][0]
         return {r[col] for r in rows if len(r) > col and r[col].strip()}
     except (ValueError, csv.Error):
         return set()
