@@ -225,7 +225,8 @@ Jira: Filters › Export › CSV (all fields). Open items are skipped. 10 MB max
 - **50/50 (P50):** plan your own work.
 - **Safer (P85):** share with a sponsor or client.
 - **Safest (P95):** use when a late finish costs a lot.
-- **Velocity:** compare with your sprint plan (story points).
+- **Velocity:** compare with your sprint plan. This date uses your team's average pace \
+in story points. The story points left are estimated unless you enter them in More options.
 
 #### Be careful
 The dates assume your team keeps its recent pace (throughput).
@@ -277,9 +278,8 @@ def cards(facts: ForecastFacts) -> list[Card]:
     """The 4 date cards, in the order and colours of the chart lines."""
     if facts.velocity_date is None:
         v_value, v_note = "Not available", "Needs story points"
-    else:
-        how = "estimated" if facts.points_estimated else "given"
-        v_value, v_note = long_date(facts.velocity_date), f"Average pace · points left {how}"
+    else:  # MCF-34 (D45): pace and estimated points are explained in the help sidebar
+        v_value, v_note = long_date(facts.velocity_date), ""
     return [
         Card("50/50 date · P50", long_date(facts.mc50), "As likely early as late", COLORS["p50"]),
         Card(

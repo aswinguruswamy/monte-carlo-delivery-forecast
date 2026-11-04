@@ -448,3 +448,20 @@ Result: pass — no ❌. Items 6 and 7 have a PM choice in the approval.
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
 Result: pass — no ❌. Item 8 closes after the PM's 20-second test.
+
+## Ticket MCF-34 — 2026-11-04 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-34-velocity-help`; each commit "MCF-34: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | 3 new or changed tests in `tests/test_web_redesign.py`; failing tests committed first | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D45 (changes part of D41), D43 | — |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent grade A−, no blocker; 1 minor (help text not tied to the expander label) fixed with a test; 1 minor was already covered (`test_no_sentence_repeats_between_the_sidebar_and_the_page`) | — |
+| 8 | Each acceptance criterion met | ✅ | Card shows label and date only; "Not available / Needs story points" kept; help line explains pace and estimated points; CLI unchanged; browser check 20 of 20 | — |
+| 9 | README and rule pages match | ✅ | No doc names the removed text | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
