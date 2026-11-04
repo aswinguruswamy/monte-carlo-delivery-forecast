@@ -22,15 +22,17 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from mcf import __version__
 from mcf.cli import compute_full, render
 from mcf.data.load import LoadError, column_indexes
 from mcf.data.types import IssueTypeError
 from mcf.explain.check import explain_checked
 from mcf.explain.client import Transport, urllib_transport
-from mcf.forecast.montecarlo import SEED, MonteCarloError
-from mcf.forecast.throughput import ThroughputError
+from mcf.forecast.montecarlo import RUNS, SEED, MonteCarloError
+from mcf.forecast.throughput import WINDOW_DAYS, ThroughputError
 from mcf.forecast.velocity import VelocityError
 from mcf.result import ForecastFacts
+from mcf.web.backtest_facts import BACKTEST
 
 TRANSPORT: Transport = urllib_transport  # replaced by a fake in tests (NFR8)
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # also set in .streamlit/config.toml
@@ -205,7 +207,8 @@ INTRO = (
 )
 NOT_CERTAIN = "The 50% date is not certain: half of the time the work finishes later."
 CHART_CAPTION = (
-    "Each bar: how often the work finished on that day in {runs:,} tries (Monte Carlo simulation)."
+    "Each bar: how often the work finished on that day in {runs:,} tries "
+    '(Monte Carlo simulation, see "How this forecast works").'
 )
 SAMPLE_LABEL = "Sample file (example team, not real data)"
 REPORT_LABEL = "Full report (technical)"
@@ -242,8 +245,7 @@ estimates them.
 #### Be careful
 The dates assume your team keeps its recent pace (throughput).
 
-The 85% date can be too early. In our test on 29 projects, the work finished later than \
-the 85% date about 1 time in 3.
+The 85% date can be too early. See "How accurate is it?" on the page.
 
 #### Privacy
 The tool uses your file only for this forecast. It does not store the file or show issue keys.
@@ -379,6 +381,86 @@ def phone_help_html() -> str:
     return (
         f'<p class="mcf-phone-help" style="margin:0;font-size:0.9rem">{html.escape(PHONE_HELP)}</p>'
         "<style>@media (min-width: 641px) {.mcf-phone-help{display:none}}</style>"
+    )
+
+
+# --- MCF-36: "How this forecast works" and the footer ---------------------------------------
+
+HOW_IT_WORKS_HEADING = "How this forecast works"
+REPO_URL = "https://github.com/aswinguruswamy/monte-carlo-delivery-forecast"
+
+
+@dataclass(frozen=True)
+class Part:
+    title: str
+    body: str  # Markdown, code-made text only
+
+
+def done_by_85_of_100() -> int:
+    """Back-test: how many of 100 forecasts were done by the 85% date."""
+    return round(BACKTEST.calibration_85 * 100)
+
+
+def later_than_85_of_100() -> int:
+    return 100 - done_by_85_of_100()
+
+
+def about_one_in(per_100: int) -> str:
+    """31 of 100 -> "about 1 in 3"."""
+    return f"about 1 in {round(100 / per_100)}"
+
+
+def how_it_works() -> list[Part]:
+    """The 2 closed parts: how the dates are made, and how accurate they were."""
+    later = about_one_in(later_than_85_of_100())
+    monte_carlo = (
+        "The tool does not use one average pace. It replays your team's real good days and "
+        "bad days many times.\n\n"
+        f"1. Count how many work items the team finished on each of the last {WINDOW_DAYS} "
+        "days.\n"
+        "2. Make one try: for each future day, pick one of those past days at random and use "
+        "its count.\n"
+        "3. Add the counts until all the work left is done. That day is the finish date of "
+        "this try.\n"
+        f"4. Do {RUNS:,} tries. Each try gives a different finish date.\n"
+        "5. Sort the finish dates. The 50% date is the day by which half of the tries finish. "
+        "The 85% and 95% dates work the same way.\n\n"
+        "Story points are not needed for these dates. The velocity date uses story points, "
+        "for comparison."
+    )
+    backtest = (
+        f"We tested the tool on the history of {BACKTEST.projects} real open-source projects. "
+        "A forecast is one prediction of when the next 10, 25 or 50 work items (not bugs or "
+        "epics) will be done."
+        "\n\n"
+        "1. Pick a past date in a project. Use only the work done up to that date.\n"
+        "2. Make the forecast.\n"
+        "3. Compare it with the date the work was really done.\n\n"
+        f"- **{BACKTEST.cases:,}** past forecasts checked "
+        f"(**{BACKTEST.no_forecast:,}** more had too little history to forecast)\n"
+        f"- **{done_by_85_of_100()} of 100** done by the 85% date (target: 75 to 95 of 100)\n"
+        f"- **{later.capitalize()}** finished later than the 85% date\n\n"
+        "So the 85% date is often too early. Use the 95% date when a late finish costs a lot. "
+        "The result is published as it is, although it missed the target."
+    )
+    return [
+        Part("How the dates are made (Monte Carlo)", monte_carlo),
+        Part(
+            f"How accurate is it? (back-test: the 85% date was too early {later} times)", backtest
+        ),
+    ]
+
+
+def footer_markdown() -> str:
+    return (
+        "**About this project**\n\n"
+        "Built by Aswin Guruswamy with Claude. Python and Streamlit. Open source (Apache 2.0)."
+        "\n\n"
+        f"Test data: TAWOS, {BACKTEST.projects} open-source projects "
+        "(Tawosi et al., MSR 2022).\n\n"
+        f"[Source code on GitHub]({REPO_URL}) · "
+        f"[Full back-test report]({REPO_URL}/blob/main/docs/backtest-report.md)\n\n"
+        f"Version {__version__}"
     )
 
 

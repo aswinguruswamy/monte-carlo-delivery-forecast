@@ -299,5 +299,16 @@ def test_page_shows_the_new_labels_and_option_help(app):
     text = page_text(at)
     for help_text in logic.OPTION_HELP.values():
         assert help_text in text
-    assert [e.label for e in at.expander] == ["More options", logic.REPORT_LABEL]
+    parts = [p.title for p in logic.how_it_works()]
+    assert [e.label for e in at.expander] == ["More options", *parts, logic.REPORT_LABEL]
     assert "#### Privacy" in sidebar_text(at)
+
+
+def test_page_shows_how_it_works_and_the_footer(app):
+    """MCF-36: the section heading, its 2 parts and the footer show on the page."""
+    at = app()
+    assert not at.exception
+    assert "How this forecast works" in [h.value for h in at.subheader]
+    text = page_text(at)
+    assert "Built by Aswin Guruswamy with Claude." in text
+    assert "1 in 3 times" in " ".join(e.label for e in at.expander)
