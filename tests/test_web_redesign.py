@@ -265,3 +265,12 @@ def test_the_help_explains_the_velocity_date():
     line = next(s for s in side.splitlines() if s.startswith("- **Velocity:**"))
     assert "average pace" in line and "story points" in line
     assert "estimated" in line and "More options" in line
+
+
+def test_the_help_names_the_real_options_expander():
+    """MCF-34 review: the help says "More options"; the page must keep that label."""
+    from pathlib import Path
+
+    app = (Path(logic.__file__).parent / "app.py").read_text()
+    assert 'st.expander("More options")' in app
+    assert '"Story points left"' in app
