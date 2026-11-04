@@ -14,9 +14,12 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class BacktestFacts:
     cases: int  # scored forecast cases
+    no_forecast: int  # cases with too little history (counted, not scored)
     projects: int
     calibration_85: float  # share of cases done by the 85% date, 3 decimals
     measure_1_pass: bool  # D07: 75–95%
 
 
-BACKTEST = BacktestFacts(cases=7692, projects=29, calibration_85=0.690, measure_1_pass=False)
+BACKTEST = BacktestFacts(
+    cases=7692, no_forecast=903, projects=29, calibration_85=0.690, measure_1_pass=False
+)

@@ -28,8 +28,8 @@ from mcf.data.load import LoadError, column_indexes
 from mcf.data.types import IssueTypeError
 from mcf.explain.check import explain_checked
 from mcf.explain.client import Transport, urllib_transport
-from mcf.forecast.montecarlo import SEED, MonteCarloError
-from mcf.forecast.throughput import ThroughputError
+from mcf.forecast.montecarlo import RUNS, SEED, MonteCarloError
+from mcf.forecast.throughput import WINDOW_DAYS, ThroughputError
 from mcf.forecast.velocity import VelocityError
 from mcf.result import ForecastFacts
 from mcf.web.backtest_facts import BACKTEST
@@ -416,12 +416,13 @@ def how_it_works() -> list[Part]:
     monte_carlo = (
         "The tool does not use one average pace. It replays your team's real good days and "
         "bad days many times.\n\n"
-        "1. Count how many work items the team finished on each of the last 84 days.\n"
+        f"1. Count how many work items the team finished on each of the last {WINDOW_DAYS} "
+        "days.\n"
         "2. Make one try: for each future day, pick one of those past days at random and use "
         "its count.\n"
         "3. Add the counts until all the work left is done. That day is the finish date of "
         "this try.\n"
-        "4. Do 10,000 tries. Each try gives a different finish date.\n"
+        f"4. Do {RUNS:,} tries. Each try gives a different finish date.\n"
         "5. Sort the finish dates. The 50% date is the day by which half of the tries finish. "
         "The 85% and 95% dates work the same way.\n\n"
         "Story points are not needed for these dates. The velocity date uses story points, "
@@ -429,12 +430,14 @@ def how_it_works() -> list[Part]:
     )
     backtest = (
         f"We tested the tool on the history of {BACKTEST.projects} real open-source projects. "
-        "A forecast is one prediction of when the next 10, 25 or 50 work items will be done."
+        "A forecast is one prediction of when the next 10, 25 or 50 work items (not bugs or "
+        "epics) will be done."
         "\n\n"
-        "1. Pick a past date in a project. Use only the work done before that date.\n"
+        "1. Pick a past date in a project. Use only the work done up to that date.\n"
         "2. Make the forecast.\n"
         "3. Compare it with the date the work was really done.\n\n"
-        f"- **{BACKTEST.cases:,}** past forecasts checked\n"
+        f"- **{BACKTEST.cases:,}** past forecasts checked "
+        f"(**{BACKTEST.no_forecast:,}** more had too little history to forecast)\n"
         f"- **{done_by_85_of_100()} of 100** done by the 85% date (target: 75 to 95 of 100)\n"
         f"- **{later.capitalize()}** finished later than the 85% date\n\n"
         "So the 85% date is often too early. Use the 95% date when a late finish costs a lot. "
