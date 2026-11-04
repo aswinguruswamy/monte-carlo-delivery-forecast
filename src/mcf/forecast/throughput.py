@@ -1,6 +1,6 @@
 """Daily throughput of done value items (ADR 0002, Monte Carlo method step 1).
 
-Only items with kind == "value" count (D04.1). Every calendar day in the range
+Only items with kind == "value" count (D04.2). Every calendar day in the range
 stays in, including days with 0 items. An unknown kind or a value item with no
 done day is an error, never a silent 0.
 

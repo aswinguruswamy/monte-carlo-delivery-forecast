@@ -252,7 +252,7 @@ def test_a_jira_export_with_subtask_rows_works(tmp_path, capsys):
     p = write(tmp_path, text, name="cloud.csv")
     assert main(["forecast", str(p), "--backlog", "30"]) == 0
     open_row = "Issue key,Issue Type,Resolved,Story Points\nA-1,Story,2026-09-30,3\nA-2,Subtask,,\n"
-    assert main(
-        ["forecast", str(write(tmp_path, open_row, name="open.csv")), "--backlog", "1"]
-    ) in (0, 1)
+    assert (
+        main(["forecast", str(write(tmp_path, open_row, name="open.csv")), "--backlog", "1"]) == 0
+    )  # review: one exact exit code
     assert "unknown issue type" not in capsys.readouterr().err
