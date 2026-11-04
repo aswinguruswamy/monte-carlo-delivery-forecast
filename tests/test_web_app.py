@@ -106,7 +106,7 @@ def test_page_with_the_sample_shows_the_3_dates_the_velocity_date_and_the_chart(
 def test_page_without_a_key_shows_no_ai_text_and_says_why(app):
     at = app()
     assert not [t for t in at.toggle if t.key == "explain"]
-    assert any("AI explanation: Not available in this demo." in c.value for c in at.caption)
+    assert any("AI explanation: Not turned on for this page." in c.value for c in at.caption)
     assert "ANTHROPIC_API_KEY" not in page_text(at)  # no server jargon on the page (#10)
 
 
@@ -277,3 +277,13 @@ def test_upload_with_no_story_points_shows_dates_and_no_velocity(app):
     text = page_text(at)
     assert "Needs story points" in text
     assert "40 work items done between" in text
+
+
+def test_the_chart_legend_has_room_for_all_4_lines(app):
+    """Review MCF-33: on a phone the bottom legend lost "Velocity"."""
+    from mcf.web import app as page
+
+    result = forecast_from_bytes(SAMPLE.read_bytes(), backlog=40)
+    spec = page._chart(result).to_dict()
+    legend = spec["layer"][1]["encoding"]["color"]["legend"]
+    assert legend["orient"] == "bottom" and legend["columns"] == 2

@@ -74,13 +74,17 @@ def test_the_cli_report_keeps_iso_dates():
 # --- Typed backlog (1 to 10,000) ------------------------------------------------------------
 
 
-@pytest.mark.parametrize("text, n", [("40", 40), (" 7 ", 7), ("1", 1), ("10000", 10_000)])
+@pytest.mark.parametrize(
+    "text, n",
+    [("40", 40), (" 7 ", 7), ("1", 1), ("10000", 10_000), ("1,000", 1_000), ("10,000", 10_000)],
+)
 def test_backlog_accepts_a_whole_number(text, n):
     assert logic.parse_backlog(text) == n
 
 
 @pytest.mark.parametrize(
-    "text", ["", "0", "-3", "10001", "4.5", "forty", "1e3", "１２", "10,000", "40 items"]
+    "text",
+    ["", "0", "-3", "10001", "10,001", "4.5", "forty", "1e3", "１２", "1,00", "40 items", "٤٠"],
 )
 def test_backlog_rejects_other_input_with_a_clear_message(text):
     with pytest.raises(logic.WebError, match=r"^Type a whole number from 1 to 10,000\.$"):
@@ -135,6 +139,21 @@ def test_text_colours_have_4_5_to_1_contrast_on_white(name):
     assert (1.05) / (lum + 0.05) >= 4.5
 
 
+@pytest.mark.parametrize("velocity", [True, False])
+def test_card_text_has_4_5_to_1_contrast_on_its_own_background(velocity):
+    """Review MCF-33: the label colour on the highlighted card background was 4.47:1."""
+    f = (
+        facts()
+        if velocity
+        else facts(velocity_date=None, velocity_per_sprint=None, points_needed=None)
+    )
+    for c in logic.cards(f):
+        back = _luminance(logic.card_background(c))
+        for fg in (c.color, logic.COLORS["muted"], logic.COLORS["ink"]):
+            ratio = (back + 0.05) / (_luminance(fg) + 0.05)
+            assert ratio >= 4.5, (c.label, fg, round(ratio, 2))
+
+
 def test_the_highlight_is_not_red():
     highlighted = [c for c in logic.cards(facts()) if c.highlight]
     assert highlighted[0].color != logic.COLORS["p95"]
@@ -168,7 +187,8 @@ def test_share_a_range_line():
     )
     across = facts(mc50=date(2026, 12, 28), mc85=date(2027, 1, 4), mc95=date(2027, 1, 9))
     assert logic.share_line(across) == (
-        'Share a range: "Dec. 28, 2026 to Jan. 4, 2027 (85% chance by Jan. 4, 2027)."'
+        'Share a range: "Dec. 28, 2026 to Jan. 4, 2027 '
+        '(85% of simulated runs finish by Jan. 4, 2027)."'
     )
 
 
@@ -181,15 +201,54 @@ def test_sidebar_has_the_5_parts_in_order():
 
 def _sentences(text: str) -> set[str]:
     text = re.sub(r"[*_#>|`-]", " ", text)
-    return {s.strip().lower() for s in re.split(r"[.!?\n]", text) if len(s.split()) >= 4}
+    return {s.strip().lower() for s in re.split(r"[.!?\n]", text) if len(s.split()) >= 3}
 
 
 def test_no_sentence_repeats_between_the_sidebar_and_the_page():
     page = " ".join([logic.INTRO, logic.BACKLOG_HELP, logic.CHART_CAPTION, logic.NOT_CERTAIN])
-    page += " " + " ".join(c.note for c in logic.cards(facts()))
+    none = facts(velocity_date=None, velocity_per_sprint=None, points_needed=None)
+    for f in (facts(), none):
+        page += " " + " ".join(c.note for c in logic.cards(f))
+    page += " " + logic.AI_NOT_AVAILABLE + " " + logic.PHONE_HELP
     assert not _sentences(logic.SIDEBAR) & _sentences(page)
 
 
 def test_the_page_never_calls_the_50_date_certain():
     text = " ".join([logic.SIDEBAR, logic.INTRO, logic.NOT_CERTAIN, logic.cards_html(facts())])
     assert "certain" not in text.lower().replace("not certain", "")
+
+
+def test_the_ai_line_does_not_say_demo():
+    assert logic.AI_NOT_AVAILABLE == "AI explanation: Not turned on for this page."
+
+
+def test_phone_help_hint_shows_only_on_narrow_screens():
+    html = logic.phone_help_html()
+    assert logic.PHONE_HELP in html and "@media (min-width: 641px)" in html
+
+
+def test_history_line():
+    assert logic.history_line(facts()) == (
+        "History: 60 work items done from July 9 to Sept. 30, 2026 (84 days)."
+    )
+
+
+@pytest.mark.parametrize(
+    "mc95, fmt", [(date(2026, 12, 1), "%b %-d"), (date(2027, 1, 9), "%b %-d, %Y")]
+)
+def test_the_chart_axis_shows_the_year_when_the_dates_cross_a_year(mc95, fmt):
+    assert logic.axis_format(facts(mc95=mc95)) == fmt
+
+
+def test_the_demo_script_waits_for_text_that_the_page_shows():
+    from pathlib import Path
+
+    script = (Path(__file__).resolve().parents[1] / "scripts" / "record_demo.py").read_text()
+    waits = re.findall(r'get_by_text\("([^"]+)"', script)
+    assert waits
+    page_src = " ".join(
+        (Path(logic.__file__).parent / n).read_text() for n in ("logic.py", "app.py")
+    )
+    for text in waits:
+        stem = re.sub(r"^\d+ ", "", text)  # "80 work items left" -> "work items left"
+        assert stem in page_src or stem in logic.result_heading(facts()), text
