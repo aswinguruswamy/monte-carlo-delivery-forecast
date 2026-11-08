@@ -8,23 +8,23 @@ A clearer web page for sponsors and Jira exports with no editing. The forecast m
 
 ### Added
 - **Jira exports work as they are** (MCF-31, D42): the Jira column names (`Issue key`, `Issue Type`, `Resolved`, `Story Points` / `Story point estimate`, also as `Custom field (…)`) and Jira date formats are read, and repeated columns that the tool does not use are ignored. No name or title column is read.
-- **Story points are optional** (MCF-32, D43): with no points, the 50%, 85% and 95% dates show and the velocity date shows "Not available"; with some points, the page shows how many items have none.
+- **Story points are optional** (MCF-32, D43): with no points, the 50%, 85% and 95% dates show and the velocity date shows "Not available"; with some points, the page and the command line show how many items have none.
 - **"Subtask"** is a value type (MCF-38, D04.2), the Jira Cloud name for "Sub-task".
-- **Help sidebar** on the web page (MCF-33): what you need, the steps, which date to use (P50, P85, P95), what to be careful of, and privacy.
+- **Help sidebar** on the web page (MCF-33, MCF-35, MCF-40): what you need, the steps, which date to use (P50, P85, P95), what to be careful of, and privacy. The steps say "Give the 85% date (P85) to your sponsor or client."
 - **"How this forecast works"** on the page (MCF-36): the Monte Carlo steps, and the back-test result with its warning in the title ("the 85% date was too early about 1 in 3 times").
 - **Footer** with the source code, the back-test report, the TAWOS citation and the version (MCF-36). The README starts with a "Try it" link to the live page.
 
 ### Changed
-- **Plain labels** (MCF-33, MCF-35, D41, D46): "50% / 85% / 95% chance of completion" and "Velocity date"; dates written out; a typed backlog number from 1 to 10,000; card colours match the chart lines; "Message to sponsor" line.
+- **Plain labels** (MCF-33, MCF-35, D41, D46): "50% / 85% / 95% chance of completion" and "Velocity date"; dates written out; a typed backlog number from 1 to 10,000 (a thousands comma is accepted); card colours match the chart lines; the chart shows the year when the dates cross into a new year; "Message to sponsor" line.
+- **Privacy:** error messages on the page do not show Jira issue keys (MCF-31).
 - **Cards show only the label and the date** (MCF-34, MCF-40, D45, D49). "Needs story points" stays when there is no velocity date. The 85% card is highlighted, with hidden text for screen readers.
-- **Layout** (MCF-37, MCF-41, D50): a grey page with 4 numbered white sections. The sections can close and are open when the page loads.
-- **Light theme only** (MCF-39, D48): the page no longer follows a dark-mode setting.
+- **Layout** (MCF-37, MCF-41, D50): a grey page with 4 numbered white sections. The sections can close and are open when the page loads. Each section has a hidden heading for screen readers.
+- **Light theme only** (MCF-39, D48): the page no longer follows a dark-mode setting, so the new white boxes stay readable on a phone in dark mode.
 - **AI explanation:** no AI line on a page with no key (MCF-35). The prompt is version 5 (MCF-32): with no velocity date, no velocity or points sentence is offered.
 - **Demo video script** follows the v1.1 page and checks the version in the footer (MCF-43).
 
 ### Fixed
-- In dark mode, the page text was white on the white boxes (MCF-39).
-- Texts below 4.5:1 contrast: the captions (MCF-37); the empty date field, the file size, the error message and the upload hint (MCF-39, MCF-41). The browser check now tests the contrast of all visible text, also in dark mode.
+- Texts below 4.5:1 contrast: the captions (MCF-37); the empty date field, the file size, the error message and the upload hint (MCF-39, MCF-41). The manual browser check (`scripts/browser_check.py`) now tests the contrast of all visible text, also in dark mode.
 - A Jira Cloud export with "Subtask" rows stopped with an unknown-type error (MCF-38).
 
 ### Back-test result (unchanged since 1.0.0)

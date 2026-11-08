@@ -131,3 +131,9 @@ def test_the_record_script_checks_the_release_version():
     source = (ROOT / "scripts" / "record_demo.py").read_text()
     assert '"--release"' in source and "Version {" in source
     assert "after the version bump" in (ROOT / "docs" / "demo.md").read_text()
+
+
+def test_the_record_script_shows_the_whole_footer():
+    """Review MCF-44: the version line was cut at the bottom edge of the video."""
+    source = (ROOT / "scripts" / "record_demo.py").read_text()
+    assert "scrollIntoView({block: 'center'})" in source  # not at the bottom edge
