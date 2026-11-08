@@ -148,3 +148,12 @@ def test_section_2_description_comes_right_after_its_heading(app):
 def test_the_full_report_box_has_a_description(app):
     texts = [c.value for c in app.caption]
     assert logic.REPORT_DESCRIPTION in texts
+
+
+def test_pale_streamlit_texts_get_a_4_5_to_1_colour():
+    """Review MCF-39: the empty date field (yyyy/mm/dd) and the file size were 3.5 to 3.7:1."""
+    css = logic.page_css()
+    assert '[data-testid="stDateInputField"] [data-placeholder="true"]' in css
+    assert '[data-testid="stFileChip"] div' in css
+    assert css.count("color:#5f6370") >= 2
+    assert '[data-testid="stAlertContentError"]' in css and "color:#7d1d14" in css
