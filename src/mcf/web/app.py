@@ -9,6 +9,7 @@ ANTHROPIC_API_KEY; without it, the page shows the plain forecast.
 
 from __future__ import annotations
 
+import html
 import os
 
 import altair as alt
@@ -210,6 +211,11 @@ def _section(section: logic.Section, number: int):
     The key gives the CSS class st-key-section-N (heading size, logic.page_css). With a
     key, Streamlit keeps the open or closed state when the page runs again.
     """
+    # Review MCF-41: an expander label is not a heading, so screen readers that jump by
+    # heading need a hidden h2 (code-made text only, escaped).
+    st.markdown(
+        f'<h2 class="mcf-sr-only">{html.escape(section.heading)}</h2>', unsafe_allow_html=True
+    )
     box = st.expander(section.heading, expanded=True, key=f"section-{number}")
     box.caption(section.description)
     return box

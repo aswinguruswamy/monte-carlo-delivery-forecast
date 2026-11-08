@@ -83,7 +83,18 @@ def test_section_labels_look_like_headings():
     css = logic.page_css()
     for n in range(1, 5):
         assert f'.st-key-section-{n}>[data-testid="stExpander"]>details>summary p' in css
-    assert "font-size:1.5rem" in css
+    sel = ",".join(
+        f'.st-key-section-{n}>[data-testid="stExpander"]>details>summary p' for n in range(1, 5)
+    )
+    assert sel + "{font-size:1.5rem;font-weight:600;line-height:1.3}" in css  # review MCF-41
+
+
+def test_each_section_has_a_hidden_heading_for_screen_readers(app):
+    """Review MCF-41: the sections were h3 headings; expander labels are not headings."""
+    hidden = [m.value for m in app.markdown if 'class="mcf-sr-only"' in m.value]
+    assert hidden == [f'<h2 class="mcf-sr-only">{h}</h2>' for h in HEADS]
+    css = logic.page_css()
+    assert ".mcf-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;" in css
 
 
 def test_cards_stack_one_per_line_on_a_phone():

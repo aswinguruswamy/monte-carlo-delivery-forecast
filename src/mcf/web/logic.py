@@ -407,6 +407,9 @@ def page_css() -> str:
             f'.st-key-section-{n}>[data-testid="stExpander"]>details>summary p' for n in range(1, 5)
         )
         + "{font-size:1.5rem;font-weight:600;line-height:1.3}"
+        # Review MCF-41: hidden section headings for screen readers.
+        ".mcf-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;"
+        "clip:rect(0,0,0,0);white-space:nowrap}"
         "</style>"
     )
 

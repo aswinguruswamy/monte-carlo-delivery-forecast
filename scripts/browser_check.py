@@ -151,7 +151,9 @@ def main() -> int:
 
                 def sample_dates(page=page):
                     expect(
-                        page.get_by_text("2. When the 40 work items will be done")
+                        page.locator("summary").get_by_text(
+                            "2. When the 40 work items will be done"
+                        )
                     ).to_be_visible(timeout=30_000)
                     want = {
                         "50% chance of completion": long_date(expected.mc50),
@@ -213,6 +215,10 @@ def main() -> int:
 
                 def sections_close_and_open(page=page):
                     """MCF-41: each of the 4 sections is open on load and can close and open."""
+                    warning = page.get_by_text("back-test: the 85% date was too early")
+                    expect(warning).to_be_visible()  # D46: visible on load (review MCF-41)
+                    heads = page.locator("[data-testid='stMain'] h2.mcf-sr-only")
+                    expect(heads).to_have_count(4)  # review MCF-41: headings for screen readers
                     for n in range(1, 5):
                         details = page.locator(
                             f".st-key-section-{n} > [data-testid='stExpander'] > details"
@@ -227,12 +233,34 @@ def main() -> int:
                         expect(details).not_to_have_attribute("open", "", timeout=5_000)
                         summary.click()
                         expect(details).to_have_attribute("open", "", timeout=5_000)
+
+                def closed_section_stays_closed(page=page):
+                    """Review MCF-41: a closed section stays closed when the page runs again."""
+                    two = page.locator(".st-key-section-2 > [data-testid='stExpander'] > details")
+                    two.locator("> summary").click()
+                    expect(two).not_to_have_attribute("open", "", timeout=5_000)
+                    box = page.get_by_label("How many work items are left? (backlog)")
+                    box.fill("41")
+                    box.press("Enter")
                     expect(
-                        page.get_by_text("back-test: the 85% date was too early")
-                    ).to_be_visible()
+                        page.locator("summary").get_by_text(
+                            "2. When the 41 work items will be done"
+                        )
+                    ).to_be_visible(timeout=30_000)
+                    assert two.get_attribute("open") is None, "section 2 opened again by itself"
+                    box.fill("40")  # back to the sample state for the next checks
+                    box.press("Enter")
+                    expect(
+                        page.locator("summary").get_by_text(
+                            "2. When the 40 work items will be done"
+                        )
+                    ).to_be_visible(timeout=30_000)
+                    two.locator("> summary").click()
+                    expect(two).to_have_attribute("open", "", timeout=5_000)
 
                 check(f"{label}: each date is under its own label", sample_dates)
                 check(f"{label}: sections are open and can close", sections_close_and_open)
+                check(f"{label}: a closed section stays closed", closed_section_stays_closed)
                 check(f"{label}: dates are not cut off", dates_not_cut)
                 check(f"{label}: help sidebar first in reading order", sidebar_first)
                 check(f"{label}: white boxes on a grey page, readable captions", boxes_and_captions)
