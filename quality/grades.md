@@ -601,3 +601,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-44 — 2026-11-08 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-44-release-1.1.0`; each commit "MCF-44: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | Release tests (version, 1.1.0 entry, lock file header) and the footer test failed first, then passed | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D41–D51 and D04.2 are in the Decision Log (version 31) | — |
+| 6 | AI ticket evaluation | 🟡 | Prompt version 5 since MCF-32; the evaluation run is a condition of the go (PM starts it) | PM runs the workflow |
+| 7 | Independent review with a verdict | ✅ | Subagent: no blocker; 3 Medium (cut footer, a wrong "Fixed" item, notes not matching) and 7 Low, fixed or answered | — |
+| 8 | Each acceptance criterion met | 🟡 | AC1–4 and AC6 met; AC5 (evaluation) and AC7 (live page) are PM steps before and after the tag | PM steps |
+| 9 | README and rule pages match | ✅ | README status, CITATION and CHANGELOG say 1.1.0, 2026-11-08 | Update the date if the tag is later |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
