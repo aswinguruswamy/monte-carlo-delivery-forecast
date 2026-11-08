@@ -402,6 +402,13 @@ def page_css() -> str:
         '[data-testid="stExpander"] details{background:#ffffff}'
         # Streamlit's caption is 60% opacity: 3.7:1 on white. This colour is 5.9:1.
         '[data-testid="stCaptionContainer"]{color:#5f6370;opacity:1}'
+        # Review MCF-39: Streamlit draws these at 60% too (3.5 to 3.7:1).
+        '[data-testid="stDateInputField"] [data-placeholder="true"],'
+        '[data-testid="stDateInputField"] [data-placeholder="true"] *,'
+        '[data-testid="stDateInputField"] [data-type="literal"],'
+        '[data-testid="stDateInputField"] [data-type="literal"] *{color:#5f6370}'
+        '[data-testid="stFileChip"] div{color:#5f6370}'
+        '[data-testid="stAlertContentError"]{color:#7d1d14}'  # was 4.2:1 on the pink box
         "</style>"
     )
 
