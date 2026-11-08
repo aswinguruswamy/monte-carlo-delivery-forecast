@@ -94,3 +94,40 @@ def test_the_record_script_follows_the_v1_1_page():
     assert 'locator("summary").get_by_text(' in source  # not the hidden heading
     # the help sidebar also says "More options" (MCF-34), so click only the expander label
     assert 'page.get_by_text("More options")' not in source
+
+
+def _page_texts(at) -> set[str]:
+    """Every label and text the running page shows (AppTest)."""
+    out: set[str] = set()
+    for e in at.expander:
+        out.add(e.label)
+    for kind in ("text_input", "number_input", "radio", "toggle", "file_uploader"):
+        for w in getattr(at, kind, []):
+            out.add(getattr(w, "label", ""))
+            out.update(str(o) for o in getattr(w, "options", []) or [])
+    for m in list(at.markdown) + list(at.caption):
+        out.add(m.value)
+    return out
+
+
+def test_each_text_the_record_script_uses_is_on_the_page():
+    """Review MCF-43: the old check missed a call split over 2 lines; use the real page."""
+    import re
+
+    from streamlit.testing.v1 import AppTest
+
+    source = (ROOT / "scripts" / "record_demo.py").read_text()
+    texts = re.findall(r'get_by_(?:text|label)\(\s*"([^"]+)"', source)
+    assert len(texts) >= 4, texts
+    at = AppTest.from_file(str(ROOT / "streamlit_app.py"), default_timeout=60).run()
+    at.text_input(key="backlog").set_value("80").run()  # the script types 80
+    shown = _page_texts(at)
+    for text in texts:
+        assert any(text in s for s in shown), f"the script uses {text!r}; the page does not show it"
+
+
+def test_the_record_script_checks_the_release_version():
+    """Review MCF-43: a release video must not show an old version in the footer."""
+    source = (ROOT / "scripts" / "record_demo.py").read_text()
+    assert '"--release"' in source and "Version {" in source
+    assert "after the version bump" in (ROOT / "docs" / "demo.md").read_text()

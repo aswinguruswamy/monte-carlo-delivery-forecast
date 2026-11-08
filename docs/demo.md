@@ -41,11 +41,15 @@ python -m playwright install chromium
 python scripts/record_demo.py --out demo.mp4
 ```
 
-The script starts the page with no key and records the sample forecast, the chart, a new backlog, a section closed and opened again, the options and a bad file. The video is about 25 seconds and less than 2 MB. It is not stored in the repository; it goes with the GitHub release.
+The script starts the page with no key and records the sample forecast, the chart, a new backlog, a section closed and opened again, the options and a bad file. The video is about 30 seconds and less than 2 MB. It is not stored in the repository; it goes with the GitHub release.
 
 Which video goes with which release:
 
 - **v1.0.0:** the v1.0 page.
 - **v1.1.0:** the v1.1 page (MCF-43): help sidebar, "chance of completion" cards with no notes, collapsible sections, light theme only.
 
-Each release keeps its own video. Record a new video for a new release only.
+Each release keeps its own video. Record a new video for a new release only, after the version bump, so that the footer shows the new version. Use `--release`; the script stops if the footer shows another version:
+
+```bash
+python scripts/record_demo.py --release 1.1.0 --out mcf-demo-v1.1.0.mp4
+```

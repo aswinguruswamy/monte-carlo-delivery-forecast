@@ -61,12 +61,12 @@ def close_and_open(page, n: int) -> None:
     summary.scroll_into_view_if_needed()
     page.wait_for_timeout(800)
     summary.click()
-    page.wait_for_timeout(1500)
+    page.wait_for_timeout(2500)  # review MCF-43: long enough to see it closed
     summary.click()
     page.wait_for_timeout(1200)
 
 
-def record(url: str, video_dir: Path) -> tuple[Path, float]:
+def record(url: str, video_dir: Path, release: str | None = None) -> tuple[Path, float]:
     """Return the video and the second at which the page is ready (cut before it)."""
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
@@ -78,6 +78,10 @@ def record(url: str, video_dir: Path) -> tuple[Path, float]:
         page.goto(url)
         expect(page.locator(".mcf-card")).to_have_count(4, timeout=60_000)
         expect(page.locator("[data-testid='stVegaLiteChart']")).to_be_visible(timeout=30_000)
+        if release:  # review MCF-43: a release video shows that release in the footer
+            footer = page.get_by_text(f"Version {release}")
+            if footer.count() == 0:
+                raise SystemExit(f"the page footer does not show Version {release}")
         page.wait_for_timeout(1000)
         ready = time.monotonic() - start
         page.wait_for_timeout(2000)
@@ -93,7 +97,9 @@ def record(url: str, video_dir: Path) -> tuple[Path, float]:
         expect(
             page.locator("summary").get_by_text("2. When the 80 work items will be done")
         ).to_be_visible(timeout=30_000)
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(1000)
+        page.locator(".mcf-card").first.scroll_into_view_if_needed()  # the dates for 80
+        page.wait_for_timeout(2500)
         _show(page, "stVegaLiteChart")
         page.wait_for_timeout(3000)
         close_and_open(page, 3)  # MCF-41: the chart section closes and opens
@@ -119,6 +125,7 @@ def record(url: str, video_dir: Path) -> tuple[Path, float]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, default=Path("demo.mp4"))
+    parser.add_argument("--release", help="stop if the page footer does not show this version")
     args = parser.parse_args()
     if shutil.which("ffmpeg") is None:
         raise SystemExit("ffmpeg is needed to make the MP4")
@@ -146,7 +153,7 @@ def main() -> int:
     try:
         wait_for(url)
         with tempfile.TemporaryDirectory() as tmp:
-            webm, ready = record(url, Path(tmp))
+            webm, ready = record(url, Path(tmp), args.release)
             subprocess.run(
                 [
                     "ffmpeg",
