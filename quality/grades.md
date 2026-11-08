@@ -567,3 +567,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-41 — 2026-11-07 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-41-collapsible`; each commit "MCF-41: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | 🟡 | AppTest (4 sections open, inner expanders inside, hidden headings) and browser checks (close and open, stays closed, label size); run and failed before the change, but committed with it | Commit failing tests first next time |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D50 is logged at this approval | PM approves |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: no blocker; 2 Medium (screen-reader headings lost; the key untested) and 3 Low, fixed tests first; AC2 text change judged sound | — |
+| 8 | Each acceptance criterion met | ✅ | Sections close and open, open on load, stay closed on a rerun, inner parts unchanged, D46 warning on load | — |
+| 9 | README and rule pages match | 🟡 | No doc names the boxes; `scripts/record_demo.py` waits for headings that changed (the video is not recorded again, PM rule) | Update the demo script if the video is recorded again |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval; AC2 changed before the build and flagged for the PM | — |
+
+Result: pass — no ❌.

@@ -220,15 +220,20 @@ def main() -> int:
                 def boxes_and_captions(page=page):
                     """MCF-37 review: white boxes on a grey page; captions 4.5:1 or more."""
                     page.wait_for_function(  # the boxes below the chart render a moment later
-                        """() => [...document.querySelectorAll("[data-testid='stVerticalBlock']")]
-                        .filter(e => parseFloat(getComputedStyle(e).borderTopWidth) > 0)
-                        .length >= 5""",
+                        """() => document.querySelectorAll(
+                          "[class*='st-key-section-'] > [data-testid='stExpander'] > "
+                          + "details").length === 4
+                          && [...document.querySelectorAll("[data-testid='stVerticalBlock']")]
+                          .some(e => parseFloat(getComputedStyle(e).borderTopWidth) > 0)""",
                         timeout=30_000,
                     )
                     got = page.evaluate(
                         """() => {
+                        // MCF-41: 4 section expanders and the bordered report box
                         const boxes = [...document.querySelectorAll(
-                          "[data-testid='stVerticalBlock']")].filter(e => {
+                          "[data-testid='stVerticalBlock'], "
+                          + "[class*='st-key-section-'] > [data-testid='stExpander'] > details"
+                          )].filter(e => {
                             const s = getComputedStyle(e);
                             return parseFloat(s.borderTopWidth) > 0
                               && s.backgroundColor === 'rgb(255, 255, 255)';});
@@ -247,7 +252,9 @@ def main() -> int:
 
                 def sample_dates(page=page):
                     expect(
-                        page.get_by_text("2. When the 40 work items will be done")
+                        page.locator("summary").get_by_text(
+                            "2. When the 40 work items will be done"
+                        )
                     ).to_be_visible(timeout=30_000)
                     want = {
                         "50% chance of completion": long_date(expected.mc50),
@@ -311,6 +318,51 @@ def main() -> int:
                     )
                     assert not cut, f"dates cut off: {cut}"
 
+                def sections_close_and_open(page=page):
+                    """MCF-41: each of the 4 sections is open on load and can close and open."""
+                    warning = page.get_by_text("back-test: the 85% date was too early")
+                    expect(warning).to_be_visible()  # D46: visible on load (review MCF-41)
+                    heads = page.locator("[data-testid='stMain'] h2.mcf-sr-only")
+                    expect(heads).to_have_count(4)  # review MCF-41: headings for screen readers
+                    for n in range(1, 5):
+                        details = page.locator(
+                            f".st-key-section-{n} > [data-testid='stExpander'] > details"
+                        )
+                        assert details.get_attribute("open") is not None, f"section {n} closed"
+                        summary = details.locator("> summary")
+                        size = summary.locator("p").first.evaluate(
+                            "e => getComputedStyle(e).fontSize"
+                        )
+                        assert size == "24px", f"section {n} label is {size}, not heading size"
+                        summary.click()
+                        expect(details).not_to_have_attribute("open", "", timeout=5_000)
+                        summary.click()
+                        expect(details).to_have_attribute("open", "", timeout=5_000)
+
+                def closed_section_stays_closed(page=page):
+                    """Review MCF-41: a closed section stays closed when the page runs again."""
+                    two = page.locator(".st-key-section-2 > [data-testid='stExpander'] > details")
+                    two.locator("> summary").click()
+                    expect(two).not_to_have_attribute("open", "", timeout=5_000)
+                    box = page.get_by_label("How many work items are left? (backlog)")
+                    box.fill("41")
+                    box.press("Enter")
+                    expect(
+                        page.locator("summary").get_by_text(
+                            "2. When the 41 work items will be done"
+                        )
+                    ).to_be_visible(timeout=30_000)
+                    assert two.get_attribute("open") is None, "section 2 opened again by itself"
+                    box.fill("40")  # back to the sample state for the next checks
+                    box.press("Enter")
+                    expect(
+                        page.locator("summary").get_by_text(
+                            "2. When the 40 work items will be done"
+                        )
+                    ).to_be_visible(timeout=30_000)
+                    two.locator("> summary").click()
+                    expect(two).to_have_attribute("open", "", timeout=5_000)
+
                 def text_contrast(page=page):
                     """MCF-39: all visible text on the page has 4.5:1 contrast or more."""
                     low = page.evaluate(CONTRAST_JS)
@@ -331,6 +383,8 @@ def main() -> int:
                     )
 
                 check(f"{label}: each date is under its own label", sample_dates)
+                check(f"{label}: sections are open and can close", sections_close_and_open)
+                check(f"{label}: a closed section stays closed", closed_section_stays_closed)
                 check(f"{label}: all text has 4.5:1 contrast", text_contrast)
                 check(f"{label}: no light / dark switch in the menu", no_theme_switch)
                 check(f"{label}: dates are not cut off", dates_not_cut)
@@ -348,6 +402,8 @@ def main() -> int:
                     page.get_by_text("Upload a CSV file", exact=True).click()
                     info = page.get_by_text("Upload a CSV file to see the forecast.")
                     expect(info).to_be_visible(timeout=30_000)
+                    # wait for the upload box: a check before it draws missed its pale hint
+                    expect(page.locator("[data-testid='stFileUploaderDropzone']")).to_be_visible()
                     low = page.evaluate(CONTRAST_JS)  # review MCF-39: the blue info box
                     assert not low, f"low-contrast texts before a file: {low[:3]}"
                     page.locator("input[type='file']").set_input_files(

@@ -414,7 +414,16 @@ def page_css() -> str:
         '[data-testid="stDateInputField"] [data-type="literal"],'
         '[data-testid="stDateInputField"] [data-type="literal"] *{color:#5f6370}'
         '[data-testid="stFileChip"] div{color:#5f6370}'
+        '[data-testid="stFileUploaderDropzoneInstructions"] span{color:#5f6370}'  # was 3.5:1
         '[data-testid="stAlertContentError"]{color:#7d1d14}'  # was 4.2:1 on the pink box
+        # MCF-41: the 4 section labels have heading size; inner expanders keep theirs.
+        + ",".join(
+            f'.st-key-section-{n}>[data-testid="stExpander"]>details>summary p' for n in range(1, 5)
+        )
+        + "{font-size:1.5rem;font-weight:600;line-height:1.3}"
+        # Review MCF-41: hidden section headings for screen readers.
+        ".mcf-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;"
+        "clip:rect(0,0,0,0);white-space:nowrap}"
         "</style>"
     )
 
