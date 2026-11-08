@@ -534,6 +534,40 @@ Result: pass — no ❌.
 
 Result: pass — no ❌. Closes the MCF-31 open point "Subtask vs Sub-task".
 
+## Ticket MCF-39 — 2026-11-07 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-39-light-theme`; each commit "MCF-39: …" | — |
+| 3 | CI green on the PR | ✅ | PR #45 head checked green before Review | — |
+| 4 | PR adds tests | 🟡 | Config, CSS and browser tests (dark-mode phone, contrast, theme switch, contrast self-test). The tests were run and failed before the fix, but were committed with the fix, not first | Commit failing tests first next time |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D48 is logged at this approval | PM approves |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: no blocker; 1 Medium (contrast check missed see-through colours, 6 of 8 bad cases) and 5 Low, all fixed tests first; the stronger check found 3 real pale texts, fixed | — |
+| 8 | Each acceptance criterion met | ✅ | Light theme, no switch, 4.5:1 in dark mode, browser check in dark mode, config test | — |
+| 9 | README and rule pages match | ✅ | No doc names the dark theme | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
+
+## Ticket MCF-40 — 2026-11-07 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-40-card-notes`; each commit "MCF-40: …" | — |
+| 3 | CI green on the PR | ✅ | PR #46 head checked green before Review | — |
+| 4 | PR adds tests | 🟡 | Card, HTML, help and browser tests; run and failed before the change, but committed with it | Commit failing tests first next time |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D49 is logged at this approval | PM approves |
+| 6 | AI ticket evaluation | n/a | No AI change (the bank does not name the card notes) | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: 1 Medium (no on-page text said which date to share) and 3 Low, all fixed tests first | — |
+| 8 | Each acceptance criterion met | ✅ | No notes except "Needs story points"; highlight kept; P50/P85/P95 and "give the 85% date" in the help | — |
+| 9 | README and rule pages match | 🟡 | No repo doc names the notes; the design canvas is out of date for the cards (noted in the PR) | PM decides if the canvas is updated |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
+
 ## Ticket MCF-41 — 2026-11-07 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
 
 | # | Criterion | Grade | Evidence | Fix |

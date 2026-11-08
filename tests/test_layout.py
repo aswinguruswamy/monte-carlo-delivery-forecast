@@ -91,7 +91,7 @@ def test_section_labels_look_like_headings():
 
 def test_each_section_has_a_hidden_heading_for_screen_readers(app):
     """Review MCF-41: the sections were h3 headings; expander labels are not headings."""
-    hidden = [m.value for m in app.markdown if 'class="mcf-sr-only"' in m.value]
+    hidden = [m.value for m in app.markdown if m.value.startswith('<h2 class="mcf-sr-only">')]
     assert hidden == [f'<h2 class="mcf-sr-only">{h}</h2>' for h in HEADS]
     css = logic.page_css()
     assert ".mcf-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;" in css
@@ -194,3 +194,13 @@ def test_section_2_description_comes_right_after_its_heading(app):
 def test_the_full_report_box_has_a_description(app):
     texts = [c.value for c in app.caption]
     assert logic.REPORT_DESCRIPTION in texts
+
+
+def test_pale_streamlit_texts_get_a_4_5_to_1_colour():
+    """Review MCF-39: the empty date field (yyyy/mm/dd) and the file size were 3.5 to 3.7:1."""
+    css = logic.page_css()
+    assert '[data-testid="stDateInputField"] [data-placeholder="true"]' in css
+    assert '[data-testid="stFileChip"] div' in css
+    assert '[data-testid="stFileUploaderDropzoneInstructions"] span{color:#5f6370}' in css
+    assert css.count("color:#5f6370") >= 2
+    assert '[data-testid="stAlertContentError"]' in css and "color:#7d1d14" in css
