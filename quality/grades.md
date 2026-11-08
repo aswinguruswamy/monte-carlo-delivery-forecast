@@ -584,3 +584,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval; AC2 changed before the build and flagged for the PM | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-43 — 2026-11-07 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-43-demo-video`; each commit "MCF-43: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | 🟡 | Script tests, the AppTest text check (fails on 2 planted wrong texts) and the release guard; run and failed before the change, but committed with it | Commit failing tests first next time |
+| 5 | Each decision ID in the PR is in the Decision Log | n/a | No new decision | — |
+| 6 | AI ticket evaluation | n/a | No AI change; the video is made with no API key | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: no blocker; 2 Medium (weak text check; old version in the footer) and 3 Low, fixed tests first | — |
+| 8 | Each acceptance criterion met | 🟡 | AC1–3 and AC5 met. AC4: the release video is recorded after the version bump (v1.1.0 release step); a draft is with the PM | Record with `--release 1.1.0` at the release |
+| 9 | README and rule pages match | ✅ | `docs/demo.md` lists the videos by release and the record step | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
