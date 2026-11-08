@@ -103,3 +103,10 @@ def test_the_1_1_0_entry_keeps_the_backtest_and_names_the_ai_prompt():
 
 def test_the_lock_file_header_names_the_release():
     assert f"Lock file for v{VERSION}" in (ROOT / "constraints.txt").read_text().splitlines()[0]
+
+
+def test_the_1_1_0_entry_has_the_ai_evaluation_result():
+    """MCF-44: the evaluation on prompt version 5 ran before the tag (go condition)."""
+    entry = _section("1.1.0")
+    assert "To run before the tag" not in entry
+    assert "**PASS** on 2026-11-08" in entry and "30 of 30" in entry

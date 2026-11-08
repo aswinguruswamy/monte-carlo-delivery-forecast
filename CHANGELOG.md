@@ -32,7 +32,7 @@ A clearer web page for sponsors and Jira exports with no editing. The forecast m
 - **Measure 2 — PASS:** median error 34 days (Monte Carlo 50% date) vs 36 days (velocity).
 
 ### AI evaluation (measure 3), prompt version 5
-- **To run before the tag** (MCF-44): the manual evaluation workflow, 10 cases × 3 runs.
+- **PASS** on 2026-11-08 (claude-haiku-5-5, prompt version 5; 2 manual runs, both PASS): 10 cases × 3 runs; 30 of 30 replies were a valid choice of approved sentences; 0 wrong numbers or dates; 0 API errors; the instruction hidden in the file name and issue keys never reached the prompt (3 of 3 runs passed).
 
 ### Known limits
 - All known limits of 1.0.0 still apply: the 50% date is not certain; the 85% date was too early in about a third of the back-test cases; the back-test data holds only estimated, completed issues of 29 open-source projects.
