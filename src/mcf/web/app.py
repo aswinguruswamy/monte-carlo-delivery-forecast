@@ -101,8 +101,7 @@ def main() -> None:
     st.title("When will your work be done?")
     st.markdown(logic.INTRO)
 
-    with st.container(border=True):
-        _section_head(logic.INPUTS_SECTION)
+    with _section(logic.INPUTS_SECTION, 1):
         sample = logic.sample_bytes()
         sources = [SAMPLE, UPLOAD] if sample is not None else [UPLOAD]
         source = st.radio("Data", sources, key="source", horizontal=True)
@@ -165,8 +164,7 @@ def main() -> None:
 
     f = result.facts
     _, result_section, chart_section, how_section = logic.sections(f)
-    with st.container(border=True):
-        _section_head(result_section)
+    with _section(result_section, 2):
         st.caption(logic.from_line(f, as_of_given=as_of is not None))
         st.caption(logic.history_line(f))
         st.markdown(logic.cards_html(f), unsafe_allow_html=True)  # code-made text only
@@ -184,8 +182,7 @@ def main() -> None:
                 st.markdown(text)
                 st.caption("AI-selected, approved sentences (D33.1). Code wrote every date above.")
 
-    with st.container(border=True):
-        _section_head(chart_section)
+    with _section(chart_section, 3):
         st.altair_chart(_chart(result), width="stretch")
         left_out = not_drawn_text(logic.runs_not_drawn(result))
         if left_out:
@@ -193,8 +190,7 @@ def main() -> None:
         if logic.same_day_note(f):
             st.caption(logic.same_day_note(f))
 
-    with st.container(border=True):
-        _section_head(how_section)
+    with _section(how_section, 4):
         for part in logic.how_it_works():
             with st.expander(part.title):
                 st.markdown(part.body)  # code-made text only
@@ -208,9 +204,15 @@ def main() -> None:
     st.markdown(logic.footer_markdown())
 
 
-def _section_head(section: logic.Section) -> None:
-    st.subheader(section.heading)
-    st.caption(section.description)
+def _section(section: logic.Section, number: int):
+    """MCF-41: a numbered section the user can close; open when the page loads.
+
+    The key gives the CSS class st-key-section-N (heading size, logic.page_css). With a
+    key, Streamlit keeps the open or closed state when the page runs again.
+    """
+    box = st.expander(section.heading, expanded=True, key=f"section-{number}")
+    box.caption(section.description)
+    return box
 
 
 if __name__ == "__main__":

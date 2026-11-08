@@ -119,15 +119,20 @@ def main() -> int:
                 def boxes_and_captions(page=page):
                     """MCF-37 review: white boxes on a grey page; captions 4.5:1 or more."""
                     page.wait_for_function(  # the boxes below the chart render a moment later
-                        """() => [...document.querySelectorAll("[data-testid='stVerticalBlock']")]
-                        .filter(e => parseFloat(getComputedStyle(e).borderTopWidth) > 0)
-                        .length >= 5""",
+                        """() => document.querySelectorAll(
+                          "[class*='st-key-section-'] > [data-testid='stExpander'] > "
+                          + "details").length === 4
+                          && [...document.querySelectorAll("[data-testid='stVerticalBlock']")]
+                          .some(e => parseFloat(getComputedStyle(e).borderTopWidth) > 0)""",
                         timeout=30_000,
                     )
                     got = page.evaluate(
                         """() => {
+                        // MCF-41: 4 section expanders and the bordered report box
                         const boxes = [...document.querySelectorAll(
-                          "[data-testid='stVerticalBlock']")].filter(e => {
+                          "[data-testid='stVerticalBlock'], "
+                          + "[class*='st-key-section-'] > [data-testid='stExpander'] > details"
+                          )].filter(e => {
                             const s = getComputedStyle(e);
                             return parseFloat(s.borderTopWidth) > 0
                               && s.backgroundColor === 'rgb(255, 255, 255)';});
@@ -206,7 +211,28 @@ def main() -> int:
                     )
                     assert not cut, f"dates cut off: {cut}"
 
+                def sections_close_and_open(page=page):
+                    """MCF-41: each of the 4 sections is open on load and can close and open."""
+                    for n in range(1, 5):
+                        details = page.locator(
+                            f".st-key-section-{n} > [data-testid='stExpander'] > details"
+                        )
+                        assert details.get_attribute("open") is not None, f"section {n} closed"
+                        summary = details.locator("> summary")
+                        size = summary.locator("p").first.evaluate(
+                            "e => getComputedStyle(e).fontSize"
+                        )
+                        assert size == "24px", f"section {n} label is {size}, not heading size"
+                        summary.click()
+                        expect(details).not_to_have_attribute("open", "", timeout=5_000)
+                        summary.click()
+                        expect(details).to_have_attribute("open", "", timeout=5_000)
+                    expect(
+                        page.get_by_text("back-test: the 85% date was too early")
+                    ).to_be_visible()
+
                 check(f"{label}: each date is under its own label", sample_dates)
+                check(f"{label}: sections are open and can close", sections_close_and_open)
                 check(f"{label}: dates are not cut off", dates_not_cut)
                 check(f"{label}: help sidebar first in reading order", sidebar_first)
                 check(f"{label}: white boxes on a grey page, readable captions", boxes_and_captions)

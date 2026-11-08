@@ -402,6 +402,11 @@ def page_css() -> str:
         '[data-testid="stExpander"] details{background:#ffffff}'
         # Streamlit's caption is 60% opacity: 3.7:1 on white. This colour is 5.9:1.
         '[data-testid="stCaptionContainer"]{color:#5f6370;opacity:1}'
+        # MCF-41: the 4 section labels have heading size; inner expanders keep theirs.
+        + ",".join(
+            f'.st-key-section-{n}>[data-testid="stExpander"]>details>summary p' for n in range(1, 5)
+        )
+        + "{font-size:1.5rem;font-weight:600;line-height:1.3}"
         "</style>"
     )
 

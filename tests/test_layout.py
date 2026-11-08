@@ -78,6 +78,14 @@ def test_captions_get_a_4_5_to_1_colour():
     assert '[data-testid="stCaptionContainer"]{color:#5f6370;opacity:1}' in css
 
 
+def test_section_labels_look_like_headings():
+    """MCF-41: a section label has heading size; the inner expanders keep the normal size."""
+    css = logic.page_css()
+    for n in range(1, 5):
+        assert f'.st-key-section-{n}>[data-testid="stExpander"]>details>summary p' in css
+    assert "font-size:1.5rem" in css
+
+
 def test_cards_stack_one_per_line_on_a_phone():
     html = logic.cards_html(facts())
     assert "@media (max-width: 640px)" in html and "grid-template-columns:1fr" in html
@@ -119,15 +127,42 @@ def app(monkeypatch):
     return at.run()
 
 
+HEADS = [
+    "1. Your inputs",
+    "2. When the 40 work items will be done",
+    "3. All possible finish dates",
+    "4. How this forecast works",
+]
+
+
 def test_page_shows_the_4_sections_in_order(app):
     assert not app.exception
-    heads = [h.value for h in app.subheader]
-    assert heads == [
-        "1. Your inputs",
-        "2. When the 40 work items will be done",
-        "3. All possible finish dates",
-        "4. How this forecast works",
-    ]
+    assert [e.label for e in app.expander if e.label in HEADS] == HEADS
+
+
+def test_the_4_sections_can_close_and_are_open_on_load(app):
+    """MCF-41 (PM user test 2026-11-07): collapsible sections, open by default."""
+    sections = [e for e in app.expander if e.label in HEADS]
+    assert [e.proto.expanded for e in sections] == [True] * 4
+    assert list(app.subheader) == []  # the heading is the expander label, not a second line
+    inside = [[x.label for x in s.expander] for s in sections]
+    parts = [p.title for p in logic.how_it_works()]
+    assert inside == [["More options"], [], [], parts]  # inner parts stay inside, closed
+    assert not any(e.proto.expanded for e in app.expander if e.label not in HEADS)
+
+
+def test_each_section_starts_with_its_description(app):
+    sections = [e for e in app.expander if e.label in HEADS]
+    for sec in sections:
+        assert sec.caption[0].value.endswith(".")
+    assert sections[0].caption[0].value == logic.INPUTS_SECTION.description
+
+
+def test_the_report_box_stays_outside_the_sections(app):
+    report = next(e for e in app.expander if e.label == logic.REPORT_LABEL)
+    assert not report.proto.expanded
+    sections = [e for e in app.expander if e.label in HEADS]
+    assert all(logic.REPORT_LABEL not in [x.label for x in s.expander] for s in sections)
 
 
 def test_page_puts_the_history_line_in_section_2(app):
