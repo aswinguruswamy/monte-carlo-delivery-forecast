@@ -97,14 +97,10 @@ def test_backlog_rejects_other_input_with_a_clear_message(text):
 def test_the_4_cards_have_the_agreed_labels_dates_notes_and_colours():
     got = [(c.label, c.value, c.notes) for c in logic.cards(facts())]
     assert got == [
-        ("50% chance of completion", "Nov. 17, 2026", ("P50",)),
-        (
-            "85% chance of completion",
-            "Nov. 25, 2026",
-            ("P85 · Recommended to share", "If a delay costs a lot, use 95%."),
-        ),
-        ("95% chance of completion", "Nov. 25, 2026".replace("Nov. 25", "Dec. 1"), ("P95",)),
-        ("Velocity date", "Nov. 17, 2026", ("Uses story points",)),  # MCF-35
+        ("50% chance of completion", "Nov. 17, 2026", ()),  # MCF-40: no notes
+        ("85% chance of completion", "Nov. 25, 2026", ()),
+        ("95% chance of completion", "Dec. 1, 2026", ()),
+        ("Velocity date", "Nov. 17, 2026", ()),
     ]
     by_label = {c.label: c for c in logic.cards(facts())}
     assert [c.label for c in logic.cards(facts()) if c.highlight] == ["85% chance of completion"]
@@ -115,7 +111,7 @@ def test_the_velocity_card_has_no_pace_line_and_says_not_available():
     """MCF-34 (D45): the "Average pace" line stays in the help sidebar."""
     for estimated in (True, False):
         card = logic.cards(facts(points_estimated=estimated))[3]
-        assert card.notes == ("Uses story points",)
+        assert card.notes == ()
     html = logic.cards_html(facts())
     assert "Average pace" not in html and "points left" not in html
     none = logic.cards(facts(velocity_date=None, velocity_per_sprint=None, points_needed=None))[3]
@@ -347,3 +343,27 @@ def test_the_demo_guide_names_the_current_ai_check():
 
     guide = (Path(__file__).resolve().parents[1] / "docs" / "demo.md").read_text()
     assert "AI off without a key" not in guide and "no AI line without a key" in guide
+
+
+# --- MCF-40: the card notes move to the help ------------------------------------------------
+
+
+def test_cards_show_no_notes_except_needs_story_points():
+    """PM user test 2026-11-07 (option B): only "Needs story points" stays on a card."""
+    html = logic.cards_html(facts())
+    for old in ("P50", "P85", "P95", "Recommended", "If a delay costs", "Uses story points"):
+        assert old not in html
+    assert "mcf-card-note" not in html.split("</style>", 1)[1]
+    none = logic.cards_html(facts(velocity_date=None, velocity_per_sprint=None, points_needed=None))
+    assert "Needs story points" in none
+
+
+def test_the_help_names_p50_p85_and_p95():
+    side = logic.SIDEBAR
+    assert "**50% chance of completion (P50):** use it to plan your own work." in side
+    assert "**85% chance of completion (P85):** use it for the date you give a sponsor" in side
+    assert "**95% chance of completion (P95):** use it when a late finish costs a lot." in side
+    steps = logic.how_it_works()[0].body
+    assert "The 50% date (P50) is the day by which half of the tries finish." in steps
+    assert "The 85% (P85) and 95% (P95) dates work the same way." in steps
+    assert "Use the 95% date when a late finish costs a lot." in logic.how_it_works()[1].body

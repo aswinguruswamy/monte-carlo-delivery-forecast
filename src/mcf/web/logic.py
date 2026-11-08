@@ -235,9 +235,9 @@ The file can be up to 10 MB.
 4. Copy the message to your sponsor.
 
 #### Which date to use
-- **50% chance of completion:** use it to plan your own work.
-- **85% chance of completion:** use it for the date you give a sponsor or client.
-- **95% chance of completion:** use it when a late finish costs a lot.
+- **50% chance of completion (P50):** use it to plan your own work.
+- **85% chance of completion (P85):** use it for the date you give a sponsor or client.
+- **95% chance of completion (P95):** use it when a late finish costs a lot.
 - **Velocity date:** use it to compare with your sprint plan. It uses your team's average \
 pace in story points. If you do not enter the story points left in More options, the tool \
 estimates them.
@@ -291,21 +291,23 @@ class Card:
 
 def cards(facts: ForecastFacts) -> list[Card]:
     """The 4 date cards, in the order and colours of the chart lines."""
+    # MCF-40: no notes on the cards; the help sidebar and "How this forecast works" explain
+    # the dates. Only "Needs story points" stays, to say why there is no velocity date.
     if facts.velocity_date is None:
-        v_value, v_note = "Not available", "Needs story points"
+        v_value, v_notes = "Not available", ("Needs story points",)
     else:  # MCF-34 (D45): pace and estimated points are explained in the help sidebar
-        v_value, v_note = long_date(facts.velocity_date), "Uses story points"
+        v_value, v_notes = long_date(facts.velocity_date), ()
     return [
-        Card("50% chance of completion", long_date(facts.mc50), ("P50",), COLORS["p50"]),
+        Card("50% chance of completion", long_date(facts.mc50), (), COLORS["p50"]),
         Card(
             "85% chance of completion",
             long_date(facts.mc85),
-            ("P85 · Recommended to share", "If a delay costs a lot, use 95%."),
+            (),
             COLORS["p85"],
             highlight=True,
         ),
-        Card("95% chance of completion", long_date(facts.mc95), ("P95",), COLORS["p95"]),
-        Card("Velocity date", v_value, (v_note,), COLORS["velocity"], dashed=True),
+        Card("95% chance of completion", long_date(facts.mc95), (), COLORS["p95"]),
+        Card("Velocity date", v_value, v_notes, COLORS["velocity"], dashed=True),
     ]
 
 
@@ -481,8 +483,8 @@ def how_it_works() -> list[Part]:
         "3. Add the counts until all the work left is done. That day is the finish date of "
         "this try.\n"
         f"4. Do {RUNS:,} tries. Each try gives a different finish date.\n"
-        "5. Sort the finish dates. The 50% date is the day by which half of the tries finish. "
-        "The 85% and 95% dates work the same way.\n\n"
+        "5. Sort the finish dates. The 50% date (P50) is the day by which half of the tries "
+        "finish. The 85% (P85) and 95% (P95) dates work the same way.\n\n"
         "Story points are not needed for these dates. The velocity date uses story points, "
         "for comparison."
     )
