@@ -258,11 +258,15 @@ def main() -> int:
                     cards = page.locator(".mcf-card")
                     expect(cards).to_have_count(4, timeout=30_000)
                     shown = {}
+                    hidden = {}
                     for c in cards.all():
-                        shown[c.locator(".mcf-card-label").inner_text().strip()] = (
-                            c.locator(".mcf-card-value").inner_text().strip()
-                        )
+                        label = c.get_attribute("data-label")
+                        shown[label] = c.locator(".mcf-card-value").inner_text().strip()
+                        hidden[label] = c.locator(".mcf-sr-only").count()
                     assert shown == want, f"label and date do not match: {shown}"
+                    # MCF-40: only the highlighted card has the hidden "date to share" text
+                    assert hidden["85% chance of completion"] == 1 == sum(hidden.values()), hidden
+                    assert page.locator(".mcf-card-note").count() == 0, "a card shows a note"
 
                 def sidebar_first(page=page):
                     first = page.evaluate(
