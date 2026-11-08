@@ -103,6 +103,10 @@ def record(url: str, video_dir: Path, release: str | None = None) -> tuple[Path,
         _show(page, "stVegaLiteChart")
         page.wait_for_timeout(3000)
         close_and_open(page, 3)  # MCF-41: the chart section closes and opens
+        footer_line = page.get_by_text("Version ", exact=False).last  # review MCF-44
+        # the whole version line in the middle of the screen (not at the bottom edge)
+        footer_line.evaluate("e => e.scrollIntoView({block: 'center'})")
+        page.wait_for_timeout(2000)
         _section(page, 1).scroll_into_view_if_needed()
 
         page.locator("summary").get_by_text("More options").click()

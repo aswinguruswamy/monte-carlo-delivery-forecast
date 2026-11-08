@@ -1,4 +1,4 @@
-# Lock file for v1.0.0 (MCF-27, D20, D26): exact versions of the runtime packages.
+# Lock file for v1.1.0 (MCF-27, D20, D26; no package changed since v1.0.0, MCF-44): exact versions of the runtime packages.
 # Made with a clean Python 3.11 install of ".[web]" (the lowest supported Python);
 # checked on Python 3.12. Use: pip install ".[web]" -c constraints.txt
 altair==6.3.0
