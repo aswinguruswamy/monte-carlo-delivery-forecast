@@ -35,6 +35,31 @@ from mcf.web.logic import (  # noqa: E402
 
 BAD = b"Issue_Key,Type\nA-1,Story\n"
 
+# MCF-39: contrast of each visible text against the first solid background behind it.
+CONTRAST_JS = """() => {
+  const rgb = c => (c.match(/[\\d.]+/g) || []).map(Number);
+  const lum = ([r, g, b]) => [r, g, b].map(v => { v /= 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; })
+    .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const bg = e => { for (; e; e = e.parentElement) { const c = rgb(getComputedStyle(e)
+    .backgroundColor); if (c.length >= 3 && (c.length < 4 || c[3] === 1)) return c; }
+    return [255, 255, 255]; };
+  const out = [];
+  const walk = document.createTreeWalker(document.querySelector("[data-testid='stApp']"),
+    NodeFilter.SHOW_TEXT);
+  for (let n; (n = walk.nextNode());) {
+    const e = n.parentElement, t = n.textContent.trim();
+    if (!t || !e || !e.getClientRects().length) continue;
+    if (e.closest("[data-testid='stVegaLiteChart'], [data-testid='stToolbar'], svg")) continue;
+    const s = getComputedStyle(e);
+    if (s.visibility === "hidden" || parseFloat(s.opacity) === 0) continue;
+    const a = lum(rgb(s.color)), b = lum(bg(e));
+    const r = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    if (r < 4.5) out.push(t.slice(0, 40) + " " + r.toFixed(2));
+  }
+  return [...new Set(out)];
+}"""
+
 
 def free_port() -> int:
     with socket.socket() as s:
@@ -105,8 +130,14 @@ def main() -> int:
             wait_for(url)
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
-            for width, label in ((1280, "desktop"), (390, "phone")):
-                page = browser.new_page(viewport={"width": width, "height": 900})
+            for width, label, scheme in (
+                (1280, "desktop", "light"),
+                (390, "phone", "light"),
+                (390, "phone in dark mode", "dark"),  # MCF-39
+            ):
+                page = browser.new_page(
+                    viewport={"width": width, "height": 900}, color_scheme=scheme
+                )
                 errors: list[str] = []
                 page.on("pageerror", lambda e, errors=errors: errors.append(str(e)))
                 page.on(
@@ -206,7 +237,25 @@ def main() -> int:
                     )
                     assert not cut, f"dates cut off: {cut}"
 
+                def text_contrast(page=page):
+                    """MCF-39: all visible text on the page has 4.5:1 contrast or more."""
+                    low = page.evaluate(CONTRAST_JS)
+                    assert not low, f"{len(low)} low-contrast texts, first: {low[:3]}"
+
+                def no_theme_switch(page=page):
+                    """MCF-39: the menu has no System / Light / Dark switch."""
+                    page.locator("[data-testid='stMainMenu']").click()
+                    menu = page.locator("[data-testid='stMainMenuList']")
+                    expect(menu).to_be_visible(timeout=10_000)
+                    text = menu.inner_text()
+                    page.keyboard.press("Escape")
+                    assert "Dark" not in text and "System" not in text, (
+                        "theme switch in the menu: " + " / ".join(text.split())
+                    )
+
                 check(f"{label}: each date is under its own label", sample_dates)
+                check(f"{label}: all text has 4.5:1 contrast", text_contrast)
+                check(f"{label}: no light / dark switch in the menu", no_theme_switch)
                 check(f"{label}: dates are not cut off", dates_not_cut)
                 check(f"{label}: help sidebar first in reading order", sidebar_first)
                 check(f"{label}: white boxes on a grey page, readable captions", boxes_and_captions)

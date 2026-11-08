@@ -7,3 +7,6 @@ gatherUsageStats = false  # send no usage data to Streamlit
 
 [client]
 toolbarMode = "viewer"  # no "Deploy" button or developer menu
+
+[theme]
+base = "light"  # MCF-39: always light; also removes the light / dark switch from the menu
