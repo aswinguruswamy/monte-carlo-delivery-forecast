@@ -83,3 +83,14 @@ def test_videos_and_cloud_secrets_are_never_committed():
 def test_a_url_is_used_as_given():
     source = (ROOT / "scripts" / "browser_check.py").read_text()
     assert "url = args.url\n" in source
+
+
+def test_the_record_script_follows_the_v1_1_page():
+    """MCF-43: since MCF-41 the section titles are expander labels, not stHeading."""
+    source = (ROOT / "scripts" / "record_demo.py").read_text()
+    assert "stHeading" not in source
+    assert ".st-key-section-" in source  # scrolls by the section boxes
+    assert "close_and_open(" in source  # shows that a section can close and open
+    assert 'locator("summary").get_by_text(' in source  # not the hidden heading
+    # the help sidebar also says "More options" (MCF-34), so click only the expander label
+    assert 'page.get_by_text("More options")' not in source

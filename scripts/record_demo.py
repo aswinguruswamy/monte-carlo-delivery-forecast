@@ -1,7 +1,8 @@
 """Record the demo video of the web page (MCF-26, A5), with Playwright and ffmpeg.
 
 The page runs locally with no API key (no paid call). The video shows the
-sample forecast, the chart, a new backlog, the options and a bad file.
+sample forecast, the chart, a new backlog, a section closed and opened again
+(MCF-43), the options and a bad file.
 
     python scripts/record_demo.py --out demo.mp4
 
@@ -49,6 +50,22 @@ def _show(page, testid: str) -> None:
     page.locator(f"[data-testid='{testid}']").first.scroll_into_view_if_needed()
 
 
+def _section(page, n: int):
+    """The box of section n (MCF-41: an expander with the key section-n)."""
+    return page.locator(f".st-key-section-{n} > [data-testid='stExpander'] > details")
+
+
+def close_and_open(page, n: int) -> None:
+    """MCF-43: show that a section can close and open again."""
+    summary = _section(page, n).locator("> summary")
+    summary.scroll_into_view_if_needed()
+    page.wait_for_timeout(800)
+    summary.click()
+    page.wait_for_timeout(1500)
+    summary.click()
+    page.wait_for_timeout(1200)
+
+
 def record(url: str, video_dir: Path) -> tuple[Path, float]:
     """Return the video and the second at which the page is ready (cut before it)."""
     with sync_playwright() as pw:
@@ -64,24 +81,27 @@ def record(url: str, video_dir: Path) -> tuple[Path, float]:
         page.wait_for_timeout(1000)
         ready = time.monotonic() - start
         page.wait_for_timeout(2000)
-        _show(page, "stVegaLiteChart")  # the dates and the chart
+        page.locator(".mcf-card").first.scroll_into_view_if_needed()  # MCF-43: the cards
+        page.wait_for_timeout(3000)
+        _show(page, "stVegaLiteChart")  # the chart
         page.wait_for_timeout(4000)
-        _show(page, "stHeading")
+        _section(page, 1).scroll_into_view_if_needed()
 
         backlog = page.get_by_label("How many work items are left? (backlog)")
         backlog.fill("80")
         backlog.press("Enter")
-        expect(page.get_by_text("2. When the 80 work items will be done")).to_be_visible(
-            timeout=30_000
-        )
+        expect(
+            page.locator("summary").get_by_text("2. When the 80 work items will be done")
+        ).to_be_visible(timeout=30_000)
         page.wait_for_timeout(1500)
         _show(page, "stVegaLiteChart")
-        page.wait_for_timeout(3500)
-        _show(page, "stHeading")
+        page.wait_for_timeout(3000)
+        close_and_open(page, 3)  # MCF-41: the chart section closes and opens
+        _section(page, 1).scroll_into_view_if_needed()
 
-        page.get_by_text("More options").click()
+        page.locator("summary").get_by_text("More options").click()
         page.wait_for_timeout(2500)
-        page.get_by_text("More options").click()
+        page.locator("summary").get_by_text("More options").click()
 
         page.get_by_text("Upload a CSV file", exact=True).click()
         page.locator("input[type='file']").set_input_files(
