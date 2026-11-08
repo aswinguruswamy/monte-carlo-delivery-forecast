@@ -353,7 +353,9 @@ def test_cards_show_no_notes_except_needs_story_points():
     html = logic.cards_html(facts())
     for old in ("P50", "P85", "P95", "Recommended", "If a delay costs", "Uses story points"):
         assert old not in html
-    assert "mcf-card-note" not in html.split("</style>", 1)[1]
+    assert 'class="mcf-card-note"' not in html  # review MCF-40: no note span at all
+    for f in (facts(), facts(points_estimated=False)):
+        assert all(c.notes == () for c in logic.cards(f))
     none = logic.cards_html(facts(velocity_date=None, velocity_per_sprint=None, points_needed=None))
     assert "Needs story points" in none
 
@@ -366,4 +368,12 @@ def test_the_help_names_p50_p85_and_p95():
     steps = logic.how_it_works()[0].body
     assert "The 50% date (P50) is the day by which half of the tries finish." in steps
     assert "The 85% (P85) and 95% (P95) dates work the same way." in steps
+    assert "Give the 85% date (P85) to your sponsor or client." in steps  # review MCF-40
+
+
+def test_the_highlighted_card_says_why_to_a_screen_reader():
+    """Review MCF-40: the highlight is only a border and a colour; add a hidden text."""
+    html = logic.cards_html(facts())
+    assert html.count('class="mcf-sr-only"> (the date to share)</span>') == 1
+    assert ".mcf-sr-only{" in html and "clip:rect(0,0,0,0)" in html
     assert "Use the 95% date when a late finish costs a lot." in logic.how_it_works()[1].body

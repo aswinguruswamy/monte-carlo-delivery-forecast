@@ -321,13 +321,15 @@ def _card_html(c: Card) -> str:
     width = 3 if c.highlight else 2
     back = card_background(c)
     note = "".join(f'<span class="mcf-card-note">{e(n)}</span>' for n in c.notes)
+    # Review MCF-40: the highlight is only a border and a colour, so say it in hidden text.
+    why = '<span class="mcf-sr-only"> (the date to share)</span>' if c.highlight else ""
     return (
         f'<div class="mcf-card{" mcf-card-highlight" if c.highlight else ""}" '
         f'data-label="{e(c.label)}" style="border:{width}px {style} {c.color};'
         f"background:{back};border-radius:10px;padding:12px 14px;display:flex;"
         f'flex-direction:column;gap:2px;min-width:0">'
         f'<span class="mcf-card-label" style="font-size:0.85rem;font-weight:600;'
-        f'color:{c.color}">{e(c.label)}</span>'
+        f'color:{c.color}">{e(c.label)}{why}</span>'
         f'<span class="mcf-card-value" style="font-size:1.2rem;font-weight:700;'
         f'color:{COLORS["ink"]};white-space:nowrap">{e(c.value)}</span>'
         f"{note}</div>"
@@ -342,6 +344,8 @@ def cards_html(facts: ForecastFacts) -> str:
         'grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">'
         f"{inner}</div>"
         f"<style>.mcf-card-note{{font-size:0.82rem;color:{COLORS['muted']}}}"
+        ".mcf-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;"
+        "clip:rect(0,0,0,0);white-space:nowrap}"
         "@media (max-width: 640px){.mcf-cards{grid-template-columns:1fr !important}}</style>"
     )
 
@@ -484,7 +488,8 @@ def how_it_works() -> list[Part]:
         "this try.\n"
         f"4. Do {RUNS:,} tries. Each try gives a different finish date.\n"
         "5. Sort the finish dates. The 50% date (P50) is the day by which half of the tries "
-        "finish. The 85% (P85) and 95% (P95) dates work the same way.\n\n"
+        "finish. The 85% (P85) and 95% (P95) dates work the same way. Give the 85% date (P85) "
+        "to your sponsor or client.\n\n"
         "Story points are not needed for these dates. The velocity date uses story points, "
         "for comparison."
     )
