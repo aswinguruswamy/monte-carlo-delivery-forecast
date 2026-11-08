@@ -2,6 +2,44 @@
 
 All notable changes are in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-11-08
+
+A clearer web page for sponsors and Jira exports with no editing. The forecast method and the back-test are unchanged.
+
+### Added
+- **Jira exports work as they are** (MCF-31, D42): the Jira column names (`Issue key`, `Issue Type`, `Resolved`, `Story Points` / `Story point estimate`, also as `Custom field (…)`) and Jira date formats are read, and repeated columns that the tool does not use are ignored. No name or title column is read.
+- **Story points are optional** (MCF-32, D43): with no points, the 50%, 85% and 95% dates show and the velocity date shows "Not available"; with some points, the page shows how many items have none.
+- **"Subtask"** is a value type (MCF-38, D04.2), the Jira Cloud name for "Sub-task".
+- **Help sidebar** on the web page (MCF-33): what you need, the steps, which date to use (P50, P85, P95), what to be careful of, and privacy.
+- **"How this forecast works"** on the page (MCF-36): the Monte Carlo steps, and the back-test result with its warning in the title ("the 85% date was too early about 1 in 3 times").
+- **Footer** with the source code, the back-test report, the TAWOS citation and the version (MCF-36). The README starts with a "Try it" link to the live page.
+
+### Changed
+- **Plain labels** (MCF-33, MCF-35, D41, D46): "50% / 85% / 95% chance of completion" and "Velocity date"; dates written out; a typed backlog number from 1 to 10,000; card colours match the chart lines; "Message to sponsor" line.
+- **Cards show only the label and the date** (MCF-34, MCF-40, D45, D49). "Needs story points" stays when there is no velocity date. The 85% card is highlighted, with hidden text for screen readers.
+- **Layout** (MCF-37, MCF-41, D50): a grey page with 4 numbered white sections. The sections can close and are open when the page loads.
+- **Light theme only** (MCF-39, D48): the page no longer follows a dark-mode setting.
+- **AI explanation:** no AI line on a page with no key (MCF-35). The prompt is version 5 (MCF-32): with no velocity date, no velocity or points sentence is offered.
+- **Demo video script** follows the v1.1 page and checks the version in the footer (MCF-43).
+
+### Fixed
+- In dark mode, the page text was white on the white boxes (MCF-39).
+- Texts below 4.5:1 contrast: the captions (MCF-37); the empty date field, the file size, the error message and the upload hint (MCF-39, MCF-41). The browser check now tests the contrast of all visible text, also in dark mode.
+- A Jira Cloud export with "Subtask" rows stopped with an unknown-type error (MCF-38).
+
+### Back-test result (unchanged since 1.0.0)
+- **Measure 1 — FAIL:** the 85% date was correct in 69.0% of 7,692 cases; the pass band is 75–95%.
+- **Measure 2 — PASS:** median error 34 days (Monte Carlo 50% date) vs 36 days (velocity).
+
+### AI evaluation (measure 3), prompt version 5
+- **To run before the tag** (MCF-44): the manual evaluation workflow, 10 cases × 3 runs.
+
+### Known limits
+- All known limits of 1.0.0 still apply: the 50% date is not certain; the 85% date was too early in about a third of the back-test cases; the back-test data holds only estimated, completed issues of 29 open-source projects.
+- The page is light only; a dark theme is planned (MCF-42).
+- After an error (for example a bad backlog number), closed sections come back open.
+- The 20-second user test was small (a few developers, with a short explanation; D51).
+
 ## [1.0.0] - 2026-11-03
 
 First public release.
@@ -36,4 +74,5 @@ First public release.
 - The public demo has no API key, so the AI explanation is off there (D39).
 - The sample file on the web page needs a repository checkout (editable install).
 
+[1.1.0]: https://github.com/aswinguruswamy/monte-carlo-delivery-forecast/releases/tag/v1.1.0
 [1.0.0]: https://github.com/aswinguruswamy/monte-carlo-delivery-forecast/releases/tag/v1.0.0
