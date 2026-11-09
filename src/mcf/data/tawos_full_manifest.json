@@ -1,0 +1,21 @@
+{
+  "ticket": "MCF-28",
+  "adr": "docs/adr/0003-full-tawos-data.md (D54, D54.1, D54.2)",
+  "dump": {
+    "file": "TAWOS.sql",
+    "source": "figshare article 19085834",
+    "readme_version": "V. 1.0",
+    "downloaded": "2026-11-09",
+    "bytes": 4313856480,
+    "sha256": "97dc0deaaa02ac75017d2b9cbe0765ac3377b5d7c10f9f88bc62de838f34badd"
+  },
+  "export": {
+    "file": "tawos-issues-allowed.csv",
+    "made_with": "mcf.data.tawos_dump.export_csv",
+    "made": "2026-11-09",
+    "columns": ["Project_Key", "Type", "Status", "Resolution", "Resolution_Date", "Story_Point"],
+    "rows": 458232,
+    "sha256": "393566e2d08fc4404ac7ecb77d9ac06e633b185677ec18d61167f3dce9644ea6"
+  },
+  "note": "Neither file is in the repository (D08). The v2 run checks the export SHA-256."
+}

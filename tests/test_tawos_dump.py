@@ -105,3 +105,49 @@ def test_export_writes_the_allowed_columns_only(tmp_path):
     text = out.read_text()
     for secret in ("Secret", "AA-1", "quote", "77", "Project A"):
         assert secret not in text
+
+
+# --- Review MCF-28 (pre-run), findings 5 and 6: no row is lost without an error ----------------
+
+
+def _bad(tmp_path, old: str, new: str) -> Path:
+    text = MINI.read_text()
+    assert old in text
+    p = tmp_path / "bad.sql"
+    p.write_text(text.replace(old, new, 1))
+    return p
+
+
+def test_an_insert_split_over_two_lines_is_an_error(tmp_path):
+    row = "(9,'x','x','x','Story','Closed','Fixed',NULL,1,1,1);"
+    p = _bad(tmp_path, ",78,1);\nINSERT", f",78,1),\n{row}\nINSERT")
+    with pytest.raises(DumpError, match="does not end with ';'"):
+        list(read_table(p, "Issue", ISSUE_COLUMNS))
+
+
+def test_a_cut_off_last_line_is_an_error(tmp_path):
+    p = _bad(tmp_path, ",8,80,2);", ",8,80")
+    with pytest.raises(DumpError, match="does not end with ';'"):
+        list(read_table(p, "Issue", ISSUE_COLUMNS))
+
+
+def test_an_insert_with_a_column_list_is_an_error(tmp_path):
+    p = _bad(tmp_path, "INSERT INTO `Issue` VALUES (3,", "INSERT INTO `Issue` (`ID`) VALUES (3,")
+    with pytest.raises(DumpError, match="unexpected INSERT"):
+        list(read_table(p, "Issue", ISSUE_COLUMNS))
+
+
+def test_an_unknown_project_id_is_an_error(tmp_path):
+    from mcf.data.tawos_dump import export_csv
+
+    p = _bad(tmp_path, ",8,80,2);", ",8,80,9);")
+    with pytest.raises(DumpError, match="unknown Project_ID 9"):
+        export_csv(p, tmp_path / "out.csv")
+
+
+def test_the_export_checks_the_row_count(tmp_path):
+    from mcf.data.tawos_dump import export_csv
+
+    assert export_csv(MINI, tmp_path / "a.csv", expected_rows=4) == 4
+    with pytest.raises(DumpError, match="4 rows, expected 5"):
+        export_csv(MINI, tmp_path / "b.csv", expected_rows=5)

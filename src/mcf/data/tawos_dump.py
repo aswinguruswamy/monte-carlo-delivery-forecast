@@ -79,13 +79,17 @@ def read_table(path: Path, table: str, wanted: tuple[str, ...]) -> Iterator[tupl
         if name not in names:
             raise DumpError(f"no column '{name}' in table '{table}'")
     keep = [(names.index(name), schema[names.index(name)][1]) for name in wanted]
-    prefix = f"INSERT INTO `{table}` VALUES "
+    start = f"INSERT INTO `{table}` "
+    prefix = f"{start}VALUES "
     width = len(schema)
     with Path(path).open(encoding="utf-8", errors="replace") as fh:
-        for line in fh:
-            if not line.startswith(prefix):
+        for number, line in enumerate(fh, 1):
+            if not line.startswith(start):
                 continue
+            if not line.startswith(prefix):
+                raise DumpError(f"line {number}: unexpected INSERT form for table '{table}'")
             row: list[re.Match] | None = None
+            ended = False
             for token in _TOKEN.finditer(line, len(prefix)):
                 if token.group(4):
                     row = []
@@ -95,10 +99,15 @@ def read_table(path: Path, table: str, wanted: tuple[str, ...]) -> Iterator[tupl
                         raise DumpError(f"row has {got} values, the table has {width} columns")
                     yield tuple(_convert(row[i], kind) for i, kind in keep)
                     row = None
-                elif token.group(6) or token.group(7):
+                elif token.group(7):
+                    ended = True
+                elif token.group(6):
                     continue
                 elif row is not None:
                     row.append(token)
+            # Review MCF-28: a split, cut-off or broken line must not lose rows silently.
+            if row is not None or not ended:
+                raise DumpError(f"line {number}: the INSERT does not end with ';'")
 
 
 def sha256_of(path: Path, chunk: int = 1 << 20) -> str:
@@ -137,11 +146,12 @@ def inventory(path: Path) -> dict:
 EXPORT_HEADER = ("Project_Key", "Type", "Status", "Resolution", "Resolution_Date", "Story_Point")
 
 
-def export_csv(path: Path, out: Path) -> int:
+def export_csv(path: Path, out: Path, expected_rows: int | None = None) -> int:
     """Write the allowed columns only, one row per issue (ADR 0003); return the row count.
 
     The issue ID is dropped too: the run needs only the project, the type, the
-    resolution, the resolution date and the story points.
+    resolution, the resolution date and the story points. With `expected_rows`
+    (458,232 for TAWOS V. 1.0), a different count is an error.
     """
     import csv
 
@@ -153,6 +163,10 @@ def export_csv(path: Path, out: Path) -> int:
         for _id, kind, status, resolution, done, points, project in read_table(
             path, "Issue", ISSUE_COLUMNS
         ):
-            writer.writerow([keys.get(project, ""), kind, status, resolution, done, points])
+            if project not in keys:
+                raise DumpError(f"unknown Project_ID {project} in table 'Issue'")
+            writer.writerow([keys[project], kind, status, resolution, done, points])
             count += 1
+    if expected_rows is not None and count != expected_rows:
+        raise DumpError(f"the export has {count} rows, expected {expected_rows}")
     return count
