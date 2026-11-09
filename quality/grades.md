@@ -618,3 +618,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-28 — 2026-11-09 — grader: builder pre-check (judgement items also covered by the subagent reviews, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before 3e8ff7f | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-28-tawos-reader`; each commit "MCF-28: …" | — |
+| 3 | CI green on the PR | ✅ | PR #50 head checked green before Review | — |
+| 4 | PR adds tests | ✅ | Reader, v2 run, report and README tests; each review finding had a failing test first; 6 review mutations now caught | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D54, D54.1, D54.2 logged before the run (version 35). The velocity rule difference needs a new decision (D54.3) | PM decides at approval |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Pre-run review (2 decisions, 5 fixes) before the run; results review recomputed all headline numbers; 1 High (report text), fixed | — |
+| 8 | Each acceptance criterion met | ✅ | Data ADR before the run (R2); v1 and v2 side by side; DOI in README; results as they are (R3) | — |
+| 9 | README and rule pages match | ✅ | README v2 numbers are tested against `results/metrics-full.json` | — |
+| 10 | Workflow steps followed | ✅ | Method before results; no change after the results; reviews before approval | — |
+
+Result: pass — no ❌.
