@@ -22,6 +22,7 @@ import time
 import urllib.request
 from pathlib import Path
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeout
 from playwright.sync_api import expect, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,10 +41,10 @@ BAD = b"Issue_Key,Type\nA-1,Story\n"
 # see-through backgrounds and the opacity of parent elements are blended in. A background
 # image (for example a gradient) cannot be measured, so it is reported as a failure.
 # WCAG allows 3:1 for large text; this check asks 4.5:1 for all text (stricter).
-# MCF-42: (box, page, caption) colours as getComputedStyle gives them.
+# MCF-42: (box, page, caption, input border) colours as getComputedStyle gives them.
 THEME_RGB = {
-    "light": ("rgb(255, 255, 255)", "rgb(245, 246, 248)", "rgb(95, 99, 112)"),
-    "dark": ("rgb(26, 29, 35)", "rgb(15, 17, 21)", "rgb(163, 169, 182)"),
+    "light": ("rgb(255, 255, 255)", "rgb(245, 246, 248)", "rgb(95, 99, 112)", "rgb(135, 140, 152)"),
+    "dark": ("rgb(26, 29, 35)", "rgb(15, 17, 21)", "rgb(163, 169, 182)", "rgb(107, 114, 128)"),
 }
 CONTRAST_JS = """() => {
   const cv = document.createElement("canvas"); cv.width = cv.height = 1;
@@ -227,7 +228,16 @@ def main() -> int:
 
                     MCF-42: in dark mode, dark boxes on a darker page.
                     """
-                    box, main, cap = THEME_RGB[scheme]
+                    box, main, cap, edge = THEME_RGB[scheme]
+                    try:  # the input border fades to its new colour after a theme switch
+                        page.wait_for_function(
+                            """(edge) => getComputedStyle(document.querySelector(
+                              "[data-testid='stNumberInputContainer']")).borderTopColor === edge""",
+                            arg=edge,
+                            timeout=5_000,
+                        )
+                    except PlaywrightTimeout:
+                        pass  # the assert below reports the colour
                     page.wait_for_function(  # the boxes below the chart render a moment later
                         """() => document.querySelectorAll(
                           "[class*='st-key-section-'] > [data-testid='stExpander'] > "
@@ -252,13 +262,16 @@ def main() -> int:
                           "[data-testid='stMain'] [data-testid='stCaptionContainer']")]
                           .map(e => { const s = getComputedStyle(e);
                             return s.color + '|' + s.opacity; });
-                        return {boxes: boxes.length, main, caps: [...new Set(caps)]};
+                        const edge = getComputedStyle(document.querySelector(
+                          "[data-testid='stNumberInputContainer']")).borderTopColor;
+                        return {boxes: boxes.length, main, caps: [...new Set(caps)], edge};
                         }""",
                         box,
                     )
                     assert got["boxes"] >= 5, f"{scheme} bordered boxes: {got['boxes']}"
                     assert got["main"] == main, got["main"]
                     assert got["caps"] == [f"{cap}|1"], got["caps"]
+                    assert got["edge"] == edge, f"input border {got['edge']}, not {edge}"
 
                 def sample_dates(page=page):
                     expect(
@@ -375,6 +388,13 @@ def main() -> int:
 
                 def text_contrast(page=page):
                     """MCF-39: all visible text on the page has 4.5:1 contrast or more."""
+                    # Streamlit dims old elements while the page runs again (the check before
+                    # this one changes the backlog): wait until no element is stale.
+                    page.wait_for_function(
+                        "() => !document.querySelector('[data-stale=\"true\"]')",
+                        timeout=30_000,
+                    )
+                    page.wait_for_timeout(500)  # the dimming fades out
                     low = page.evaluate(CONTRAST_JS)
                     assert not low, f"{len(low)} low-contrast texts, first: {low[:3]}"
 

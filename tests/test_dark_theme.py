@@ -14,7 +14,8 @@ from mcf.web import logic
 
 ROOT = Path(__file__).resolve().parents[1]
 PAIR = re.compile(r"light-dark\((#[0-9a-f]{6}),(#[0-9a-f]{6})\)")
-HEX = re.compile(r"#[0-9a-f]{6}\b")
+# Review MCF-42: also 3-digit hex and rgb() colours, so no colour escapes the pair check.
+HEX = re.compile(r"#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?\b|rgba?\(")
 
 # The approved design (canvas MainDark, 2026-11-09), light -> dark.
 APPROVED = {
@@ -30,6 +31,7 @@ APPROVED = {
     "#f0faf3": "#16261b",
     "#878c98": "#6b7280",
     "#7d1d14": "#ffb4ab",  # error text: not in the canvas; light on the dark error box
+    "#0054a3": "#8cc4ff",  # info text (Streamlit's light colour); review MCF-42
 }
 
 
@@ -60,7 +62,8 @@ def test_the_config_has_both_themes_and_no_fixed_base():
     assert dark["backgroundColor"] == "#0f1115"
     assert dark["secondaryBackgroundColor"] == "#232730"
     assert dark["textColor"] == "#e6e8ee"
-    assert "light" in cfg["theme"]
+    # Review MCF-42: light mode keeps Streamlit's light colours (v1.1).
+    assert cfg["theme"]["light"] == {"backgroundColor": "#ffffff", "textColor": "#31333f"}
 
 
 def test_every_page_colour_has_a_dark_pair_from_the_design():
@@ -114,3 +117,36 @@ def test_the_chart_marker_table_uses_the_chart_colours():
 
     marks = logic.marker_table(facts())
     assert set(marks["color"]) <= set(logic.CHART_COLORS.values())
+
+
+# --- Review MCF-42 ---------------------------------------------------------------------------
+
+
+def _blend(top: str, alpha: float, under: str) -> str:
+    a = [int(top[i : i + 2], 16) for i in (1, 3, 5)]
+    b = [int(under[i : i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(
+        f"{round(alpha * x + (1 - alpha) * y):02x}" for x, y in zip(a, b, strict=True)
+    )
+
+
+def test_the_info_text_is_readable_on_the_dark_section_box():
+    """High contrast for "AI explanation not shown" inside a section: it was 4.30:1."""
+    css = logic.page_css()
+    assert '[data-testid="stAlertContentInfo"]{color:light-dark(#0054a3,#8cc4ff)}' in css
+    box = _blend("#3d9df3", 0.2, "#1a1d23")  # Streamlit's dark info box on the section box
+    assert contrast("#8cc4ff", box) >= 4.5
+    assert contrast("#0054a3", _blend("#1c83ff", 0.1, "#ffffff")) >= 4.5  # light unchanged
+
+
+def test_the_input_border_uses_streamlit_1_66_test_ids():
+    """The baseweb selectors matched nothing; these are the elements that draw the border."""
+    css = logic.page_css()
+    for testid in ("stTextInputRootElement", "stNumberInputContainer", "stDateInputField"):
+        assert f'[data-testid="{testid}"]' in css
+    assert "data-baseweb" not in css
+    # A theme switch left the border between the 2 colours: Streamlit's border fade stopped.
+    assert (
+        '[data-testid="stDateInputField"]{border-color:light-dark(#878c98,#6b7280);'
+        "transition:none}" in css
+    )

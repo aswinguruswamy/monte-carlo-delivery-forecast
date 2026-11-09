@@ -211,6 +211,7 @@ DARK = {
     "#f0faf3": "#16261b",  # velocity card
     "#878c98": "#6b7280",  # inner borders
     "#7d1d14": "#ffb4ab",  # error text
+    "#0054a3": "#8cc4ff",  # info text (Streamlit's light colour); was 4.30:1 in a dark box
 }
 # Altair draws the chart, so CSS cannot switch its colours: one set that passes 3:1 on
 # the light and the dark box (D48.1).
@@ -444,10 +445,12 @@ def page_css() -> str:
         f'[data-testid="stFileChip"] div{{{muted}}}'
         f'[data-testid="stFileUploaderDropzoneInstructions"] span{{{muted}}}'  # was 3.5:1
         f'[data-testid="stAlertContentError"]{{color:{ld("#7d1d14")}}}'  # was 4.2:1
+        f'[data-testid="stAlertContentInfo"]{{color:{ld("#0054a3")}}}'
         # MCF-42 canvas review: the inner expanders and the input boxes get a 3:1 border.
         '[data-testid="stExpander"] [data-testid="stExpander"] details,'
-        '[data-baseweb="input"],[data-baseweb="base-input"],[data-baseweb="select"]>div'
-        f"{{{border}}}"
+        '[data-testid="stTextInputRootElement"],[data-testid="stNumberInputContainer"],'
+        '[data-testid="stDateInputField"]'
+        f"{{{border};transition:none}}"  # the fade stopped midway after a theme switch
         # MCF-41: the 4 section labels have heading size; inner expanders keep theirs.
         + ",".join(
             f'.st-key-section-{n}>[data-testid="stExpander"]>details>summary p' for n in range(1, 5)
