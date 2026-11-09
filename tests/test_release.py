@@ -1,4 +1,4 @@
-"""MCF-27 checks: release v1.0.0 (G7, G8); MCF-44: release v1.1.0.
+"""MCF-27 checks: release v1.0.0 (G7, G8); MCF-44: release v1.1.0; MCF-45: release v1.2.0.
 
 AC1: the tag equals the package version, and a clean install works.
 The tag is made after the PM's go; CI builds the wheel, installs it in a clean
@@ -13,7 +13,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "1.1.0"  # MCF-44
+VERSION = "1.2.0"  # MCF-45
 
 
 def test_package_version_is_the_release_version():
@@ -110,3 +110,23 @@ def test_the_1_1_0_entry_has_the_ai_evaluation_result():
     entry = _section("1.1.0")
     assert "To run before the tag" not in entry
     assert "**PASS** on 2026-11-08" in entry and "30 of 30" in entry
+
+
+def test_the_1_2_0_entry_has_both_backtests_the_evaluation_and_the_limits():
+    """MCF-45: v1 unchanged; v2 published as it is (R3), with its limits (D54.3)."""
+    entry = _section("1.2.0")
+    for part in ("### Added", "### Changed", "### Fixed", "### Known limits"):
+        assert part in entry, part
+    assert "[Unreleased]" not in (ROOT / "CHANGELOG.md").read_text()
+    # v1 result unchanged; v2 result with its warnings
+    assert "69.0%" in entry and "7,692" in entry
+    assert "75.0%" in entry and "not robust" in entry and "73.5%" in entry
+    assert "D54.3" in entry
+    # AI evaluation evidence on the merged code (prompt version 5 unchanged)
+    assert "**PASS** on 2026-11-09" in entry and "30 of 30" in entry
+    assert "prompt version 5" in entry
+    assert "light-dark()" in entry  # older browsers (D48.1)
+    assert (
+        "[1.2.0]: https://github.com/aswinguruswamy/monte-carlo-delivery-forecast/releases/tag/v1.2.0"
+        in (ROOT / "CHANGELOG.md").read_text()
+    )
