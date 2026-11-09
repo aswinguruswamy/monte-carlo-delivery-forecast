@@ -631,7 +631,7 @@ Result: pass — no ❌.
 | 6 | AI ticket evaluation | n/a | No AI change | — |
 | 7 | Independent review with a verdict | ✅ | Subagent: 1 High (input border selectors), 1 Medium (info text 4.30:1), 2 test gaps; fixed | — |
 | 8 | Each acceptance criterion met | 🟡 | AC1–3 and AC5 met. AC4 changed: one set of chart colours for both themes (PM option A) | D48.1 |
-| 9 | README and rule pages match | ✅ | No README text names the theme | — |
+| 9 | README and rule pages match | ✅ | CHANGELOG Unreleased entry; no README text names the theme | — |
 | 10 | Workflow steps followed | ✅ | Design approved first, tests first, review before approval | — |
 
 Result: pass — no ❌.

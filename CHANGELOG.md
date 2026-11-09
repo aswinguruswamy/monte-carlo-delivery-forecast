@@ -2,6 +2,11 @@
 
 All notable changes are in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Dark theme** (MCF-42, D48.1): the page follows the device and the menu's System / Light / Dark switch, with dark colours from the approved design. Light mode keeps the 1.1.0 colours, with darker input and inner borders. The chart lines use one set of colours that is readable in both themes. The browser check tests both themes and a manual switch.
+
 ## [1.1.0] - 2026-11-08
 
 A clearer web page for sponsors and Jira exports with no editing. The forecast method and the back-test are unchanged.
