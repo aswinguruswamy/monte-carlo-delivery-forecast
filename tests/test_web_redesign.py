@@ -253,9 +253,9 @@ def test_the_demo_script_waits_for_text_that_the_page_shows():
     script = (Path(__file__).resolve().parents[1] / "scripts" / "record_demo.py").read_text()
     waits = re.findall(r'get_by_text\("([^"]+)"', script)
     assert waits
-    page_src = " ".join(
-        (Path(logic.__file__).parent / n).read_text() for n in ("logic.py", "app.py")
-    )
+    web = Path(logic.__file__).parent
+    sources = [web / "logic.py", web / "app.py", *sorted((web / "content").iterdir())]
+    page_src = " ".join(p.read_text(encoding="utf-8") for p in sources)  # MCF-47: + content
     for text in waits:
         stem = re.sub(r"\d+", "#", text)  # numbers vary: compare the words
         heading = re.sub(r"\d+", "#", logic.result_heading(facts()))

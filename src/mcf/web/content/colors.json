@@ -1,0 +1,47 @@
+{
+ "notes": {
+  "COLORS": "Text colours on white; each has 4.5:1 contrast or more (WCAG AA, tested). MCF-33 (D41).",
+  "DARK": "The dark colour of each light colour (MCF-42, D48.1; approved design, canvas MainDark).",
+  "CHART_COLORS": "Altair draws the chart, so CSS cannot switch its colours: one set that passes 3:1 on the light and the dark box (D48.1)."
+ },
+ "COLORS": {
+  "p50": "#2f6db5",
+  "p85": "#9a5a0c",
+  "p95": "#b8322f",
+  "velocity": "#1a7f37",
+  "muted": "#5f6370",
+  "ink": "#31333f"
+ },
+ "DARK": {
+  "#f5f6f8": "#0f1115",
+  "#ffffff": "#1a1d23",
+  "#31333f": "#e6e8ee",
+  "#5f6370": "#a3a9b6",
+  "#2f6db5": "#79b0ff",
+  "#9a5a0c": "#f2b05e",
+  "#b8322f": "#ff8a80",
+  "#1a7f37": "#5bd47a",
+  "#fff8ee": "#2a2216",
+  "#f0faf3": "#16261b",
+  "#878c98": "#6b7280",
+  "#7d1d14": "#ffb4ab",
+  "#0054a3": "#8cc4ff"
+ },
+ "DARK_ROLES": {
+  "#f5f6f8": "page",
+  "#ffffff": "boxes and cards",
+  "#31333f": "ink",
+  "#5f6370": "muted text",
+  "#fff8ee": "85% card",
+  "#f0faf3": "velocity card",
+  "#878c98": "inner borders",
+  "#7d1d14": "error text",
+  "#0054a3": "info text (Streamlit's light colour); was 4.30:1 in a dark box"
+ },
+ "CHART_COLORS": {
+  "p50": "#3d7fcd",
+  "p85": "#ab7119",
+  "p95": "#d25350",
+  "velocity": "#1d903e"
+ }
+}
