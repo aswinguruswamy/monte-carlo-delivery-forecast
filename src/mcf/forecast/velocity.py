@@ -37,6 +37,10 @@ class VelocityError(ValueError):
     """Velocity or a velocity date cannot be calculated from this input."""
 
 
+class VelocityTooFar(VelocityError):
+    """The velocity date would be after the last calendar date (9999-12-31)."""
+
+
 def _check_day(t: object) -> None:
     if isinstance(t, datetime) or not isinstance(t, date):
         raise VelocityError(f"day t must be a calendar date (datetime.date), got {t!r}")
@@ -90,10 +94,10 @@ def velocity_date(t: date, velocity: float, points_needed: float) -> date:
 
     exact = points_needed / velocity * SPRINT_DAYS
     if not math.isfinite(exact):
-        raise VelocityError(f"no date: {points_needed} points at velocity {velocity} is too far")
+        raise VelocityTooFar(f"no date: {points_needed} points at velocity {velocity} is too far")
     nearest = round(exact)
     days = nearest if abs(exact - nearest) <= _FLOAT_TOLERANCE else math.ceil(exact)
     try:
         return t + timedelta(days=days)
     except OverflowError as exc:
-        raise VelocityError(f"no date: {days} days after {t} is past the last date") from exc
+        raise VelocityTooFar(f"no date: {days} days after {t} is past the last date") from exc

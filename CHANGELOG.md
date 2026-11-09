@@ -2,6 +2,11 @@
 
 All notable changes are in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **v2 back-test on the full TAWOS data** (MCF-28, ADR 0003, D54, D54.1, D54.2): a reader for the TAWOS SQL dump that keeps only the allowed columns (`mcf.data.tawos_dump`), the v2 run (`mcf.backtest.full`) with the unchanged ADR 0002 method, and a side-by-side report (`docs/backtest-report-full.md`). Measure 1 is 75.0% (PASS, not robust: interval 73.0% to 77.1%); measure 2 PASS.
+
 ## [1.1.0] - 2026-11-08
 
 A clearer web page for sponsors and Jira exports with no editing. The forecast method and the back-test are unchanged.

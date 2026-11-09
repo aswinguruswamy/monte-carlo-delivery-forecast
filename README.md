@@ -72,6 +72,17 @@ Measure 1 did not pass: the 85% date was too early in 31.0% of cases. Measure 2 
 
 Full report, with one row for each project: [docs/backtest-report.md](docs/backtest-report.md).
 
+### v2: full TAWOS data (MCF-28)
+
+The same method on the full TAWOS Issue table (39 projects, 458,232 issues, also items with no story points and every resolution), with data rules fixed before the run (ADR 0003; D54, D54.1, D54.2): **22,619** scored cases.
+
+| Success measure | v1: extract | v2: full data |
+| --- | --- | --- |
+| 1. Calibration of the 85% date (pass 75–95%) | 69.0% **FAIL** | 75.0% **PASS** |
+| 2. Median error, Monte Carlo 50% vs velocity | 34 d vs 36 d **PASS** | 14 d vs 90 d **PASS** |
+
+Measure 1 passes on the full data only just: its bootstrap 95% interval (73.0% to 77.1%) crosses the 75% edge, so the pass is not robust. With "done = completed only" (information), it is 73.5% (FAIL). Measure 2 uses the 12,632 cases with a velocity date. **The v2 velocity rule (ADR 0003) takes the pace from the pointed items only but counts all N items as work, so its date is late when few items have points; the tool divides by all items (D44). Most of the measure 2 margin comes from this rule, so it does not test the velocity rule that users run.** On the 524 fully pointed cases with a velocity date the medians are 8 d vs 10 d. Side-by-side report: [docs/backtest-report-full.md](docs/backtest-report-full.md).
+
 ## Limits
 
 - The data holds only issues with story points, and only issues resolved as completed. Teams with many unestimated items may behave differently.
@@ -92,7 +103,9 @@ The back-test uses the TAWOS dataset extract (SOLAR-group/SPvsDevelopmentEffort,
 python -m mcf.data.download --dest data
 ```
 
-This gets the 29 files (47,205 rows) and checks each file with SHA-256. If a file does not match, the script stops. **Do not try to trace issues back to individual contributors.** The tool loads no names or titles, and only summary numbers are published.
+This gets the 29 files (47,205 rows) and checks each file with SHA-256. If a file does not match, the script stops.
+
+The v2 back-test uses the full TAWOS MySQL dump (`TAWOS.sql`, figshare article 19085834, doi [10.5522/04/21308124](https://doi.org/10.5522/04/21308124)). `mcf.data.tawos_dump` reads it without a database and keeps only the allowed columns (no keys, titles, text or user IDs); the checksums are in `src/mcf/data/tawos_full_manifest.json`. Neither the dump nor the export is in this repository. **Do not try to trace issues back to individual contributors.** The tool loads no names or titles, and only summary numbers are published.
 
 Re-run the back-test (about 7 minutes, measured on 2026-10-29: two runs of 406 s and 429 s):
 
@@ -107,6 +120,7 @@ python -m mcf.backtest.report --results results --commit <commit> --out docs/bac
 See [CITATION.cff](CITATION.cff). If you use the data, cite:
 
 - Tawosi, Al-Subaihin, Moussa, Sarro. *A Versatile Dataset of Agile Open Source Software Projects.* MSR 2022. https://doi.org/10.1145/3524842.3528029
+- The TAWOS dataset (full MySQL dump, used by the v2 back-test). https://doi.org/10.5522/04/21308124
 - Tawosi, Moussa, Sarro. *On the Relationship Between Story Points and Development Effort in Agile Open-Source Software.* ESEM 2022. https://doi.org/10.1145/3544902.3546238
 
 ## Handover
