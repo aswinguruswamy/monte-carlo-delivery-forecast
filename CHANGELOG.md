@@ -6,6 +6,7 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ### Added
 - **Dark theme** (MCF-42, D48.1): the page follows the device and the menu's System / Light / Dark switch, with dark colours from the approved design. Light mode keeps the 1.1.0 colours, with darker input and inner borders. The chart lines use one set of colours that is readable in both themes. The browser check tests both themes and a manual switch.
+- **v2 back-test on the full TAWOS data** (MCF-28, ADR 0003, D54, D54.1, D54.2): a reader for the TAWOS SQL dump that keeps only the allowed columns (`mcf.data.tawos_dump`), the v2 run (`mcf.backtest.full`) with the unchanged ADR 0002 method, and a side-by-side report (`docs/backtest-report-full.md`). Measure 1 is 75.0% (PASS, not robust: interval 73.0% to 77.1%); measure 2 PASS.
 
 ## [1.1.0] - 2026-11-08
 
