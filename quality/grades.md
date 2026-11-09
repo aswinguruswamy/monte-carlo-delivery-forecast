@@ -666,3 +666,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-46 — 2026-11-09 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before 85cce07 | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-46-one-backtest-engine`; each commit "MCF-46: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_backtest_engine.py` (6 tests, failed first); no existing test changed | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | The refactor tickets come from the PM's option A (2026-11-09); logged as D58 at approval | Log at approval |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: no High or Medium; 44 made-up inputs, old = new; 5 Low, fixed | — |
+| 8 | Each acceptance criterion met | ✅ | AC1: all 8 back-test outputs byte-identical at 10,000 runs (before = main 5431f6d, after = 9505c79); AC2: 871 old tests pass unchanged; AC3: browser check 46 of 46; AC5: see the PR | — |
+| 9 | README and rule pages match | ✅ | No user-facing change | — |
+| 10 | Workflow steps followed | ✅ | Baseline before the change, tests first for the review findings, review before approval | — |
+
+Result: pass — no ❌.

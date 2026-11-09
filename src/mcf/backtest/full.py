@@ -30,23 +30,14 @@ import math
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date
-from fractions import Fraction
 from pathlib import Path
 
 import numpy as np
 
-from mcf.backtest.metrics import (
-    BOOTSTRAP_RESAMPLES,
-    BOOTSTRAP_SEED,
-    NO_FORECAST_FLAG,
-    calibration_passes,
-    error_passes,
-)
-from mcf.backtest.run import SIZES, _after, _all_dates, _points_needed
+from mcf.backtest import metrics, run
+from mcf.backtest.run import SIZES, FullCase, run_cases
 from mcf.data.types import BUG, D04_KIND, NOT_COUNTED, VALUE
-from mcf.forecast.montecarlo import RUNS, case_generator, forecast_dates
-from mcf.forecast.throughput import counts_from_ordinals, window
-from mcf.forecast.velocity import SPRINTS, VelocityTooFar, velocity_date
+from mcf.forecast.montecarlo import RUNS
 
 # ADR 0003 rule 6 (D54): the types of the full table that the extract does not have.
 EXTRA_KIND = {
@@ -69,21 +60,6 @@ COLUMNS = ("Project_Key", "Type", "Status", "Resolution", "Resolution_Date", "St
 
 class FullBacktestError(ValueError):
     """The v2 back-test cannot run on this input."""
-
-
-@dataclass(frozen=True)
-class FullCase:
-    project: str
-    p: int
-    t: date
-    n: int
-    no_forecast: bool
-    mc50: date | None
-    mc85: date | None
-    mc95: date | None
-    velocity: date | None
-    actual: date
-    fully_pointed: bool
 
 
 @dataclass
@@ -187,50 +163,30 @@ def run_project_full(
     sizes: Iterable[int] = SIZES,
     runs: int = RUNS,
 ) -> tuple[list[FullCase], FullSummary]:
-    summary = FullSummary(project=project, p=p, value_items_done=int(ordinals.size))
-    cases: list[FullCase] = []
-    for n in sizes:
-        all_dates = _all_dates(ordinals)
-        ts = [t for t in all_dates if ordinals.size - _after(ordinals, t) >= n]
-        summary.cases[n] = len(ts)
-        summary.short_dates[n] = len(all_dates) - len(ts)
-        summary.no_forecast[n] = 0
-        summary.no_velocity[n] = 0
-        summary.no_pointed_item[n] = 0
-        summary.velocity_too_far[n] = 0
-        for t in ts:
-            start = _after(ordinals, t)
-            actual = date.fromordinal(int(ordinals[start + n - 1]))
-            last_day = ordinals[start + n - 1]
-            needed_pts = np.concatenate([points[start : start + n], points[ordinals == last_day]])
-            fully_pointed = not np.isnan(needed_pts).any()
-            first, last = window(t)
-            counts = counts_from_ordinals(ordinals, first, last)
-            if not counts.any():
-                summary.no_forecast[n] += 1
-                cases.append(
-                    FullCase(project, p, t, n, True, None, None, None, None, actual, fully_pointed)
-                )
-                continue
-            mc = forecast_dates(t, counts, n, case_generator(p, t, n), runs=runs)
-            in_window = (ordinals >= first.toordinal()) & (ordinals <= last.toordinal())
-            pointed = points[in_window]
-            pointed = pointed[~np.isnan(pointed)]
-            v = None
-            if not pointed.size:
-                summary.no_pointed_item[n] += 1
-            else:
-                filled = np.where(np.isnan(points), pointed.mean(), points)
-                needed = _points_needed(ordinals, filled, t, n, "mean")
-                try:
-                    v = velocity_date(t, float(pointed.sum()) / SPRINTS, needed)
-                except VelocityTooFar:  # D54.2; any other velocity error stops the run
-                    summary.velocity_too_far[n] += 1
-            if v is None:
-                summary.no_velocity[n] += 1
-            cases.append(
-                FullCase(project, p, t, n, False, mc[50], mc[85], mc[95], v, actual, fully_pointed)
-            )
+    """The v2 back-test of one project: the shared case loop with the ADR 0003 rules."""
+    cases, counts = run_cases(
+        ordinals,
+        points,
+        project,
+        p,
+        tie_rule="mean",
+        sizes=sizes,
+        runs=runs,
+        velocity_for=None,
+        too_far_raises=False,
+    )
+    no_velocity = {n: counts.no_pointed_item[n] + counts.velocity_too_far[n] for n in counts.cases}
+    summary = FullSummary(
+        project=project,
+        p=p,
+        value_items_done=int(ordinals.size),
+        cases=counts.cases,
+        no_forecast=counts.no_forecast,
+        no_velocity=no_velocity,
+        no_pointed_item=counts.no_pointed_item,
+        velocity_too_far=counts.velocity_too_far,
+        short_dates=counts.short_dates,
+    )
     return cases, summary
 
 
@@ -258,69 +214,8 @@ def run_full(
     return cases, summaries
 
 
-def _days(a: date, b: date) -> int:
-    return (a - b).days
-
-
 def _group(cases: list[FullCase]) -> dict:
-    """Measure 1 on every forecast case; measure 2 (both methods) on the velocity cases."""
-    scored = [c for c in cases if not c.no_forecast]
-    with_v = [c for c in scored if c.velocity is not None]
-    row: dict = {
-        "cases": len(scored),
-        "no_forecast_cases": len(cases) - len(scored),
-        "measure_2_cases": len(with_v),
-    }
-    if scored:
-        row["calibration_50"] = float(np.mean([c.actual <= c.mc50 for c in scored]))
-        row["calibration_85"] = float(np.mean([c.actual <= c.mc85 for c in scored]))
-        row["calibration_95"] = float(np.mean([c.actual <= c.mc95 for c in scored]))
-    if with_v:
-        mc = np.array([_days(c.mc50, c.actual) for c in with_v], dtype=float)
-        v = np.array([_days(c.velocity, c.actual) for c in with_v], dtype=float)
-        row.update(
-            median_error_mc50=float(np.median(np.abs(mc))),
-            median_error_velocity=float(np.median(np.abs(v))),
-            mean_error_mc50=float(np.abs(mc).mean()),
-            mean_error_velocity=float(np.abs(v).mean()),
-            bias_mc50=float(mc.mean()),
-            bias_velocity=float(v.mean()),
-        )
-    return row
-
-
-def _bootstrap(groups: dict[str, list[FullCase]]) -> dict:
-    """As ADR 0002 and D30: whole projects resampled; measure 2 on the velocity cases."""
-    per = []
-    for cases in groups.values():
-        scored = [c for c in cases if not c.no_forecast]
-        if scored:
-            hit = np.array([c.actual <= c.mc85 for c in scored], dtype=bool)
-            with_v = [c for c in scored if c.velocity is not None]
-            mc = np.array([abs(_days(c.mc50, c.actual)) for c in with_v], dtype=float)
-            v = np.array([abs(_days(c.velocity, c.actual)) for c in with_v], dtype=float)
-            per.append((hit, mc, v))
-    rng = np.random.default_rng(BOOTSTRAP_SEED)
-    calib = np.empty(BOOTSTRAP_RESAMPLES)
-    diff = np.full(BOOTSTRAP_RESAMPLES, np.nan)
-    for i in range(BOOTSTRAP_RESAMPLES):
-        pick = rng.integers(0, len(per), size=len(per))
-        calib[i] = np.concatenate([per[j][0] for j in pick]).mean()
-        mc = np.concatenate([per[j][1] for j in pick])
-        if mc.size:
-            diff[i] = np.median(np.concatenate([per[j][2] for j in pick])) - np.median(mc)
-    ok = diff[~np.isnan(diff)]
-    return {
-        "resamples": BOOTSTRAP_RESAMPLES,
-        "seed": BOOTSTRAP_SEED,
-        "projects": len(per),
-        "calibration_85_95ci": [float(x) for x in np.quantile(calib, [0.025, 0.975])],
-        "median_error_difference_95ci": (
-            [float(x) for x in np.quantile(ok, [0.025, 0.975])] if ok.size else None
-        ),
-        "median_error_difference_resamples": int(ok.size),
-        "median_error_difference_meaning": "velocity median - Monte Carlo median; > 0 = MC better",
-    }
+    return metrics.group(cases, velocity_cases=True)
 
 
 def full_metrics(cases: list[FullCase], summaries: list[FullSummary]) -> dict:
@@ -328,18 +223,7 @@ def full_metrics(cases: list[FullCase], summaries: list[FullSummary]) -> dict:
     scored = [c for c in cases if not c.no_forecast]
     if not scored:
         raise FullBacktestError("no forecast case")
-    summary = _group(cases)
-    hits = sum(c.actual <= c.mc85 for c in scored)
-    share = Fraction(summary["no_forecast_cases"], len(cases))
-    summary["calibration_85_no_forecast_as_miss"] = hits / len(cases)
-    summary["no_forecast_share"] = float(share)
-    summary["no_forecast_over_10_percent"] = share > NO_FORECAST_FLAG
-    summary["measure_1_pass"] = calibration_passes(Fraction(hits, len(scored)))
-    summary["measure_2_pass"] = (
-        error_passes(summary["median_error_mc50"], summary["median_error_velocity"])
-        if summary["measure_2_cases"]
-        else None
-    )
+    summary = metrics.pass_summary(cases, _group(cases), velocity_cases=True)
     summary["projects"] = len(summaries)
     summary["projects_with_cases"] = len({c.project for c in cases})
     summary["value_items_done"] = sum(s.value_items_done for s in summaries)
@@ -360,43 +244,19 @@ def full_metrics(cases: list[FullCase], summaries: list[FullSummary]) -> dict:
             "counts": s.counts,
         }
     summary["no_case_projects"] = [s.project for s in summaries if not groups[s.project]]
-    rates = [r["calibration_85"] for r in by_project.values() if "calibration_85" in r]
-    summary["mean_project_calibration_85"] = float(np.mean(rates))
+    summary["mean_project_calibration_85"] = metrics.mean_calibration(by_project)
     return {
         "summary": summary,
         "by_n": {str(n): _group([c for c in cases if c.n == n]) for n in SIZES},
         "by_project": by_project,
         "pointed_only": _group([c for c in cases if c.fully_pointed]),
-        "bootstrap": _bootstrap(groups),
+        "bootstrap": metrics.bootstrap(groups, velocity_cases=True),
     }
 
 
-CASE_COLUMNS = [
-    "project",
-    "p",
-    "t",
-    "n",
-    "no_forecast",
-    "mc50",
-    "mc85",
-    "mc95",
-    "velocity",
-    "actual",
-    "fully_pointed",
-]
-
-
 def write_cases(cases: Iterable[FullCase], path: Path) -> None:
-    """One row per case. No issue rows (D08)."""
-    with Path(path).open("w", newline="", encoding="utf-8") as fh:
-        w = csv.writer(fh, lineterminator="\n")
-        w.writerow(CASE_COLUMNS)
-        for c in cases:
-            w.writerow(
-                [c.project, c.p, c.t, c.n, int(c.no_forecast)]
-                + ["" if d is None else d for d in (c.mc50, c.mc85, c.mc95, c.velocity)]
-                + [c.actual, int(c.fully_pointed)]
-            )
+    """One row per case, with the `fully_pointed` column. No issue rows (D08)."""
+    run.write_cases(cases, path, fully_pointed=True)
 
 
 def main(argv: list[str] | None = None) -> int:
