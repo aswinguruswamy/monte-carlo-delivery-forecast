@@ -49,6 +49,9 @@ MAX_SAMPLE_BYTES = 100 * 1024
 METADATA_FILES = {
     "src/mcf/data/tawos_manifest.json",
     "results/metrics.json",  # summary numbers only (MCF-19)
+    ".devcontainer/devcontainer.json",  # editor settings, no data (PM, 5c90952 on main)
+    "src/mcf/data/tawos_full_manifest.json",  # checksums and counts only (MCF-28)
+    "results/metrics-full.json",  # summary numbers only (MCF-28)
 }
 REQUIRED_PYTHONS = ["3.11", "3.12"]
 

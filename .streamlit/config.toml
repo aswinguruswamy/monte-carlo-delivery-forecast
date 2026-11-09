@@ -7,3 +7,16 @@ gatherUsageStats = false  # send no usage data to Streamlit
 
 [client]
 toolbarMode = "viewer"  # no "Deploy" button or developer menu
+
+# MCF-42 (D48.1): light and dark themes. No fixed base, so the page follows the device
+# (System) and the menu's Light / Dark switch. The page CSS uses light-dark() for the rest.
+[theme]
+
+[theme.light]
+backgroundColor = "#ffffff"
+textColor = "#31333f"
+
+[theme.dark]
+backgroundColor = "#0f1115"
+secondaryBackgroundColor = "#232730"
+textColor = "#e6e8ee"

@@ -1,0 +1,176 @@
+"""MCF-28 checks: the side-by-side report of the v1 (extract) and v2 (full TAWOS) back-test.
+
+Every number comes from the two metrics files. The data here is made up.
+"""
+
+from __future__ import annotations
+
+import json
+from datetime import date, timedelta
+from pathlib import Path
+
+import pytest
+
+from mcf.backtest.full import full_metrics, run_full
+from mcf.backtest.full_report import FullReportError, render_full_report
+
+ROOT = Path(__file__).resolve().parents[1]
+V1 = json.loads((ROOT / "results" / "metrics.json").read_text())
+HEADER = "Project_Key,Type,Status,Resolution,Resolution_Date,Story_Point\n"
+INFO = {
+    "code_commit": "abc1234",
+    "export_sha256": "0" * 64,
+    "rows": 400,
+    "runs": 200,
+    "cases_any_sha256": "1" * 64,
+    "cases_completed_sha256": "2" * 64,
+}
+
+
+@pytest.fixture(scope="module")
+def v2(tmp_path_factory) -> dict:
+    p = tmp_path_factory.mktemp("d") / "issues.csv"
+    start = date(2026, 1, 1)
+    lines = [
+        f"AA,Story,Closed,{'Fixed' if d % 3 else 'Duplicate'},{start + timedelta(days=d)} 10:00:00,"
+        f"{'' if d % 4 == 0 else '3'}\n"
+        for d in range(200)
+    ] + [f"BB,Story,Closed,Fixed,{start + timedelta(days=2 * d)} 10:00:00,\n" for d in range(100)]
+    p.write_text(HEADER + "".join(lines), encoding="utf-8")
+    out = {}
+    for rule in ("any", "completed"):
+        out[rule] = full_metrics(*run_full(p, done_rule=rule, runs=200))
+    return out
+
+
+def report(v2: dict) -> str:
+    return render_full_report(V1, v2, INFO)
+
+
+def test_the_summary_puts_v1_and_v2_side_by_side(v2):
+    text = report(v2)
+    assert text.startswith("# Back-test report — full TAWOS data (v2) next to the extract (v1)")
+    s = v2["any"]["summary"]
+    row = next(line for line in text.splitlines() if line.startswith("| 1. Calibration"))
+    assert "69.0%" in row  # v1
+    assert f"{s['calibration_85']:.1%}" in row
+    assert ("**PASS**" if s["measure_1_pass"] else "**FAIL**") in row
+
+
+def test_completed_only_is_shown_next_to_it_for_information(v2):
+    text = report(v2)
+    c = v2["completed"]["summary"]
+    assert "Done = completed only (information)" in text
+    assert f"{c['calibration_85']:.1%}" in text
+
+
+def test_measure_2_names_its_cases_and_the_fully_pointed_view(v2):
+    text = report(v2)
+    s = v2["any"]["summary"]
+    assert f"{s['measure_2_cases']:,} cases with a velocity date" in text
+    assert "Fully pointed cases (information)" in text
+
+
+def test_counts_per_project_and_the_d54_rules_are_in_the_report(v2):
+    text = report(v2)
+    assert "| Project | Issues read | No resolution date | Not a value item |" in text
+    assert "| AA | 200 |" in text
+    for word in ("D54.1", "D54.2", "not certain", "R3"):
+        assert word in text
+
+
+def test_no_issue_rows_or_keys(v2):
+    text = report(v2)
+    assert "AA-1" not in text and "10:00:00" not in text and "Story," not in text
+
+
+def test_missing_run_information_is_an_error(v2):
+    with pytest.raises(FullReportError, match="code_commit"):
+        render_full_report(V1, v2, {k: v for k, v in INFO.items() if k != "code_commit"})
+
+
+def test_no_measure_2_case_shows_a_dash(v2):
+    bare = json.loads(json.dumps(v2))
+    bare["any"]["summary"].update(
+        measure_2_cases=0, measure_2_pass=None, median_error_mc50=None, median_error_velocity=None
+    )
+    row = next(
+        line for line in render_full_report(V1, bare, INFO).splitlines() if line.startswith("| 2.")
+    )
+    assert "no case" in row
+
+
+# --- Regressions found in the first real report (2026-11-09) ---------------------------------
+
+
+def test_v1_measure_2_shows_its_errors(v2):
+    """v1 metrics have no "measure_2_cases": every v1 scored case has a velocity date."""
+    row = next(line for line in report(v2).splitlines() if line.startswith("| 2."))
+    assert "34 d vs 36 d **PASS**" in row
+
+
+def test_bootstrap_days_are_written_once_and_rounded(v2):
+    text = report(v2)
+    assert "| 0 to 6 days |" in text
+    assert ".012" not in text
+
+
+def test_a_pass_whose_interval_crosses_the_band_edge_is_called_not_robust(v2):
+    edge = json.loads(json.dumps(v2))
+    edge["any"]["summary"].update(calibration_85=0.7504, measure_1_pass=True)
+    edge["any"]["bootstrap"]["calibration_85_95ci"] = [0.7296, 0.7706]
+    text = render_full_report(V1, edge, INFO)
+    assert "crosses the 75% edge of the band" in text and "not robust" in text
+    inside = json.loads(json.dumps(edge))
+    inside["any"]["bootstrap"]["calibration_85_95ci"] = [0.80, 0.85]
+    assert "crosses the" not in render_full_report(V1, inside, INFO)
+
+
+def test_the_readme_v2_numbers_match_the_metrics_file():
+    m = json.loads((ROOT / "results" / "metrics-full.json").read_text())
+    a, c = m["any"]["summary"], m["completed"]["summary"]
+    readme = (ROOT / "README.md").read_text()
+    ci = m["any"]["bootstrap"]["calibration_85_95ci"]
+    for text in (
+        f"**{a['cases']:,}** scored cases",
+        f"{a['calibration_85']:.1%} **PASS**",
+        f"{a['median_error_mc50']:g} d vs {a['median_error_velocity']:g} d **PASS**",
+        f"({ci[0]:.1%} to {ci[1]:.1%})",
+        f"it is {c['calibration_85']:.1%} (FAIL)",
+        f"the {a['measure_2_cases']:,} cases with a velocity date",
+    ):
+        assert text in readme, text
+
+
+# --- Independent results review (2026-11-09) ---------------------------------------------------
+
+
+def test_the_fully_pointed_view_names_its_velocity_cases(v2):
+    text = report(v2)
+    p = v2["any"]["pointed_only"]
+    assert "| Cases | Cases with a velocity date | Calibration 85% |" in text
+    assert f"| {p['cases']:,} | {p['measure_2_cases']:,} |" in text
+
+
+def test_measure_1_shows_the_exact_count_and_the_count_needed(v2):
+    import math
+
+    s = v2["any"]["summary"]
+    hits = round(s["calibration_85"] * s["cases"])
+    need = math.ceil(0.75 * s["cases"])
+    assert f"{hits:,} of {s['cases']:,} cases (75% needs {need:,})" in report(v2)
+
+
+def test_the_limits_explain_the_velocity_rule_and_do_not_call_it_the_tools_rule(v2):
+    text = report(v2)
+    assert "pace from the pointed items only" in text
+    assert "The tool (D44) divides the points by all value items" in text
+    assert "sparse estimates" not in text
+    assert "close (see" not in text
+
+
+def test_the_readme_does_not_call_the_fully_pointed_view_531_medians():
+    readme = (ROOT / "README.md").read_text()
+    m = json.loads((ROOT / "results" / "metrics-full.json").read_text())
+    p = m["any"]["pointed_only"]
+    assert f"the {p['measure_2_cases']:,} fully pointed cases with a velocity date" in readme

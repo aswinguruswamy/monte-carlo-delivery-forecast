@@ -4,7 +4,7 @@ This page explains how the tool makes its dates and how the back-test checks the
 
 ## The question
 
-"When will the next N value items be done?" A value item has one of 12 types: Story, Task, Improvement, New Feature, Suggestion, Enhancement Request, Sub-task, Technical task, Documentation, Technical Debt, Wish or Question (D04.1). Bugs and epics do not count.
+"When will the next N value items be done?" A value item has one of 13 types: Story, Task, Improvement, New Feature, Suggestion, Enhancement Request, Sub-task, Subtask (Jira Cloud's name for Sub-task), Technical task, Documentation, Technical Debt, Wish or Question (D04.2). Bugs and epics do not count.
 
 ## Monte Carlo
 

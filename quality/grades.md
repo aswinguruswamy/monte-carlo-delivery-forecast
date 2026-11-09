@@ -465,3 +465,187 @@ Result: pass — no ❌. Item 8 closes after the PM's 20-second test.
 | 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-35 — 2026-11-04 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-35-plain-wording`; each commit "MCF-35: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | New and changed tests in `tests/test_web_redesign.py` and `tests/test_web_app.py`; failing tests committed first twice; browser check 20 of 20 | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D41, D44, D45 logged. **D46** ("chance of completion" back on the page) is decided at this approval | PM decides D46 |
+| 6 | AI ticket evaluation | n/a | No AI change (the sentence bank is not touched) | — |
+| 7 | Independent review with a verdict | ✅ | Subagent grade B−, no blocker; weak AI-line test, "Empty" for a toggle, stale demo guide and demo script fixed with tests first; honesty point, bank wording and card layout go to the PM (see PR) | PM decides |
+| 8 | Each acceptance criterion met | ✅ | All MCF-35 criteria; numbers and CLI unchanged | — |
+| 9 | README and rule pages match | ✅ | `docs/demo.md` check name updated | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌. Item 5 closes with D46.
+
+## Ticket MCF-36 — 2026-11-04 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-36-how-it-works`; each commit "MCF-36: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_how_it_works.py` (21 tests) and an AppTest; failing tests committed first twice; browser check 20 of 20 | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D46 (warning on the page: closed by this ticket), R3 | — |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent grade B+, no blocker; typed "84 days" / "10,000" now from `WINDOW_DAYS` / `RUNS` (planted change was not caught before), 903 no-forecast cases added, "up to that date", "not bugs or epics" — all with tests first | — |
+| 8 | Each acceptance criterion met | ✅ | Section with 2 parts, figures from tested facts, footer, chart caption, README "Try it" | — |
+| 9 | README and rule pages match | ✅ | README "Try it" line | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
+
+## Ticket MCF-37 — 2026-11-04 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-37-layout` (on top of MCF-36); each commit "MCF-37: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_layout.py` and a new browser-check step; failing tests committed first twice; browser check 22 of 22 | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D41, D46 (layout only, no new decision) | — |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent grade C+, no blocker; caption contrast 3.7:1 → 5.9:1; a broken box selector passed every check → new browser step fails on it (planted again: caught); "touch" → "side by side"; section 2 order; Full report description | — |
+| 8 | Each acceptance criterion met | ✅ | 4 numbered boxes plus Full report, grey page, history in section 2, cards stack on a phone, same-day lines and note, other states, fixed sidebar | — |
+| 9 | README and rule pages match | ✅ | No doc names the old layout | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
+
+## Ticket MCF-38 — 2026-11-04 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-38-subtask`; each commit "MCF-38: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | Type, Jira export and TAWOS tests; failing tests committed first; the TAWOS check ran with the 29 downloaded files (no "Subtask" rows) | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D04.2 is logged at this approval (D04.1 struck through) | PM approves |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent grade A−, no blocker; not a back-test change after results (TAWOS has no "Subtask"); weak exit-code test made exact; stale "D04.1" in `throughput.py` fixed | — |
+| 8 | Each acceptance criterion met | ✅ | "Subtask" is a value item on done and open rows; other spellings stay errors; back-test unchanged | — |
+| 9 | README and rule pages match | ✅ | `docs/method.md` lists 13 value types | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌. Closes the MCF-31 open point "Subtask vs Sub-task".
+
+## Ticket MCF-39 — 2026-11-07 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-39-light-theme`; each commit "MCF-39: …" | — |
+| 3 | CI green on the PR | ✅ | PR #45 head checked green before Review | — |
+| 4 | PR adds tests | 🟡 | Config, CSS and browser tests (dark-mode phone, contrast, theme switch, contrast self-test). The tests were run and failed before the fix, but were committed with the fix, not first | Commit failing tests first next time |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D48 is logged at this approval | PM approves |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: no blocker; 1 Medium (contrast check missed see-through colours, 6 of 8 bad cases) and 5 Low, all fixed tests first; the stronger check found 3 real pale texts, fixed | — |
+| 8 | Each acceptance criterion met | ✅ | Light theme, no switch, 4.5:1 in dark mode, browser check in dark mode, config test | — |
+| 9 | README and rule pages match | ✅ | No doc names the dark theme | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
+
+## Ticket MCF-40 — 2026-11-07 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-40-card-notes`; each commit "MCF-40: …" | — |
+| 3 | CI green on the PR | ✅ | PR #46 head checked green before Review | — |
+| 4 | PR adds tests | 🟡 | Card, HTML, help and browser tests; run and failed before the change, but committed with it | Commit failing tests first next time |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D49 is logged at this approval | PM approves |
+| 6 | AI ticket evaluation | n/a | No AI change (the bank does not name the card notes) | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: 1 Medium (no on-page text said which date to share) and 3 Low, all fixed tests first | — |
+| 8 | Each acceptance criterion met | ✅ | No notes except "Needs story points"; highlight kept; P50/P85/P95 and "give the 85% date" in the help | — |
+| 9 | README and rule pages match | 🟡 | No repo doc names the notes; the design canvas is out of date for the cards (noted in the PR) | PM decides if the canvas is updated |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
+
+## Ticket MCF-41 — 2026-11-07 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-41-collapsible`; each commit "MCF-41: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | 🟡 | AppTest (4 sections open, inner expanders inside, hidden headings) and browser checks (close and open, stays closed, label size); run and failed before the change, but committed with it | Commit failing tests first next time |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D50 is logged at this approval | PM approves |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: no blocker; 2 Medium (screen-reader headings lost; the key untested) and 3 Low, fixed tests first; AC2 text change judged sound | — |
+| 8 | Each acceptance criterion met | ✅ | Sections close and open, open on load, stay closed on a rerun, inner parts unchanged, D46 warning on load | — |
+| 9 | README and rule pages match | 🟡 | No doc names the boxes; `scripts/record_demo.py` waits for headings that changed (the video is not recorded again, PM rule) | Update the demo script if the video is recorded again |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval; AC2 changed before the build and flagged for the PM | — |
+
+Result: pass — no ❌.
+
+## Ticket MCF-43 — 2026-11-07 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-43-demo-video`; each commit "MCF-43: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | 🟡 | Script tests, the AppTest text check (fails on 2 planted wrong texts) and the release guard; run and failed before the change, but committed with it | Commit failing tests first next time |
+| 5 | Each decision ID in the PR is in the Decision Log | n/a | No new decision | — |
+| 6 | AI ticket evaluation | n/a | No AI change; the video is made with no API key | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: no blocker; 2 Medium (weak text check; old version in the footer) and 3 Low, fixed tests first | — |
+| 8 | Each acceptance criterion met | 🟡 | AC1–3 and AC5 met. AC4: the release video is recorded after the version bump (v1.1.0 release step); a draft is with the PM | Record with `--release 1.1.0` at the release |
+| 9 | README and rule pages match | ✅ | `docs/demo.md` lists the videos by release and the record step | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
+
+## Ticket MCF-44 — 2026-11-08 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before the first commit | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-44-release-1.1.0`; each commit "MCF-44: …" | — |
+| 3 | CI green on the PR | ✅ | PR head checked green before Review | — |
+| 4 | PR adds tests | ✅ | Release tests (version, 1.1.0 entry, lock file header) and the footer test failed first, then passed | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D41–D51 and D04.2 are in the Decision Log (version 31) | — |
+| 6 | AI ticket evaluation | 🟡 | Prompt version 5 since MCF-32; the evaluation run is a condition of the go (PM starts it) | PM runs the workflow |
+| 7 | Independent review with a verdict | ✅ | Subagent: no blocker; 3 Medium (cut footer, a wrong "Fixed" item, notes not matching) and 7 Low, fixed or answered | — |
+| 8 | Each acceptance criterion met | 🟡 | AC1–4 and AC6 met; AC5 (evaluation) and AC7 (live page) are PM steps before and after the tag | PM steps |
+| 9 | README and rule pages match | ✅ | README status, CITATION and CHANGELOG say 1.1.0, 2026-11-08 | Update the date if the tag is later |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
+
+## Ticket MCF-42 — 2026-11-09 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before f697df7 | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-42-dark-theme`; each commit "MCF-42: …" | — |
+| 3 | CI green on the PR | ✅ | PR #51 head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_dark_theme.py` and the browser check theme checks failed first; review gaps closed tests-first | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D48.1 (dark theme, chart colours) is logged at approval | Log at approval |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: 1 High (input border selectors), 1 Medium (info text 4.30:1), 2 test gaps; fixed | — |
+| 8 | Each acceptance criterion met | 🟡 | AC1–3 and AC5 met. AC4 changed: one set of chart colours for both themes (PM option A) | D48.1 |
+| 9 | README and rule pages match | ✅ | CHANGELOG Unreleased entry; no README text names the theme | — |
+| 10 | Workflow steps followed | ✅ | Design approved first, tests first, review before approval | — |
+## Ticket MCF-28 — 2026-11-09 — grader: builder pre-check (judgement items also covered by the subagent reviews, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before 3e8ff7f | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-28-tawos-reader`; each commit "MCF-28: …" | — |
+| 3 | CI green on the PR | ✅ | PR #50 head checked green before Review | — |
+| 4 | PR adds tests | ✅ | Reader, v2 run, report and README tests; each review finding had a failing test first; 6 review mutations now caught | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D54, D54.1, D54.2 logged before the run (version 35). The velocity rule difference needs a new decision (D54.3) | PM decides at approval |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Pre-run review (2 decisions, 5 fixes) before the run; results review recomputed all headline numbers; 1 High (report text), fixed | — |
+| 8 | Each acceptance criterion met | ✅ | Data ADR before the run (R2); v1 and v2 side by side; DOI in README; results as they are (R3) | — |
+| 9 | README and rule pages match | ✅ | README v2 numbers are tested against `results/metrics-full.json` | — |
+| 10 | Workflow steps followed | ✅ | Method before results; no change after the results; reviews before approval | — |
+
+Result: pass — no ❌.
