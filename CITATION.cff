@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below, and cite the TAWOS dataset papers."
 title: "Monte Carlo Delivery Forecast (MCF)"
-version: "1.1.0"
-date-released: "2026-11-08"
+version: "1.2.0"
+date-released: "2026-11-09"
 license: Apache-2.0
 authors:
   - family-names: Guruswamy
@@ -37,3 +37,15 @@ references:
       name: "ESEM 2022: ACM/IEEE International Symposium on Empirical Software Engineering and Measurement"
     year: 2022
     doi: "10.1145/3544902.3546238"
+  - type: data
+    title: "The TAWOS dataset"
+    authors:
+      - family-names: Tawosi
+        given-names: Vali
+      - family-names: Al-Subaihin
+        given-names: Afnan
+      - family-names: Moussa
+        given-names: Rebecca
+      - family-names: Sarro
+        given-names: Federica
+    doi: "10.5522/04/21308124"

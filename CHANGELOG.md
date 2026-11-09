@@ -2,11 +2,41 @@
 
 All notable changes are in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.2.0] - 2026-11-09
+
+A dark theme for the web page, and a second back-test on the full TAWOS data. The forecast method, the tool's velocity rule and the AI prompt are unchanged.
 
 ### Added
-- **Dark theme** (MCF-42, D48.1): the page follows the device and the menu's System / Light / Dark switch, with dark colours from the approved design. Light mode keeps the 1.1.0 colours, with darker input and inner borders. The chart lines use one set of colours that is readable in both themes. The browser check tests both themes and a manual switch.
-- **v2 back-test on the full TAWOS data** (MCF-28, ADR 0003, D54, D54.1, D54.2): a reader for the TAWOS SQL dump that keeps only the allowed columns (`mcf.data.tawos_dump`), the v2 run (`mcf.backtest.full`) with the unchanged ADR 0002 method, and a side-by-side report (`docs/backtest-report-full.md`). Measure 1 is 75.0% (PASS, not robust: interval 73.0% to 77.1%); measure 2 PASS.
+- **Dark theme** (MCF-42, D48.1): the page follows the device and the menu's System / Light / Dark switch, with dark colours from the approved design. Light mode keeps the 1.1.0 colours, except darker input and inner borders (3:1) and new chart line colours: one set that is readable in both themes, so the lines no longer match the card colours exactly (D41). The browser check tests both themes and a manual switch (46 checks).
+- **v2 back-test on the full TAWOS data** (MCF-28, ADR 0003, D54, D54.1, D54.2): a reader for the TAWOS SQL dump that keeps only the allowed columns (`mcf.data.tawos_dump`; no keys, titles or user IDs), the v2 run (`mcf.backtest.full`) with the unchanged ADR 0002 method, and a side-by-side report (`docs/backtest-report-full.md`, summary numbers in `results/metrics-full.json`). The README cites the dataset DOI. Neither the dump nor the export is in the repository (D08).
+
+- **Dev container settings** for GitHub Codespaces (`.devcontainer/devcontainer.json`, added by the PM).
+
+### Changed
+- The manual AI evaluation workflow uploads its result with `actions/upload-artifact` 7.0.2 (PR #34, D47).
+- The page no longer forces the light theme (replaces "Light theme only" of 1.1.0, D48).
+- The repository check for data files allows the dev container settings file (`.devcontainer/devcontainer.json`).
+
+### Fixed
+- The info text ("AI explanation not shown") was 4.30:1 on a dark section box; it is now readable in both themes (MCF-42).
+- The browser check could fail by chance when Streamlit dimmed old elements during a rerun; it now waits until no element is stale (MCF-42).
+
+### Back-test results (published as they are, R3)
+- **v1, TAWOS extract (unchanged since 1.0.0):** measure 1 **FAIL**, the 85% date was correct in 69.0% of 7,692 cases (pass band 75–95%); measure 2 **PASS**, 34 days vs 36 days.
+- **v2, full TAWOS data (new):** 39 projects, 22,619 scored cases. Measure 1 **PASS** at 75.0% (16,974 of 22,619), but **not robust**: its bootstrap 95% interval (73.0% to 77.1%) crosses the 75% edge. With "done = completed only" (information) it is 73.5% (**FAIL**). Measure 2 **PASS**, 14 days vs 90 days on 12,632 cases, but see the D54.3 limit below. Full report: `docs/backtest-report-full.md`.
+
+### AI evaluation (measure 3), prompt version 5 (unchanged)
+- **PASS** on 2026-11-09 (claude-haiku-5-5; 1 manual run on the merged code of this release, with upload-artifact 7.0.2): 10 cases × 3 runs; 30 of 30 replies were a valid choice of approved sentences; 0 wrong numbers or dates; 0 API errors; the injection case passed 3 of 3 runs.
+
+### Known limits
+- All known limits of 1.0.0 and 1.1.0 still apply, except "light only": the 50% date is not certain; on the extract the 85% date was too early in about a third of the cases.
+- v2 counts every resolved issue as done, also Won't Fix, Duplicate and similar (about 4 in 10 resolutions). The v2 measure 1 pass depends on this rule: with completed only, it fails.
+- **D54.3:** the v2 velocity rule (ADR 0003) takes the pace from the items with story points only, but counts all N items as work, so its date is late when few items have points. The tool divides by all items (D44). Most of the v2 measure 2 margin comes from this rule, so it does not test the velocity rule that users run. On the 524 fully pointed cases with a velocity date: 8 days vs 10 days.
+- Only 14% of the full TAWOS issues have story points; large story points are used as recorded (D54.2).
+- The page in the app still shows only the v1 back-test result and its warning, and its footer links only to the v1 report.
+- No new demo video for 1.2.0 (D55): the v1.1.0 video shows the light page and "Version 1.1.0".
+- Browsers without CSS `light-dark()` (Chrome before 123, Safari before 17.5, Firefox before 120) show Streamlit's own colours, not the page colours.
+- Some of Streamlit's own parts are below 3:1 (radio circle, focus ring, next-month days in the date picker).
 
 ## [1.1.0] - 2026-11-08
 
@@ -80,5 +110,6 @@ First public release.
 - The public demo has no API key, so the AI explanation is off there (D39).
 - The sample file on the web page needs a repository checkout (editable install).
 
+[1.2.0]: https://github.com/aswinguruswamy/monte-carlo-delivery-forecast/releases/tag/v1.2.0
 [1.1.0]: https://github.com/aswinguruswamy/monte-carlo-delivery-forecast/releases/tag/v1.1.0
 [1.0.0]: https://github.com/aswinguruswamy/monte-carlo-delivery-forecast/releases/tag/v1.0.0

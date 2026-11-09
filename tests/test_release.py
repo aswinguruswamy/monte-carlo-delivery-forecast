@@ -1,4 +1,4 @@
-"""MCF-27 checks: release v1.0.0 (G7, G8); MCF-44: release v1.1.0.
+"""MCF-27 checks: release v1.0.0 (G7, G8); MCF-44: release v1.1.0; MCF-45: release v1.2.0.
 
 AC1: the tag equals the package version, and a clean install works.
 The tag is made after the PM's go; CI builds the wheel, installs it in a clean
@@ -13,7 +13,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "1.1.0"  # MCF-44
+VERSION = "1.2.0"  # MCF-45
 
 
 def test_package_version_is_the_release_version():
@@ -110,3 +110,74 @@ def test_the_1_1_0_entry_has_the_ai_evaluation_result():
     entry = _section("1.1.0")
     assert "To run before the tag" not in entry
     assert "**PASS** on 2026-11-08" in entry and "30 of 30" in entry
+
+
+def test_the_1_2_0_entry_has_both_backtests_the_evaluation_and_the_limits():
+    """MCF-45: v1 unchanged; v2 published as it is (R3), with its limits (D54.3)."""
+    entry = _section("1.2.0")
+    for part in ("### Added", "### Changed", "### Fixed", "### Known limits"):
+        assert part in entry, part
+    assert "[Unreleased]" not in (ROOT / "CHANGELOG.md").read_text()
+    # v1 result unchanged; v2 result with its warnings
+    assert "69.0%" in entry and "7,692" in entry
+    assert "75.0%" in entry and "not robust" in entry and "73.5%" in entry
+    assert "D54.3" in entry
+    # AI evaluation evidence on the merged code (prompt version 5 unchanged)
+    assert "**PASS** on 2026-11-09" in entry and "30 of 30" in entry
+    assert "prompt version 5" in entry
+    assert "light-dark()" in entry  # older browsers (D48.1)
+    assert (
+        "[1.2.0]: https://github.com/aswinguruswamy/monte-carlo-delivery-forecast/releases/tag/v1.2.0"
+        in (ROOT / "CHANGELOG.md").read_text()
+    )
+
+
+# --- Review MCF-45 ------------------------------------------------------------------------------
+
+
+def test_the_1_2_0_entry_numbers_come_from_the_metrics_files():
+    import json
+
+    v1 = json.loads((ROOT / "results" / "metrics.json").read_text())["summary"]
+    full = json.loads((ROOT / "results" / "metrics-full.json").read_text())
+    a, c = full["any"]["summary"], full["completed"]["summary"]
+    ci = full["any"]["bootstrap"]["calibration_85_95ci"]
+    p = full["any"]["pointed_only"]
+    entry = _section("1.2.0")
+    hits = round(a["calibration_85"] * a["cases"])
+    for text in (
+        f"{v1['calibration_85']:.1%} of {v1['cases']:,} cases",
+        f"{a['projects']} projects, {a['cases']:,} scored cases",
+        f"{a['calibration_85']:.1%} ({hits:,} of {a['cases']:,})",
+        f"({ci[0]:.1%} to {ci[1]:.1%})",
+        f"it is {c['calibration_85']:.1%} (**FAIL**)",
+        f"{a['median_error_mc50']:g} days vs {a['median_error_velocity']:g} days "
+        f"on {a['measure_2_cases']:,} cases",
+        f"the {p['measure_2_cases']:,} fully pointed cases with a velocity date: "
+        f"{p['median_error_mc50']:g} days vs {p['median_error_velocity']:g} days",
+    ):
+        assert text in entry, text
+    assert "**FAIL**" in entry and "not certain" in entry
+    # v2 "done" includes Won't Fix and Duplicate; no new demo video (D55)
+    assert "Won't Fix" in entry and "D55" in entry
+
+
+def test_the_readme_ai_result_is_the_release_evaluation_and_dates_match():
+    cff = yaml.safe_load((ROOT / "CITATION.cff").read_text())
+    readme = (ROOT / "README.md").read_text()
+    assert f"released {cff['date-released']}" in readme
+    assert "**AI evaluation (measure 3): PASS** on 2026-11-09" in readme
+    assert "prompt version 5" in readme
+    assert "PASS** on 2026-11-09" in _section(VERSION)
+
+
+def test_the_citation_and_readme_name_the_full_tawos_dataset():
+    cff = yaml.safe_load((ROOT / "CITATION.cff").read_text())
+    assert any(r.get("doi") == "10.5522/04/21308124" for r in cff["references"])
+    intro = (ROOT / "README.md").read_text().split("## Install")[0]
+    assert "39" in intro and "full" in intro
+
+
+def test_the_demo_page_says_1_2_0_has_no_new_video():
+    demo = (ROOT / "docs" / "demo.md").read_text()
+    assert "**v1.2.0:** no new video (D55" in demo
