@@ -172,6 +172,7 @@ def run_project_full(
         tie_rule="mean",
         sizes=sizes,
         runs=runs,
+        velocity_for=None,
         too_far_raises=False,
     )
     no_velocity = {n: counts.no_pointed_item[n] + counts.velocity_too_far[n] for n in counts.cases}
@@ -214,7 +215,7 @@ def run_full(
 
 
 def _group(cases: list[FullCase]) -> dict:
-    return metrics._group(cases, velocity_cases=True)
+    return metrics.group(cases, velocity_cases=True)
 
 
 def full_metrics(cases: list[FullCase], summaries: list[FullSummary]) -> dict:
@@ -222,7 +223,7 @@ def full_metrics(cases: list[FullCase], summaries: list[FullSummary]) -> dict:
     scored = [c for c in cases if not c.no_forecast]
     if not scored:
         raise FullBacktestError("no forecast case")
-    summary = metrics.pass_summary(cases, _group(cases))
+    summary = metrics.pass_summary(cases, _group(cases), velocity_cases=True)
     summary["projects"] = len(summaries)
     summary["projects_with_cases"] = len({c.project for c in cases})
     summary["value_items_done"] = sum(s.value_items_done for s in summaries)
@@ -249,7 +250,7 @@ def full_metrics(cases: list[FullCase], summaries: list[FullSummary]) -> dict:
         "by_n": {str(n): _group([c for c in cases if c.n == n]) for n in SIZES},
         "by_project": by_project,
         "pointed_only": _group([c for c in cases if c.fully_pointed]),
-        "bootstrap": metrics._bootstrap(groups, velocity_cases=True),
+        "bootstrap": metrics.bootstrap(groups, velocity_cases=True),
     }
 
 

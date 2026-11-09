@@ -80,7 +80,7 @@ class Case:
 class FullCase(Case):
     """A case with the v2 flag: all points needed by the case are real (ADR 0003)."""
 
-    fully_pointed: bool = True
+    fully_pointed: bool = field(kw_only=True)
 
 
 @dataclass
@@ -185,8 +185,8 @@ def run_cases(
     tie_rule: str,
     sizes: Iterable[int] = SIZES,
     runs: int = RUNS,
-    velocity_for: Callable[[date], float] | None = None,
-    too_far_raises: bool = True,
+    velocity_for: Callable[[date], float] | None,
+    too_far_raises: bool,
 ) -> tuple[list[FullCase], CaseCounts]:
     """The one case loop of the v1 and the v2 back-test (ADR 0002 method).
 
@@ -208,8 +208,9 @@ def run_cases(
         ts = [t for t in all_dates if ordinals.size - _after(ordinals, t) >= n]
         counts.cases[n] = len(ts)
         counts.short_dates[n] = len(all_dates) - len(ts)
-        for key in ("no_forecast", "no_pointed_item", "velocity_too_far"):
-            getattr(counts, key)[n] = 0
+        counts.no_forecast[n] = 0
+        counts.no_pointed_item[n] = 0
+        counts.velocity_too_far[n] = 0
         for t in ts:
             start = _after(ordinals, t)
             actual = date.fromordinal(int(ordinals[start + n - 1]))
@@ -222,7 +223,19 @@ def run_cases(
             if not day_counts.any():
                 counts.no_forecast[n] += 1
                 cases.append(
-                    FullCase(project, p, t, n, True, None, None, None, None, actual, fully_pointed)
+                    FullCase(
+                        project,
+                        p,
+                        t,
+                        n,
+                        True,
+                        None,
+                        None,
+                        None,
+                        None,
+                        actual,
+                        fully_pointed=fully_pointed,
+                    )
                 )
                 continue
             mc = forecast_dates(t, day_counts, n, case_generator(p, t, n), runs=runs)
@@ -242,7 +255,19 @@ def run_cases(
                         raise
                     counts.velocity_too_far[n] += 1
             cases.append(
-                FullCase(project, p, t, n, False, mc[50], mc[85], mc[95], v, actual, fully_pointed)
+                FullCase(
+                    project,
+                    p,
+                    t,
+                    n,
+                    False,
+                    mc[50],
+                    mc[85],
+                    mc[95],
+                    v,
+                    actual,
+                    fully_pointed=fully_pointed,
+                )
             )
     return cases, counts
 
@@ -260,6 +285,7 @@ def run_project(
     runs: int = RUNS,
 ) -> tuple[list[Case], ProjectSummary]:
     """The v1 back-test of one project (ADR 0002): every value item has points."""
+    # Checked here too, so a bad tie rule fails before the table is read (as before).
     if tie_rule not in TIE_RULES:
         raise BacktestError(f"unknown tie rule {tie_rule!r}; use one of {TIE_RULES}")
     ordinals, points = _value_items(issues)
@@ -279,6 +305,7 @@ def run_project(
         sizes=sizes,
         runs=runs,
         velocity_for=velocity_for,
+        too_far_raises=True,
     )
     summary = ProjectSummary(
         project=project,

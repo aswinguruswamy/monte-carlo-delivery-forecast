@@ -79,7 +79,7 @@ def check_case(c: Case) -> None:
         raise MetricsError(f"{where}: a forecast case needs all 4 forecast dates")
 
 
-def _group(cases: Sequence[Case], *, velocity_cases: bool = False) -> dict:
+def group(cases: Sequence[Case], *, velocity_cases: bool = False) -> dict:
     """Calibration on the forecast cases; errors and bias on the cases with a velocity date.
 
     v1 (`velocity_cases=False`): every forecast case has a velocity date, and a group
@@ -91,22 +91,29 @@ def _group(cases: Sequence[Case], *, velocity_cases: bool = False) -> dict:
     row: dict = {"cases": len(scored), "no_forecast_cases": len(cases) - len(scored)}
     if velocity_cases:
         row["measure_2_cases"] = len(with_v)
+    elif len(with_v) < len(scored):
+        raise MetricsError("v1: every forecast case needs a velocity date")
     elif not scored:
         return {**row, **dict.fromkeys(_RATE_KEYS)}
     if scored:
-        for p, date_of in ((50, "mc50"), (85, "mc85"), (95, "mc95")):
-            hits = np.array([c.actual <= getattr(c, date_of) for c in scored], dtype=bool)
+        for p in (50, 85, 95):
+            hits = np.array([c.actual <= getattr(c, f"mc{p}") for c in scored], dtype=bool)
             row[f"calibration_{p}"] = float(hits.mean())
     if with_v:
-        for name, date_of in (("mc50", "mc50"), ("velocity", "velocity")):
-            signed = np.array([_days(getattr(c, date_of), c.actual) for c in with_v], dtype=float)
-            row[f"median_error_{name}"] = float(np.median(np.abs(signed)))
-            row[f"mean_error_{name}"] = float(np.abs(signed).mean())
-            row[f"bias_{name}"] = float(signed.mean())
+        mc = np.array([_days(c.mc50, c.actual) for c in with_v], dtype=float)
+        v = np.array([_days(c.velocity, c.actual) for c in with_v], dtype=float)
+        row.update(
+            median_error_mc50=float(np.median(np.abs(mc))),
+            median_error_velocity=float(np.median(np.abs(v))),
+            mean_error_mc50=float(np.abs(mc).mean()),
+            mean_error_velocity=float(np.abs(v).mean()),
+            bias_mc50=float(mc.mean()),
+            bias_velocity=float(v.mean()),
+        )
     return row
 
 
-def _bootstrap(groups: dict[str, list[Case]], *, velocity_cases: bool = False) -> dict:
+def bootstrap(groups: dict[str, list[Case]], *, velocity_cases: bool = False) -> dict:
     """Whole projects resampled (D30); measure 2 on the cases with a velocity date."""
     per = []
     for cases in groups.values():
@@ -135,17 +142,17 @@ def _bootstrap(groups: dict[str, list[Case]], *, velocity_cases: bool = False) -
         "median_error_difference_95ci": (
             [float(x) for x in np.quantile(ok, [0.025, 0.975])] if ok.size else None
         ),
-        "median_error_difference_meaning": "velocity median - Monte Carlo median; > 0 = MC better",
     }
     if velocity_cases:
         out["median_error_difference_resamples"] = int(ok.size)
+    out["median_error_difference_meaning"] = "velocity median - Monte Carlo median; > 0 = MC better"
     return out
 
 
-def pass_summary(cases: Sequence[Case], summary: dict) -> dict:
+def pass_summary(cases: Sequence[Case], summary: dict, *, velocity_cases: bool = False) -> dict:
     """Add the pass rules (D07; ADR 0002) and the no-forecast items to a group summary.
 
-    Measure 2 is None when no case has a velocity date (v2 only).
+    v2 (`velocity_cases=True`): measure 2 is None when no case has a velocity date.
     """
     scored = [c for c in cases if not c.no_forecast]
     hits = sum(c.actual <= c.mc85 for c in scored)
@@ -156,7 +163,7 @@ def pass_summary(cases: Sequence[Case], summary: dict) -> dict:
     summary["measure_1_pass"] = calibration_passes(Fraction(hits, len(scored)))
     summary["measure_2_pass"] = (
         error_passes(summary["median_error_mc50"], summary["median_error_velocity"])
-        if summary.get("measure_2_cases", True)
+        if not velocity_cases or summary["measure_2_cases"]
         else None
     )
     return summary
@@ -190,9 +197,9 @@ def compute_metrics(
     if not scored:
         raise MetricsError("no forecast case: every case has no forecast")
 
-    summary = pass_summary(cases, _group(cases))
+    summary = pass_summary(cases, group(cases))
 
-    by_n = {str(n): _group([c for c in cases if c.n == n]) for n in SIZES}
+    by_n = {str(n): group([c for c in cases if c.n == n]) for n in SIZES}
 
     groups: dict[str, list[Case]] = {}
     order = (
@@ -207,7 +214,7 @@ def compute_metrics(
     by_project = {}
     for name, cs in groups.items():
         p = numbers.get(name, next((q for q, n in order if n == name), None))
-        by_project[name] = {"p": p, **_group(cs)}
+        by_project[name] = {"p": p, **group(cs)}
     if summaries is not None:
         for s in summaries:
             by_project[s.project]["short_dates"] = {str(n): s.short_dates.get(n, 0) for n in SIZES}
@@ -228,7 +235,7 @@ def compute_metrics(
         "summary": summary,
         "by_n": by_n,
         "by_project": by_project,
-        "bootstrap": _bootstrap(groups),
+        "bootstrap": bootstrap(groups),
     }
 
 
