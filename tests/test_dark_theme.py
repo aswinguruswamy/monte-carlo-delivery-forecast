@@ -50,7 +50,7 @@ def contrast(a: str, b: str) -> float:
 
 
 def _all_html() -> str:
-    from tests.test_layout import facts  # the same made-up forecast as the layout tests
+    from test_layout import facts  # the same made-up forecast as the layout tests
 
     return logic.page_css() + logic.cards_html(facts())
 
@@ -113,7 +113,7 @@ def test_chart_lines_pass_3_to_1_in_both_themes():
 
 
 def test_the_chart_marker_table_uses_the_chart_colours():
-    from tests.test_layout import facts
+    from test_layout import facts
 
     marks = logic.marker_table(facts())
     assert set(marks["color"]) <= set(logic.CHART_COLORS.values())
