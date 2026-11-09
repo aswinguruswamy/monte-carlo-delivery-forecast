@@ -619,6 +619,20 @@ Result: pass — no ❌.
 
 Result: pass — no ❌.
 
+## Ticket MCF-42 — 2026-11-09 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before f697df7 | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-42-dark-theme`; each commit "MCF-42: …" | — |
+| 3 | CI green on the PR | ✅ | PR #51 head checked green before Review | — |
+| 4 | PR adds tests | ✅ | `tests/test_dark_theme.py` and the browser check theme checks failed first; review gaps closed tests-first | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D48.1 (dark theme, chart colours) is logged at approval | Log at approval |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: 1 High (input border selectors), 1 Medium (info text 4.30:1), 2 test gaps; fixed | — |
+| 8 | Each acceptance criterion met | 🟡 | AC1–3 and AC5 met. AC4 changed: one set of chart colours for both themes (PM option A) | D48.1 |
+| 9 | README and rule pages match | ✅ | CHANGELOG Unreleased entry; no README text names the theme | — |
+| 10 | Workflow steps followed | ✅ | Design approved first, tests first, review before approval | — |
 ## Ticket MCF-28 — 2026-11-09 — grader: builder pre-check (judgement items also covered by the subagent reviews, D24)
 
 | # | Criterion | Grade | Evidence | Fix |

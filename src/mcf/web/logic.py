@@ -177,12 +177,12 @@ def marker_table(facts: ForecastFacts) -> pd.DataFrame:
     """
     same = facts.velocity_date is not None and facts.velocity_date == facts.mc50
     marks = [
-        ("50% chance", facts.mc50, COLORS["p50"], -3 if same else 0),
-        ("85% chance", facts.mc85, COLORS["p85"], 0),
-        ("95% chance", facts.mc95, COLORS["p95"], 0),
+        ("50% chance", facts.mc50, CHART_COLORS["p50"], -3 if same else 0),
+        ("85% chance", facts.mc85, CHART_COLORS["p85"], 0),
+        ("95% chance", facts.mc95, CHART_COLORS["p95"], 0),
     ]
     if facts.velocity_date is not None:
-        marks.append(("Velocity", facts.velocity_date, COLORS["velocity"], 3 if same else 0))
+        marks.append(("Velocity", facts.velocity_date, CHART_COLORS["velocity"], 3 if same else 0))
     return pd.DataFrame(marks, columns=["label", "date", "color", "offset"])
 
 
@@ -197,6 +197,32 @@ COLORS = {
     "muted": "#5f6370",
     "ink": "#31333f",
 }
+# MCF-42 (D48.1): the dark colour of each light colour (approved design, canvas MainDark).
+DARK = {
+    "#f5f6f8": "#0f1115",  # page
+    "#ffffff": "#1a1d23",  # boxes and cards
+    "#31333f": "#e6e8ee",  # ink
+    "#5f6370": "#a3a9b6",  # muted text
+    "#2f6db5": "#79b0ff",
+    "#9a5a0c": "#f2b05e",
+    "#b8322f": "#ff8a80",
+    "#1a7f37": "#5bd47a",
+    "#fff8ee": "#2a2216",  # 85% card
+    "#f0faf3": "#16261b",  # velocity card
+    "#878c98": "#6b7280",  # inner borders
+    "#7d1d14": "#ffb4ab",  # error text
+    "#0054a3": "#8cc4ff",  # info text (Streamlit's light colour); was 4.30:1 in a dark box
+}
+# Altair draws the chart, so CSS cannot switch its colours: one set that passes 3:1 on
+# the light and the dark box (D48.1).
+CHART_COLORS = {"p50": "#3d7fcd", "p85": "#ab7119", "p95": "#d25350", "velocity": "#1d903e"}
+
+
+def ld(light: str) -> str:
+    """CSS for a colour in both themes; it follows Streamlit's color-scheme on stApp."""
+    return f"light-dark({light},{DARK[light]})"
+
+
 MAX_BACKLOG = 10_000
 BACKLOG_ERROR = "Type a whole number from 1 to 10,000."
 BACKLOG_HELP = "Type any whole number from 1 to 10,000."
@@ -319,19 +345,20 @@ def _card_html(c: Card) -> str:
     e = html.escape
     style = "dashed" if c.dashed else "solid"
     width = 3 if c.highlight else 2
-    back = card_background(c)
+    back = ld(card_background(c))
+    colour = ld(c.color)
     note = "".join(f'<span class="mcf-card-note">{e(n)}</span>' for n in c.notes)
     # Review MCF-40: the highlight is only a border and a colour, so say it in hidden text.
     why = '<span class="mcf-sr-only"> (the date to share)</span>' if c.highlight else ""
     return (
         f'<div class="mcf-card{" mcf-card-highlight" if c.highlight else ""}" '
-        f'data-label="{e(c.label)}" style="border:{width}px {style} {c.color};'
+        f'data-label="{e(c.label)}" style="border:{width}px {style} {colour};'
         f"background:{back};border-radius:10px;padding:12px 14px;display:flex;"
         f'flex-direction:column;gap:2px;min-width:0">'
         f'<span class="mcf-card-label" style="font-size:0.85rem;font-weight:600;'
-        f'color:{c.color}">{e(c.label)}{why}</span>'
+        f'color:{colour}">{e(c.label)}{why}</span>'
         f'<span class="mcf-card-value" style="font-size:1.2rem;font-weight:700;'
-        f'color:{COLORS["ink"]};white-space:nowrap">{e(c.value)}</span>'
+        f'color:{ld(COLORS["ink"])};white-space:nowrap">{e(c.value)}</span>'
         f"{note}</div>"
     )
 
@@ -343,7 +370,7 @@ def cards_html(facts: ForecastFacts) -> str:
         '<div class="mcf-cards" style="display:grid;gap:10px;margin-bottom:16px;'
         'grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">'
         f"{inner}</div>"
-        f"<style>.mcf-card-note{{font-size:0.82rem;color:{COLORS['muted']}}}"
+        f"<style>.mcf-card-note{{font-size:0.82rem;color:{ld(COLORS['muted'])}}}"
         ".mcf-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;"
         "clip:rect(0,0,0,0);white-space:nowrap}"
         "@media (max-width: 640px){.mcf-cards{grid-template-columns:1fr !important}}</style>"
@@ -398,24 +425,32 @@ def same_day_note(facts: ForecastFacts) -> str | None:
 
 
 def page_css() -> str:
-    """Grey page, white boxes (MCF-37). Fixed text only."""
+    """Grey page, white boxes (MCF-37); each colour has its dark pair (MCF-42). Fixed text only."""
+    muted = f"color:{ld('#5f6370')}"
+    border = f"border-color:{ld('#878c98')}"
     return (
         "<style>"
         '[data-testid="stAppViewContainer"],[data-testid="stMain"],'
-        '[data-testid="stHeader"]{background:#f5f6f8}'
+        f'[data-testid="stHeader"]{{background:{ld("#f5f6f8")}}}'
         # A bordered st.container is a stVerticalBlock inside a stLayoutWrapper (1.66).
         '[data-testid="stLayoutWrapper"]>[data-testid="stVerticalBlock"],'
-        '[data-testid="stExpander"] details{background:#ffffff}'
+        f'[data-testid="stExpander"] details{{background:{ld("#ffffff")}}}'
         # Streamlit's caption is 60% opacity: 3.7:1 on white. This colour is 5.9:1.
-        '[data-testid="stCaptionContainer"]{color:#5f6370;opacity:1}'
+        f'[data-testid="stCaptionContainer"]{{{muted};opacity:1}}'
         # Review MCF-39: Streamlit draws these at 60% too (3.5 to 3.7:1).
         '[data-testid="stDateInputField"] [data-placeholder="true"],'
         '[data-testid="stDateInputField"] [data-placeholder="true"] *,'
         '[data-testid="stDateInputField"] [data-type="literal"],'
-        '[data-testid="stDateInputField"] [data-type="literal"] *{color:#5f6370}'
-        '[data-testid="stFileChip"] div{color:#5f6370}'
-        '[data-testid="stFileUploaderDropzoneInstructions"] span{color:#5f6370}'  # was 3.5:1
-        '[data-testid="stAlertContentError"]{color:#7d1d14}'  # was 4.2:1 on the pink box
+        f'[data-testid="stDateInputField"] [data-type="literal"] *{{{muted}}}'
+        f'[data-testid="stFileChip"] div{{{muted}}}'
+        f'[data-testid="stFileUploaderDropzoneInstructions"] span{{{muted}}}'  # was 3.5:1
+        f'[data-testid="stAlertContentError"]{{color:{ld("#7d1d14")}}}'  # was 4.2:1
+        f'[data-testid="stAlertContentInfo"]{{color:{ld("#0054a3")}}}'
+        # MCF-42 canvas review: the inner expanders and the input boxes get a 3:1 border.
+        '[data-testid="stExpander"] [data-testid="stExpander"] details,'
+        '[data-testid="stTextInputRootElement"],[data-testid="stNumberInputContainer"],'
+        '[data-testid="stDateInputField"]'
+        f"{{{border};transition:none}}"  # the fade stopped midway after a theme switch
         # MCF-41: the 4 section labels have heading size; inner expanders keep theirs.
         + ",".join(
             f'.st-key-section-{n}>[data-testid="stExpander"]>details>summary p' for n in range(1, 5)

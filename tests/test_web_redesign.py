@@ -119,16 +119,15 @@ def test_the_velocity_card_has_no_pace_line_and_says_not_available():
 
 
 def test_card_and_chart_line_colours_match():
+    """MCF-42 (D48.1): each line has its card's colour family; the chart shade passes
+    3:1 in both themes, because Altair cannot switch colours with the theme."""
     f = facts()
     lines = dict(zip(logic.marker_table(f)["label"], logic.marker_table(f)["color"], strict=True))
-    for card, line in zip(logic.cards(f), lines, strict=True):
-        assert card.color == lines[line]
-    assert lines == {
-        "50% chance": logic.COLORS["p50"],
-        "85% chance": logic.COLORS["p85"],
-        "95% chance": logic.COLORS["p95"],
-        "Velocity": logic.COLORS["velocity"],
-    }
+    names = ("p50", "p85", "p95", "velocity")
+    for card, line, name in zip(logic.cards(f), lines, names, strict=True):
+        assert card.color == logic.COLORS[name]
+        assert lines[line] == logic.CHART_COLORS[name]
+    assert list(lines) == ["50% chance", "85% chance", "95% chance", "Velocity"]
 
 
 def _luminance(hex_colour: str) -> float:

@@ -22,6 +22,7 @@ import time
 import urllib.request
 from pathlib import Path
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeout
 from playwright.sync_api import expect, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +41,11 @@ BAD = b"Issue_Key,Type\nA-1,Story\n"
 # see-through backgrounds and the opacity of parent elements are blended in. A background
 # image (for example a gradient) cannot be measured, so it is reported as a failure.
 # WCAG allows 3:1 for large text; this check asks 4.5:1 for all text (stricter).
+# MCF-42: (box, page, caption, input border) colours as getComputedStyle gives them.
+THEME_RGB = {
+    "light": ("rgb(255, 255, 255)", "rgb(245, 246, 248)", "rgb(95, 99, 112)", "rgb(135, 140, 152)"),
+    "dark": ("rgb(26, 29, 35)", "rgb(15, 17, 21)", "rgb(163, 169, 182)", "rgb(107, 114, 128)"),
+}
 CONTRAST_JS = """() => {
   const cv = document.createElement("canvas"); cv.width = cv.height = 1;
   const cx = cv.getContext("2d", {willReadFrequently: true});
@@ -217,8 +223,21 @@ def main() -> int:
                 page.goto(url, timeout=120_000)  # a sleeping cloud app can take a minute
                 main_area = page.locator("[data-testid='stMain']")
 
-                def boxes_and_captions(page=page):
-                    """MCF-37 review: white boxes on a grey page; captions 4.5:1 or more."""
+                def boxes_and_captions(page=page, scheme=scheme):
+                    """MCF-37 review: white boxes on a grey page; captions 4.5:1 or more.
+
+                    MCF-42: in dark mode, dark boxes on a darker page.
+                    """
+                    box, main, cap, edge = THEME_RGB[scheme]
+                    try:  # the input border fades to its new colour after a theme switch
+                        page.wait_for_function(
+                            """(edge) => getComputedStyle(document.querySelector(
+                              "[data-testid='stNumberInputContainer']")).borderTopColor === edge""",
+                            arg=edge,
+                            timeout=5_000,
+                        )
+                    except PlaywrightTimeout:
+                        pass  # the assert below reports the colour
                     page.wait_for_function(  # the boxes below the chart render a moment later
                         """() => document.querySelectorAll(
                           "[class*='st-key-section-'] > [data-testid='stExpander'] > "
@@ -228,7 +247,7 @@ def main() -> int:
                         timeout=30_000,
                     )
                     got = page.evaluate(
-                        """() => {
+                        """(box) => {
                         // MCF-41: 4 section expanders and the bordered report box
                         const boxes = [...document.querySelectorAll(
                           "[data-testid='stVerticalBlock'], "
@@ -236,19 +255,23 @@ def main() -> int:
                           )].filter(e => {
                             const s = getComputedStyle(e);
                             return parseFloat(s.borderTopWidth) > 0
-                              && s.backgroundColor === 'rgb(255, 255, 255)';});
+                              && s.backgroundColor === box;});
                         const main = getComputedStyle(
                           document.querySelector("[data-testid='stMain']")).backgroundColor;
                         const caps = [...document.querySelectorAll(
                           "[data-testid='stMain'] [data-testid='stCaptionContainer']")]
                           .map(e => { const s = getComputedStyle(e);
                             return s.color + '|' + s.opacity; });
-                        return {boxes: boxes.length, main, caps: [...new Set(caps)]};
-                        }"""
+                        const edge = getComputedStyle(document.querySelector(
+                          "[data-testid='stNumberInputContainer']")).borderTopColor;
+                        return {boxes: boxes.length, main, caps: [...new Set(caps)], edge};
+                        }""",
+                        box,
                     )
-                    assert got["boxes"] >= 5, f"white bordered boxes: {got['boxes']}"
-                    assert got["main"] == "rgb(245, 246, 248)", got["main"]
-                    assert got["caps"] == ["rgb(95, 99, 112)|1"], got["caps"]
+                    assert got["boxes"] >= 5, f"{scheme} bordered boxes: {got['boxes']}"
+                    assert got["main"] == main, got["main"]
+                    assert got["caps"] == [f"{cap}|1"], got["caps"]
+                    assert got["edge"] == edge, f"input border {got['edge']}, not {edge}"
 
                 def sample_dates(page=page):
                     expect(
@@ -365,28 +388,57 @@ def main() -> int:
 
                 def text_contrast(page=page):
                     """MCF-39: all visible text on the page has 4.5:1 contrast or more."""
+                    # Streamlit dims old elements while the page runs again (the check before
+                    # this one changes the backlog): wait until no element is stale.
+                    page.wait_for_function(
+                        "() => !document.querySelector('[data-stale=\"true\"]')",
+                        timeout=30_000,
+                    )
+                    page.wait_for_timeout(500)  # the dimming fades out
                     low = page.evaluate(CONTRAST_JS)
                     assert not low, f"{len(low)} low-contrast texts, first: {low[:3]}"
 
-                def no_theme_switch(page=page):
-                    """MCF-39: the menu has no System / Light / Dark switch."""
-                    button = page.locator("[data-testid='stMainMenu']")
-                    assert button.count() == 1, "the app menu button is not on the page"
-                    button.click()
-                    menu = page.locator("[data-testid='stMainMenuList']")
-                    expect(menu).to_be_visible(timeout=10_000)
-                    text = menu.inner_text()
+                def theme_switch(page=page, scheme=scheme, label=label):
+                    """MCF-42: the menu has System / Light / Dark; the other theme is readable."""
+                    other = "light" if scheme == "dark" else "dark"
+
+                    def pick(name: str) -> None:
+                        page.locator("[data-testid='stMainMenu']").click()
+                        item = page.locator(f"[data-testid='stMainMenuItem-theme-{name}']")
+                        expect(item).to_be_visible(timeout=10_000)
+                        item.click()
+                        page.keyboard.press("Escape")
+                        page.wait_for_function(
+                            """(want) => getComputedStyle(document.querySelector(
+                              "[data-testid='stApp']")).colorScheme === want""",
+                            arg=name.lower(),
+                            timeout=10_000,
+                        )
+                        page.wait_for_timeout(500)  # the colours change with a short fade
+
+                    page.locator("[data-testid='stMainMenu']").click()
+                    for name in ("System", "Light", "Dark"):
+                        item = page.locator(f"[data-testid='stMainMenuItem-theme-{name}']")
+                        expect(item).to_be_visible(timeout=10_000)
                     page.keyboard.press("Escape")
-                    words = text.lower()  # the icons are named dark_mode and light_mode
-                    assert not any(w in words for w in ("dark", "light", "system")), (
-                        "theme switch in the menu: " + " / ".join(text.split())
-                    )
+                    pick(other.title())
+                    try:
+                        low = page.evaluate(CONTRAST_JS)
+                        assert not low, f"{other}: {len(low)} low-contrast texts: {low[:3]}"
+                        boxes_and_captions(page, other)
+                        if shots:
+                            page.screenshot(
+                                path=str(shots / f"sample-{label}-picked-{other}.png"),
+                                full_page=True,
+                            )
+                    finally:
+                        pick(scheme.title())
 
                 check(f"{label}: each date is under its own label", sample_dates)
                 check(f"{label}: sections are open and can close", sections_close_and_open)
                 check(f"{label}: a closed section stays closed", closed_section_stays_closed)
                 check(f"{label}: all text has 4.5:1 contrast", text_contrast)
-                check(f"{label}: no light / dark switch in the menu", no_theme_switch)
+                check(f"{label}: the other theme from the menu is readable", theme_switch)
                 check(f"{label}: dates are not cut off", dates_not_cut)
                 check(f"{label}: help sidebar first in reading order", sidebar_first)
                 check(f"{label}: white boxes on a grey page, readable captions", boxes_and_captions)

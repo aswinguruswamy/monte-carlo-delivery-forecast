@@ -277,15 +277,12 @@ def test_toolbar_hides_the_deploy_button():
     assert cfg["client"]["toolbarMode"] == "viewer"
 
 
-def test_the_page_is_always_light():
-    """MCF-39: a dark-mode phone made the text white on the white boxes.
-
-    A fixed base theme also removes the System / Light / Dark switch from the menu.
-    """
+def test_the_page_has_light_and_dark_themes():
+    """MCF-42 replaces MCF-39's fixed light theme; the colours are in test_dark_theme.py."""
     import tomllib
 
     cfg = tomllib.loads((ROOT / ".streamlit" / "config.toml").read_text())
-    assert cfg["theme"]["base"] == "light"
+    assert "base" not in cfg["theme"] and {"light", "dark"} <= set(cfg["theme"])
 
 
 def test_readme_says_where_to_start_the_page_and_what_it_shows():
