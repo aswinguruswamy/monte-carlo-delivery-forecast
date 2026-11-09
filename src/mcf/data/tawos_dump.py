@@ -132,3 +132,27 @@ def inventory(path: Path) -> dict:
         p["resolved"] += done is not None
         p["with_points"] += points is not None
     return {"issues": total, "types": types, "resolutions": resolutions, "projects": projects}
+
+
+EXPORT_HEADER = ("Project_Key", "Type", "Status", "Resolution", "Resolution_Date", "Story_Point")
+
+
+def export_csv(path: Path, out: Path) -> int:
+    """Write the allowed columns only, one row per issue (ADR 0003); return the row count.
+
+    The issue ID is dropped too: the run needs only the project, the type, the
+    resolution, the resolution date and the story points.
+    """
+    import csv
+
+    keys = dict(read_table(path, "Project", PROJECT_COLUMNS))
+    count = 0
+    with Path(out).open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.writer(fh, lineterminator="\n")
+        writer.writerow(EXPORT_HEADER)
+        for _id, kind, status, resolution, done, points, project in read_table(
+            path, "Issue", ISSUE_COLUMNS
+        ):
+            writer.writerow([keys.get(project, ""), kind, status, resolution, done, points])
+            count += 1
+    return count

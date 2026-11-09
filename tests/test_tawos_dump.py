@@ -86,3 +86,22 @@ def test_inventory_gives_counts_only():
     }
     assert inv["issues"] == 4
     assert "Secret" not in repr(inv) and "AA-1" not in repr(inv)
+
+
+def test_export_writes_the_allowed_columns_only(tmp_path):
+    """ADR 0003: the small file for the run holds no ID, key, title, text or user ID."""
+    from mcf.data.tawos_dump import export_csv
+
+    out = tmp_path / "issues.csv"
+    assert export_csv(MINI, out) == 4
+    lines = out.read_text(encoding="utf-8").splitlines()
+    assert lines[0] == "Project_Key,Type,Status,Resolution,Resolution_Date,Story_Point"
+    assert lines[1:] == [
+        "AA,Story,Closed,Fixed,2026-01-05 10:00:00,3.0",
+        "AA,Bug,Closed,Won't Fix,2026-01-06 11:00:00,",
+        "BB,Sub-task,Open,,,1.5",
+        "BB,Epic,Resolved,Done,2026-02-01 00:00:00,8.0",
+    ]
+    text = out.read_text()
+    for secret in ("Secret", "AA-1", "quote", "77", "Project A"):
+        assert secret not in text
