@@ -46,7 +46,7 @@ from mcf.backtest.run import SIZES, _after, _all_dates, _points_needed
 from mcf.data.types import BUG, D04_KIND, NOT_COUNTED, VALUE
 from mcf.forecast.montecarlo import RUNS, case_generator, forecast_dates
 from mcf.forecast.throughput import counts_from_ordinals, window
-from mcf.forecast.velocity import SPRINTS, VelocityError, velocity_date
+from mcf.forecast.velocity import SPRINTS, VelocityTooFar, velocity_date
 
 # ADR 0003 rule 6 (D54): the types of the full table that the extract does not have.
 EXTRA_KIND = {
@@ -224,10 +224,7 @@ def run_project_full(
                 needed = _points_needed(ordinals, filled, t, n, "mean")
                 try:
                     v = velocity_date(t, float(pointed.sum()) / SPRINTS, needed)
-                except VelocityError as exc:
-                    # D54.2: only "no date" (too far) is expected; any other error stops the run.
-                    if not str(exc).startswith("no date"):
-                        raise
+                except VelocityTooFar:  # D54.2; any other velocity error stops the run
                     summary.velocity_too_far[n] += 1
             if v is None:
                 summary.no_velocity[n] += 1

@@ -348,3 +348,21 @@ def test_the_manifest_ties_the_export_checksum_to_the_dump():
     assert m["export"]["sha256"] == EXPORT_SHA256
     assert m["export"]["rows"] == 458_232
     assert m["export"]["made_with"] == "mcf.data.tawos_dump.export_csv"
+    # Results review: the fixed reader (500df2a) made the same file again from the dump.
+    assert m["export"]["rechecked_with_reader_commit"] == "500df2a"
+
+
+def test_too_far_is_found_by_its_error_class_not_its_text():
+    """Results review: the run matched the message text "no date"."""
+    from mcf.forecast.velocity import VelocityError, VelocityTooFar, velocity_date
+
+    assert issubclass(VelocityTooFar, VelocityError)
+    with pytest.raises(VelocityTooFar):
+        velocity_date(date(2026, 1, 1), 1e-9, 1e9)
+    source = (Path(__file__).resolve().parents[1] / "src/mcf/backtest/full.py").read_text()
+    assert 'startswith("no date")' not in source
+
+
+def test_the_v2_outputs_and_the_export_are_ignored_by_git():
+    ignore = (Path(__file__).resolve().parents[1] / ".gitignore").read_text()
+    assert "/results-full/" in ignore and "tawos-issues-allowed.csv" in ignore

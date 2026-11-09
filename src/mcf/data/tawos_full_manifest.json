@@ -13,9 +13,18 @@
     "file": "tawos-issues-allowed.csv",
     "made_with": "mcf.data.tawos_dump.export_csv",
     "made": "2026-11-09",
-    "columns": ["Project_Key", "Type", "Status", "Resolution", "Resolution_Date", "Story_Point"],
+    "columns": [
+      "Project_Key",
+      "Type",
+      "Status",
+      "Resolution",
+      "Resolution_Date",
+      "Story_Point"
+    ],
     "rows": 458232,
-    "sha256": "393566e2d08fc4404ac7ecb77d9ac06e633b185677ec18d61167f3dce9644ea6"
+    "sha256": "393566e2d08fc4404ac7ecb77d9ac06e633b185677ec18d61167f3dce9644ea6",
+    "rechecked_with_reader_commit": "500df2a",
+    "rechecked": "2026-11-09: export_csv(expected_rows=458232) on the dump gave the same SHA-256"
   },
   "note": "Neither file is in the repository (D08). The v2 run checks the export SHA-256."
 }

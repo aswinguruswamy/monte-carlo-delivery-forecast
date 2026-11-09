@@ -138,6 +138,39 @@ def test_the_readme_v2_numbers_match_the_metrics_file():
         f"({ci[0]:.1%} to {ci[1]:.1%})",
         f"it is {c['calibration_85']:.1%} (FAIL)",
         f"the {a['measure_2_cases']:,} cases with a velocity date",
-        f"the {m['any']['pointed_only']['cases']:,} fully pointed cases",
     ):
         assert text in readme, text
+
+
+# --- Independent results review (2026-11-09) ---------------------------------------------------
+
+
+def test_the_fully_pointed_view_names_its_velocity_cases(v2):
+    text = report(v2)
+    p = v2["any"]["pointed_only"]
+    assert "| Cases | Cases with a velocity date | Calibration 85% |" in text
+    assert f"| {p['cases']:,} | {p['measure_2_cases']:,} |" in text
+
+
+def test_measure_1_shows_the_exact_count_and_the_count_needed(v2):
+    import math
+
+    s = v2["any"]["summary"]
+    hits = round(s["calibration_85"] * s["cases"])
+    need = math.ceil(0.75 * s["cases"])
+    assert f"{hits:,} of {s['cases']:,} cases (75% needs {need:,})" in report(v2)
+
+
+def test_the_limits_explain_the_velocity_rule_and_do_not_call_it_the_tools_rule(v2):
+    text = report(v2)
+    assert "pace from the pointed items only" in text
+    assert "The tool (D44) divides the points by all value items" in text
+    assert "sparse estimates" not in text
+    assert "close (see" not in text
+
+
+def test_the_readme_does_not_call_the_fully_pointed_view_531_medians():
+    readme = (ROOT / "README.md").read_text()
+    m = json.loads((ROOT / "results" / "metrics-full.json").read_text())
+    p = m["any"]["pointed_only"]
+    assert f"the {p['measure_2_cases']:,} fully pointed cases with a velocity date" in readme

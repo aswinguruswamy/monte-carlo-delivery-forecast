@@ -13,6 +13,9 @@ build/
 /data/
 .venv*/
 /results/*.csv
+# v2 back-test (MCF-28): the allowed-columns export and the run output stay outside (D08)
+/results-full/
+tawos-issues-allowed.csv
 
 # Demo video and Streamlit Cloud secrets (MCF-26): never commit
 *.mp4

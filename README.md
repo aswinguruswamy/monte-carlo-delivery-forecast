@@ -81,7 +81,7 @@ The same method on the full TAWOS Issue table (39 projects, 458,232 issues, also
 | 1. Calibration of the 85% date (pass 75–95%) | 69.0% **FAIL** | 75.0% **PASS** |
 | 2. Median error, Monte Carlo 50% vs velocity | 34 d vs 36 d **PASS** | 14 d vs 90 d **PASS** |
 
-Measure 1 passes on the full data only just: its bootstrap 95% interval (73.0% to 77.1%) crosses the 75% edge, so the pass is not robust. With "done = completed only" (information), it is 73.5% (FAIL). Measure 2 uses the 12,632 cases with a velocity date; most of them use estimated points, and on the 531 fully pointed cases the two methods are close (8 d vs 10 d). Side-by-side report: [docs/backtest-report-full.md](docs/backtest-report-full.md).
+Measure 1 passes on the full data only just: its bootstrap 95% interval (73.0% to 77.1%) crosses the 75% edge, so the pass is not robust. With "done = completed only" (information), it is 73.5% (FAIL). Measure 2 uses the 12,632 cases with a velocity date. **The v2 velocity rule (ADR 0003) takes the pace from the pointed items only but counts all N items as work, so its date is late when few items have points; the tool divides by all items (D44). Most of the measure 2 margin comes from this rule, so it does not test the velocity rule that users run.** On the 524 fully pointed cases with a velocity date the medians are 8 d vs 10 d. Side-by-side report: [docs/backtest-report-full.md](docs/backtest-report-full.md).
 
 ## Limits
 

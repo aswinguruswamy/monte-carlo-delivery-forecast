@@ -12,7 +12,7 @@ The v2 back-test runs the **unchanged ADR 0002 method** on the full TAWOS Issue 
 | Projects | 29 | 39 | — |
 | Cases with no forecast | 903 (10.5%) | 536 (2.3%) | counted, not scored |
 
-v2 measure 2 uses the 12,632 cases with a velocity date (of 22,619 scored cases): a case has no velocity date when no value item in its 84-day window has story points, or when the date would be after year 9999 (D54.2). Measure 1 uses all scored cases.
+v2 measure 2 uses the 12,632 cases with a velocity date (of 22,619 scored cases): a case has no velocity date when no value item in its 84-day window has story points, or when the date would be after year 9999 (D54.2). Measure 1 uses all scored cases: the 85% date was on time in 16,974 of 22,619 cases (75% needs 16,965).
 
 Measure 1 passes on the full data, but its bootstrap 95% interval (73.0% to 77.1%) crosses the 75% edge of the band, so the result is not robust.
 
@@ -46,9 +46,9 @@ Done = completed only counts only the resolutions Fixed, Done, Complete, Complet
 
 Cases where each of the next N value items (with the items of the N-th item's day) has story points, so the velocity date uses no estimated points (ADR 0003 decision 2).
 
-| Cases | Calibration 85% | Median error MC 50% | Median error velocity |
-| --- | --- | --- | --- |
-| 531 | 74.0% | 8 d | 10 d |
+| Cases | Cases with a velocity date | Calibration 85% | Median error MC 50% | Median error velocity |
+| --- | --- | --- | --- | --- |
+| 531 | 524 | 74.0% | 8 d | 10 d |
 
 ## v2 results by backlog size
 
@@ -153,7 +153,7 @@ Forecast cases with no velocity date: 9,987 with no pointed item in the window, 
 
 - Only 14% of the issues have story points, so most v2 velocity dates use estimated points for part of the backlog (ADR 0003 decision 2): the mean points of the pointed value items in the window.
 - D54.1: a story point of 0 counts as no story point (1,387 done value items). D54.2: large story points are used as recorded (141 values above 100 in the file, the largest 26,710,114; 16 of them on done value items); one such item can decide the velocity of every window it is in.
-- The velocity errors on the full data rest mostly on estimated points. On the 531 fully pointed cases the two methods are close (see Fully pointed cases), so the large measure 2 margin shows how velocity behaves with sparse estimates, not that velocity fails on well-estimated work.
+- **The v2 velocity rule makes the velocity date late when few items have points.** ADR 0003 decision 2 takes the pace from the pointed items only, but fills each unpointed item of the next N with the mean points of a pointed item, so the work counts all N items. The tool (D44) divides the points by all value items in the window, so its date does not depend on how many items have points. ADR 0003 called the two rules the same; they are not. Most of the measure 2 margin comes from this rule, so the v2 measure 2 result does not test the velocity rule that users run. On the 524 fully pointed cases with a velocity date the medians are 8 d (Monte Carlo) and 10 d (velocity).
 - Done = any resolution date, so Won't Fix, Duplicate and similar count as done (about 4 in 10 resolutions). The completed-only view shows the effect.
 - Velocity uses 2-week periods counted from day t, not the teams' real sprints (A2), and the real points of the next N items where they exist (ADR 0002 limit).
 - Case selection uses knowledge of the future: a forecast date exists only when at least N value items were done after it (ADR 0002 design). Cases 14 days apart share 70 of 84 window days.

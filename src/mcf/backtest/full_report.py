@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -112,7 +113,9 @@ def render_full_report(v1: dict, v2: dict, info: dict) -> str:
         f"v2 measure 2 uses the {_n(a['measure_2_cases'])} cases with a velocity date "
         f"(of {_n(a['cases'])} scored cases): a case has no velocity date when no value item "
         "in its 84-day window has story points, or when the date would be after year 9999 "
-        "(D54.2). Measure 1 uses all scored cases."
+        "(D54.2). Measure 1 uses all scored cases: the 85% date was on time in "
+        f"{round(a['calibration_85'] * a['cases']):,} of {_n(a['cases'])} cases "
+        f"(75% needs {math.ceil(0.75 * a['cases']):,})."
     )
     add("")
     note = _edge_note(a, ba)
@@ -188,10 +191,13 @@ def render_full_report(v1: dict, v2: dict, info: dict) -> str:
         "decision 2)."
     )
     add("")
-    add("| Cases | Calibration 85% | Median error MC 50% | Median error velocity |")
-    add("| --- | --- | --- | --- |")
     add(
-        f"| {_n(p['cases'])} | {_pct(p.get('calibration_85'))} | "
+        "| Cases | Cases with a velocity date | Calibration 85% | Median error MC 50% "
+        "| Median error velocity |"
+    )
+    add("| --- | --- | --- | --- | --- |")
+    add(
+        f"| {_n(p['cases'])} | {_n(p['measure_2_cases'])} | {_pct(p.get('calibration_85'))} | "
         f"{_d(p.get('median_error_mc50'))} | {_d(p.get('median_error_velocity'))} |"
     )
     add("")
@@ -275,10 +281,16 @@ def render_full_report(v1: dict, v2: dict, info: dict) -> str:
         "decide the velocity of every window it is in."
     )
     add(
-        "- The velocity errors on the full data rest mostly on estimated points. On the "
-        f"{v2['any']['pointed_only']['cases']:,} fully pointed cases the two methods are "
-        "close (see Fully pointed cases), so the large measure 2 margin shows how velocity "
-        "behaves with sparse estimates, not that velocity fails on well-estimated work."
+        "- **The v2 velocity rule makes the velocity date late when few items have points.** "
+        "ADR 0003 decision 2 takes the pace from the pointed items only, but fills each "
+        "unpointed item of the next N with the mean points of a pointed item, so the work "
+        "counts all N items. The tool (D44) divides the points by all value items in the "
+        "window, so its date does not depend on how many items have points. ADR 0003 called "
+        "the two rules the same; they are not. Most of the measure 2 margin comes from this "
+        "rule, so the v2 measure 2 result does not test the velocity rule that users run. On "
+        f"the {_n(p['measure_2_cases'])} fully pointed cases with a velocity date the medians "
+        f"are {_d(p.get('median_error_mc50'))} (Monte Carlo) and "
+        f"{_d(p.get('median_error_velocity'))} (velocity)."
     )
     add(
         "- Done = any resolution date, so Won't Fix, Duplicate and similar count as done "
