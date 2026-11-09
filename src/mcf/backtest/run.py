@@ -16,8 +16,8 @@ from __future__ import annotations
 
 import csv
 import hashlib
-from collections.abc import Iterable
-from dataclasses import dataclass, field
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass, field, fields
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -28,7 +28,7 @@ from mcf.data.load import LoadReport, load_issues
 from mcf.data.types import VALUE, sort_types
 from mcf.forecast.montecarlo import RUNS, case_generator, forecast_dates
 from mcf.forecast.throughput import counts_from_ordinals, done_ordinals, window
-from mcf.forecast.velocity import velocity_date, window_velocity
+from mcf.forecast.velocity import SPRINTS, VelocityTooFar, velocity_date, window_velocity
 
 SIZES = (10, 25, 50)
 STEP_DAYS = 14
@@ -74,6 +74,24 @@ class Case:
     mc95: date | None
     velocity: date | None
     actual: date
+
+
+@dataclass(frozen=True)
+class FullCase(Case):
+    """A case with the v2 flag: all points needed by the case are real (ADR 0003)."""
+
+    fully_pointed: bool = True
+
+
+@dataclass
+class CaseCounts:
+    """Per size N: forecast dates, short dates, and cases with no forecast or no velocity."""
+
+    cases: dict[int, int] = field(default_factory=dict)
+    short_dates: dict[int, int] = field(default_factory=dict)
+    no_forecast: dict[int, int] = field(default_factory=dict)
+    no_pointed_item: dict[int, int] = field(default_factory=dict)
+    velocity_too_far: dict[int, int] = field(default_factory=dict)
 
 
 @dataclass
@@ -158,6 +176,80 @@ def _points_needed(
     return float(before.sum() + same_day.mean() * (n - before.size))
 
 
+def run_cases(
+    ordinals: np.ndarray,
+    points: np.ndarray,
+    project: str,
+    p: int,
+    *,
+    tie_rule: str,
+    sizes: Iterable[int] = SIZES,
+    runs: int = RUNS,
+    velocity_for: Callable[[date], float] | None = None,
+    too_far_raises: bool = True,
+) -> tuple[list[FullCase], CaseCounts]:
+    """The one case loop of the v1 and the v2 back-test (ADR 0002 method).
+
+    `points` holds NaN for an item with no story point (v2 only). Velocity comes
+    from `velocity_for(t)` (v1: `window_velocity`, which sums in file order), or,
+    with None, from the pointed items in the window (v2, ADR 0003 decision 2);
+    with no pointed item there is no velocity date. Each unpointed item of the
+    next N items gets the mean points of the pointed items in the window. With no
+    NaN (v1 data) this changes nothing. A velocity date after 9999-12-31 raises,
+    or is counted as "too far" (D54.2).
+    """
+    if tie_rule not in TIE_RULES:
+        raise BacktestError(f"unknown tie rule {tie_rule!r}; use one of {TIE_RULES}")
+    counts = CaseCounts()
+    cases: list[FullCase] = []
+    missing = np.isnan(points)
+    for n in sizes:
+        all_dates = _all_dates(ordinals)
+        ts = [t for t in all_dates if ordinals.size - _after(ordinals, t) >= n]
+        counts.cases[n] = len(ts)
+        counts.short_dates[n] = len(all_dates) - len(ts)
+        for key in ("no_forecast", "no_pointed_item", "velocity_too_far"):
+            getattr(counts, key)[n] = 0
+        for t in ts:
+            start = _after(ordinals, t)
+            actual = date.fromordinal(int(ordinals[start + n - 1]))
+            last_day = ordinals[start + n - 1]
+            fully_pointed = not (
+                missing[start : start + n].any() or missing[ordinals == last_day].any()
+            )
+            first, last = window(t)
+            day_counts = counts_from_ordinals(ordinals, first, last)
+            if not day_counts.any():
+                counts.no_forecast[n] += 1
+                cases.append(
+                    FullCase(project, p, t, n, True, None, None, None, None, actual, fully_pointed)
+                )
+                continue
+            mc = forecast_dates(t, day_counts, n, case_generator(p, t, n), runs=runs)
+            in_window = (ordinals >= first.toordinal()) & (ordinals <= last.toordinal())
+            pointed = points[in_window & ~missing]
+            v = None
+            if velocity_for is None and not pointed.size:
+                counts.no_pointed_item[n] += 1
+            else:
+                speed = velocity_for(t) if velocity_for else float(pointed.sum()) / SPRINTS
+                filled = np.where(missing, pointed.mean(), points) if missing.any() else points
+                needed = _points_needed(ordinals, filled, t, n, tie_rule)
+                try:
+                    v = velocity_date(t, speed, needed)
+                except VelocityTooFar:
+                    if too_far_raises:
+                        raise
+                    counts.velocity_too_far[n] += 1
+            cases.append(
+                FullCase(project, p, t, n, False, mc[50], mc[85], mc[95], v, actual, fully_pointed)
+            )
+    return cases, counts
+
+
+_CASE_FIELDS = [f.name for f in fields(Case)]
+
+
 def run_project(
     issues: pd.DataFrame,
     project: str,
@@ -167,33 +259,35 @@ def run_project(
     sizes: Iterable[int] = SIZES,
     runs: int = RUNS,
 ) -> tuple[list[Case], ProjectSummary]:
+    """The v1 back-test of one project (ADR 0002): every value item has points."""
     if tie_rule not in TIE_RULES:
         raise BacktestError(f"unknown tie rule {tie_rule!r}; use one of {TIE_RULES}")
     ordinals, points = _value_items(issues)
-    summary = ProjectSummary(project=project, p=p)
-    cases: list[Case] = []
     velocities: dict[date, float] = {}
-    for n in sizes:
-        all_dates = _all_dates(ordinals)
-        ts = [t for t in all_dates if ordinals.size - _after(ordinals, t) >= n]
-        summary.cases[n] = len(ts)
-        summary.short_dates[n] = len(all_dates) - len(ts)
-        summary.no_forecast[n] = 0
-        for t in ts:
-            start = _after(ordinals, t)
-            actual = date.fromordinal(int(ordinals[start + n - 1]))
-            counts = counts_from_ordinals(ordinals, *window(t))
-            if not counts.any():
-                summary.no_forecast[n] += 1
-                cases.append(Case(project, p, t, n, True, None, None, None, None, actual))
-                continue
-            mc = forecast_dates(t, counts, n, case_generator(p, t, n), runs=runs)
-            if t not in velocities:
-                velocities[t] = window_velocity(issues, t)
-            needed = _points_needed(ordinals, points, t, n, tie_rule)
-            v = velocity_date(t, velocities[t], needed)
-            cases.append(Case(project, p, t, n, False, mc[50], mc[85], mc[95], v, actual))
-    return cases, summary
+
+    def velocity_for(t: date) -> float:
+        if t not in velocities:
+            velocities[t] = window_velocity(issues, t)
+        return velocities[t]
+
+    full, counts = run_cases(
+        ordinals,
+        points,
+        project,
+        p,
+        tie_rule=tie_rule,
+        sizes=sizes,
+        runs=runs,
+        velocity_for=velocity_for,
+    )
+    summary = ProjectSummary(
+        project=project,
+        p=p,
+        cases=counts.cases,
+        no_forecast=counts.no_forecast,
+        short_dates=counts.short_dates,
+    )
+    return [Case(**{k: getattr(c, k) for k in _CASE_FIELDS}) for c in full], summary
 
 
 def check_files(files: list[Path], manifest: dict) -> None:
@@ -243,22 +337,17 @@ def run_backtest(
     return all_cases, summaries
 
 
-def write_cases(cases: Iterable[Case], path: str | Path) -> None:
-    """Write one row per case. No issue rows (D08)."""
+def write_cases(cases: Iterable[Case], path: str | Path, *, fully_pointed: bool = False) -> None:
+    """Write one row per case; v2 adds the `fully_pointed` column. No issue rows (D08)."""
     with Path(path).open("w", newline="", encoding="utf-8") as fh:
         writer = csv.writer(fh, lineterminator="\n")
-        writer.writerow(CASE_COLUMNS)
+        writer.writerow(CASE_COLUMNS + ["fully_pointed"] * fully_pointed)
         for c in cases:
             writer.writerow(
-                [
-                    c.project,
-                    c.p,
-                    c.t,
-                    c.n,
-                    int(c.no_forecast),
-                    *("" if d is None else d for d in (c.mc50, c.mc85, c.mc95, c.velocity)),
-                    c.actual,
-                ]
+                [c.project, c.p, c.t, c.n, int(c.no_forecast)]
+                + ["" if d is None else d for d in (c.mc50, c.mc85, c.mc95, c.velocity)]
+                + [c.actual]
+                + ([int(c.fully_pointed)] if fully_pointed else [])
             )
 
 
