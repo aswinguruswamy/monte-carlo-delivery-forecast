@@ -340,3 +340,11 @@ def test_page_shows_how_it_works_and_the_footer(app):
     text = page_text(at)
     assert "Built by Aswin Guruswamy with Claude." in text
     assert "1 in 3 times" in " ".join(e.label for e in at.expander)
+
+
+def test_the_chart_has_no_background_of_its_own(app):
+    """MCF-42: in dark mode the chart showed a darker box inside the dark section box."""
+    from mcf.web import app as page
+
+    result = forecast_from_bytes(SAMPLE.read_bytes(), backlog=40)
+    assert page._chart(result).to_dict()["background"] == "transparent"

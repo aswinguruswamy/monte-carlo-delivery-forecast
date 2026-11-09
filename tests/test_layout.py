@@ -68,14 +68,14 @@ def test_the_history_line_says_value_items_only():
 
 def test_the_page_style_gives_a_grey_page_and_white_boxes():
     css = logic.page_css()
-    assert "#f5f6f8" in css and "#ffffff" in css
+    assert "light-dark(#f5f6f8,#0f1115)" in css and "light-dark(#ffffff,#1a1d23)" in css
     assert "<script" not in css
 
 
 def test_captions_get_a_4_5_to_1_colour():
     """Review MCF-37: Streamlit's caption (60% opacity) was 3.7:1 on white."""
     css = logic.page_css()
-    assert '[data-testid="stCaptionContainer"]{color:#5f6370;opacity:1}' in css
+    assert '[data-testid="stCaptionContainer"]{color:light-dark(#5f6370,#a3a9b6);opacity:1}' in css
 
 
 def test_section_labels_look_like_headings():
@@ -201,6 +201,7 @@ def test_pale_streamlit_texts_get_a_4_5_to_1_colour():
     css = logic.page_css()
     assert '[data-testid="stDateInputField"] [data-placeholder="true"]' in css
     assert '[data-testid="stFileChip"] div' in css
-    assert '[data-testid="stFileUploaderDropzoneInstructions"] span{color:#5f6370}' in css
-    assert css.count("color:#5f6370") >= 2
-    assert '[data-testid="stAlertContentError"]' in css and "color:#7d1d14" in css
+    muted = "color:light-dark(#5f6370,#a3a9b6)"
+    assert '[data-testid="stFileUploaderDropzoneInstructions"] span{' + muted + "}" in css
+    assert css.count(muted) >= 2
+    assert '[data-testid="stAlertContentError"]{color:light-dark(#7d1d14,#ffb4ab)}' in css

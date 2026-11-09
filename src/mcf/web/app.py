@@ -81,7 +81,8 @@ def _chart(result: logic.WebForecast) -> alt.LayerChart:
             )
         )
     rules = alt.layer(*layers)
-    return (bars + rules).properties(height=300)
+    # MCF-42: no own background, so the chart sits on the section box in both themes.
+    return (bars + rules).properties(height=300, background="transparent")
 
 
 def _sidebar() -> None:
