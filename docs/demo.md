@@ -47,6 +47,7 @@ Which video goes with which release:
 
 - **v1.0.0:** the v1.0 page.
 - **v1.1.0:** the v1.1 page (MCF-43): help sidebar, "chance of completion" cards with no notes, collapsible sections, light theme only.
+- **v1.2.0:** no new video (D55, PM decision 2026-11-09). The v1.1.0 video still shows the page; it does not show the dark theme, and its footer says "Version 1.1.0".
 
 Each release keeps its own video. Record a new video for a new release only, after the version bump, so that the footer shows the new version. Use `--release`; the script stops if the footer shows another version:
 

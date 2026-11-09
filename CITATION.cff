@@ -37,3 +37,15 @@ references:
       name: "ESEM 2022: ACM/IEEE International Symposium on Empirical Software Engineering and Measurement"
     year: 2022
     doi: "10.1145/3544902.3546238"
+  - type: data
+    title: "The TAWOS dataset"
+    authors:
+      - family-names: Tawosi
+        given-names: Vali
+      - family-names: Al-Subaihin
+        given-names: Afnan
+      - family-names: Moussa
+        given-names: Rebecca
+      - family-names: Sarro
+        given-names: Federica
+    doi: "10.5522/04/21308124"

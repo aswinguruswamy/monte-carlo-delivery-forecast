@@ -649,3 +649,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | Method before results; no change after the results; reviews before approval | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-45 — 2026-11-09 — grader: builder pre-check (judgement items also covered by the subagent review, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief before e4ba537 | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-45-release-1.2.0`; each commit "MCF-45: …" | — |
+| 3 | CI green on the PR | ✅ | PR #52 head checked green before Review | — |
+| 4 | PR adds tests | ✅ | Release tests ask for 1.2.0; review fixes tested first (numbers from the metrics files, README date and AI line, dataset DOI, demo line) | — |
+| 5 | Each decision ID in the PR is in the Decision Log | 🟡 | D47, D48.1, D54–D54.3 logged (version 37). D55 (no new video, PM 2026-11-09) is logged with the G8 decision | Log at G8 |
+| 6 | AI ticket evaluation | ✅ | Prompt version 5 unchanged; run 42679675133 on the merged code: PASS, 30 of 30 | — |
+| 7 | Independent review with a verdict | ✅ | Subagent: no High; 3 Medium (old README AI line, no video note, v2 "done" limit) and 7 Low; fixed or answered | — |
+| 8 | Each acceptance criterion met | 🟡 | AC1–3 met; AC4 (G8) and AC5 (live page, tag, release) are PM steps | PM steps |
+| 9 | README and rule pages match | ✅ | README status, AI line and intro; CITATION version, date and dataset DOI; demo page | — |
+| 10 | Workflow steps followed | ✅ | Brief, tests first, review before approval | — |
+
+Result: pass — no ❌.
