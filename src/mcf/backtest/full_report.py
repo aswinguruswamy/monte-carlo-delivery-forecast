@@ -35,7 +35,8 @@ def _m1(s: dict) -> str:
 
 
 def _m2(s: dict) -> str:
-    if not s.get("measure_2_cases"):
+    # v1 metrics have no "measure_2_cases": there every scored case has a velocity date.
+    if not s.get("measure_2_cases", s.get("cases")):
         return "— (no case)"
     return (
         f"{_d(s['median_error_mc50'])} vs {_d(s['median_error_velocity'])} "
@@ -48,8 +49,25 @@ def _ci(b: dict, key: str, fmt) -> str:
     return "—" if not v else f"{fmt(v[0])} to {fmt(v[1])}"
 
 
-def _days(x: float) -> str:
-    return f"{x:g} days"
+def _days_ci(b: dict, key: str) -> str:
+    v = b.get(key)
+    return "—" if not v else f"{round(v[0], 1):g} to {round(v[1], 1):g} days"
+
+
+def _edge_note(s: dict, b: dict) -> str | None:
+    """A measure 1 result whose bootstrap interval crosses a band edge is not robust."""
+    ci = b.get("calibration_85_95ci")
+    if not ci:
+        return None
+    for edge in (0.75, 0.95):
+        if ci[0] < edge < ci[1]:
+            word = "passes" if s["measure_1_pass"] else "fails"
+            return (
+                f"Measure 1 {word} on the full data, but its bootstrap 95% interval "
+                f"({_pct(ci[0])} to {_pct(ci[1])}) crosses the {edge:.0%} edge of the band, "
+                "so the result is not robust."
+            )
+    return None
 
 
 def _n(x: int) -> str:
@@ -97,6 +115,10 @@ def render_full_report(v1: dict, v2: dict, info: dict) -> str:
         "(D54.2). Measure 1 uses all scored cases."
     )
     add("")
+    note = _edge_note(a, ba)
+    if note:
+        add(note)
+        add("")
     add(
         "Each result is published as it is (R3). A Monte Carlo date is a probability, not a "
         "promise: the 50% date is not certain."
@@ -146,9 +168,9 @@ def render_full_report(v1: dict, v2: dict, info: dict) -> str:
     )
     add(
         f"| Bootstrap 95% interval, error difference (velocity − MC; > 0 = MC better) "
-        f"| {_ci(bo, 'median_error_difference_95ci', _days)} "
-        f"| {_ci(ba, 'median_error_difference_95ci', _days)} "
-        f"| {_ci(bc, 'median_error_difference_95ci', _days)} |"
+        f"| {_days_ci(bo, 'median_error_difference_95ci')} "
+        f"| {_days_ci(ba, 'median_error_difference_95ci')} "
+        f"| {_days_ci(bc, 'median_error_difference_95ci')} |"
     )
     add("")
     add(
@@ -246,9 +268,17 @@ def render_full_report(v1: dict, v2: dict, info: dict) -> str:
         "value items in the window."
     )
     add(
-        "- D54.1: a story point of 0 counts as no story point. D54.2: large story points are "
-        "used as recorded (141 values above 100, the largest 26,710,114); one such item can "
+        "- D54.1: a story point of 0 counts as no story point "
+        f"({a['counts']['zero_points']:,} done value items). D54.2: large story points are "
+        "used as recorded (141 values above 100 in the file, the largest 26,710,114; "
+        f"{a['counts']['over_100_points']:,} of them on done value items); one such item can "
         "decide the velocity of every window it is in."
+    )
+    add(
+        "- The velocity errors on the full data rest mostly on estimated points. On the "
+        f"{v2['any']['pointed_only']['cases']:,} fully pointed cases the two methods are "
+        "close (see Fully pointed cases), so the large measure 2 margin shows how velocity "
+        "behaves with sparse estimates, not that velocity fails on well-estimated work."
     )
     add(
         "- Done = any resolution date, so Won't Fix, Duplicate and similar count as done "

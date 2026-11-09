@@ -98,3 +98,46 @@ def test_no_measure_2_case_shows_a_dash(v2):
         line for line in render_full_report(V1, bare, INFO).splitlines() if line.startswith("| 2.")
     )
     assert "no case" in row
+
+
+# --- Regressions found in the first real report (2026-11-09) ---------------------------------
+
+
+def test_v1_measure_2_shows_its_errors(v2):
+    """v1 metrics have no "measure_2_cases": every v1 scored case has a velocity date."""
+    row = next(line for line in report(v2).splitlines() if line.startswith("| 2."))
+    assert "34 d vs 36 d **PASS**" in row
+
+
+def test_bootstrap_days_are_written_once_and_rounded(v2):
+    text = report(v2)
+    assert "| 0 to 6 days |" in text
+    assert ".012" not in text
+
+
+def test_a_pass_whose_interval_crosses_the_band_edge_is_called_not_robust(v2):
+    edge = json.loads(json.dumps(v2))
+    edge["any"]["summary"].update(calibration_85=0.7504, measure_1_pass=True)
+    edge["any"]["bootstrap"]["calibration_85_95ci"] = [0.7296, 0.7706]
+    text = render_full_report(V1, edge, INFO)
+    assert "crosses the 75% edge of the band" in text and "not robust" in text
+    inside = json.loads(json.dumps(edge))
+    inside["any"]["bootstrap"]["calibration_85_95ci"] = [0.80, 0.85]
+    assert "crosses the" not in render_full_report(V1, inside, INFO)
+
+
+def test_the_readme_v2_numbers_match_the_metrics_file():
+    m = json.loads((ROOT / "results" / "metrics-full.json").read_text())
+    a, c = m["any"]["summary"], m["completed"]["summary"]
+    readme = (ROOT / "README.md").read_text()
+    ci = m["any"]["bootstrap"]["calibration_85_95ci"]
+    for text in (
+        f"**{a['cases']:,}** scored cases",
+        f"{a['calibration_85']:.1%} **PASS**",
+        f"{a['median_error_mc50']:g} d vs {a['median_error_velocity']:g} d **PASS**",
+        f"({ci[0]:.1%} to {ci[1]:.1%})",
+        f"it is {c['calibration_85']:.1%} (FAIL)",
+        f"the {a['measure_2_cases']:,} cases with a velocity date",
+        f"the {m['any']['pointed_only']['cases']:,} fully pointed cases",
+    ):
+        assert text in readme, text
