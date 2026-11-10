@@ -389,13 +389,29 @@ def same_day_note(facts: ForecastFacts) -> str | None:
     return None
 
 
+def css_rules(text: str) -> str:
+    """CSS from a content file as one line (MCF-47): full-line comments are removed, and the
+    other lines are stripped and joined with no space. Any other comment, or a line that ends
+    inside a selector or a value, is a ValueError, because the join would change the CSS."""
+    kept = []
+    for n, line in enumerate(text.splitlines(), 1):
+        s = line.strip()
+        if s.startswith("/*") and s.endswith("*/") and s.count("/*") == s.count("*/") == 1:
+            continue
+        if "/*" in s or "*/" in s:
+            raise ValueError(f"page CSS line {n}: a comment must be a full line of its own")
+        if s and s[-1] not in ",{};":
+            raise ValueError(f"page CSS line {n}: a line must end with , {{ }} or ;")
+        kept.append(s)
+    return "".join(kept)
+
+
 def page_css() -> str:
     """Grey page, white boxes (MCF-37); each colour has its dark pair (MCF-42). Fixed text only.
 
-    The rules are in content/page.css: comment lines are removed, and the other lines are
-    stripped and joined with no space (MCF-47).
+    The rules are in content/page.css (MCF-47); css_rules() joins them.
     """
-    lines = _fill(
+    text = _fill(
         "page.css",
         page=ld("#f5f6f8"),
         box=ld("#ffffff"),
@@ -403,9 +419,8 @@ def page_css() -> str:
         error=ld("#7d1d14"),
         info=ld("#0054a3"),
         border=ld("#878c98"),
-    ).splitlines()
-    rules = "".join(s for line in lines if (s := line.strip()) and not s.startswith("/*"))
-    return f"<style>{rules}</style>"
+    )
+    return f"<style>{css_rules(text)}</style>"
 
 
 def from_line(facts: ForecastFacts, *, as_of_given: bool) -> str:

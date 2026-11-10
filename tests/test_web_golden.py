@@ -2,10 +2,13 @@
 
 The golden file was made from the code before the move (commit d82d9b5) with
 ``python tests/test_web_golden.py --write``. It holds code-made text only: no dataset
-rows (D08) and no issue keys (C2). Do not write it again in a refactor ticket.
+rows (D08) and no issue keys (C2). The package version is written as ``<version>``, so a
+release does not change the file. Do not write it again in a refactor ticket; a wording
+change writes it again from the new code, with PM approval.
 """
 
 import json
+import re
 import subprocess
 import sys
 import zipfile
@@ -14,6 +17,7 @@ from pathlib import Path
 
 import pytest
 
+from mcf import __version__
 from mcf.web import logic
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,7 +54,9 @@ def page_strings() -> dict[str, str]:
         "INPUTS_SECTION": repr(logic.INPUTS_SECTION),
         "HOW_IT_WORKS_HEADING": logic.HOW_IT_WORKS_HEADING,
         "how_it_works": repr(logic.how_it_works()),
-        "footer_markdown": logic.footer_markdown(),
+        "footer_markdown": logic.footer_markdown().replace(
+            f"Version {__version__}", "Version <version>"
+        ),
     }
     for backlog, as_of in ((40, None), (40, date(2026, 8, 15)), (2000, None)):
         tag = f"sample-{backlog}-{as_of}"
@@ -97,11 +103,33 @@ def test_each_content_file_is_in_the_source_package(name):
 
 def test_the_content_files_have_no_stray_dollar_sign():
     """string.Template fields are $name; any other $ would break the fill."""
-    import re
-
     for name in CONTENT_FILES:
         text = (ROOT / "src" / "mcf" / "web" / "content" / name).read_text(encoding="utf-8")
         assert not re.search(r"\$(?![A-Za-z_]\w*)", text), name
+
+
+def test_each_dark_role_note_names_a_dark_colour():
+    palette = json.loads((ROOT / "src" / "mcf" / "web" / "content" / "colors.json").read_text())
+    assert set(palette["DARK_ROLES"]) <= set(palette["DARK"])
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "/* a comment\non two lines */\nx{color:red}",  # comment over two lines
+        "/* note */ x{color:red}",  # a rule after a comment on the same line
+        "x{color:red} /* note */",  # a comment after a rule
+        ".a\n.b{color:red}",  # a line break inside a selector
+    ],
+)
+def test_the_css_loader_rejects_a_file_it_would_join_wrongly(bad):
+    with pytest.raises(ValueError):
+        logic.css_rules(bad)
+
+
+def test_the_css_loader_keeps_rules_and_drops_full_comment_lines():
+    text = "/* note */\n[a],\n[b]{color:red}\n.c{width:1px;\nheight:1px}"
+    assert logic.css_rules(text) == "[a],[b]{color:red}.c{width:1px;height:1px}"
 
 
 def test_the_built_wheel_contains_the_content_files(tmp_path):
