@@ -1,0 +1,38 @@
+/* Page CSS (MCF-37, MCF-39, MCF-41, MCF-42; D48.1). Fixed text only. */
+/* The code removes the comment lines, strips each line and joins the lines with no space. */
+/* Each comment is a full line. Each other line ends with , { } or ; (else an error). */
+/* The fields (a dollar sign and a name, for example: page) are colours in both themes. */
+/* The code fills them with light-dark(<light>,<dark>) from colors.json. */
+/* Grey page, white boxes (MCF-37). */
+[data-testid="stAppViewContainer"],[data-testid="stMain"],
+[data-testid="stHeader"]{background:$page}
+/* A bordered st.container is a stVerticalBlock inside a stLayoutWrapper (Streamlit 1.66). */
+[data-testid="stLayoutWrapper"]>[data-testid="stVerticalBlock"],
+[data-testid="stExpander"] details{background:$box}
+/* Streamlit's caption is 60% opacity: 3.7:1 on white. This colour is 5.9:1. */
+[data-testid="stCaptionContainer"]{color:$muted;opacity:1}
+/* Review MCF-39: Streamlit draws these at 60% too (3.5 to 3.7:1). */
+[data-testid="stDateInputField"] [data-placeholder="true"],
+[data-testid="stDateInputField"] [data-placeholder="true"] *,
+[data-testid="stDateInputField"] [data-type="literal"],
+[data-testid="stDateInputField"] [data-type="literal"] *{color:$muted}
+[data-testid="stFileChip"] div{color:$muted}
+/* Was 3.5:1. */
+[data-testid="stFileUploaderDropzoneInstructions"] span{color:$muted}
+/* Was 4.2:1. */
+[data-testid="stAlertContentError"]{color:$error}
+[data-testid="stAlertContentInfo"]{color:$info}
+/* MCF-42 canvas review: the inner expanders and the input boxes get a 3:1 border. */
+/* No transition: the fade stopped midway after a theme switch. */
+[data-testid="stExpander"] [data-testid="stExpander"] details,
+[data-testid="stTextInputRootElement"],[data-testid="stNumberInputContainer"],
+[data-testid="stDateInputField"]{border-color:$border;transition:none}
+/* MCF-41: the 4 section labels have heading size; inner expanders keep theirs. */
+.st-key-section-1>[data-testid="stExpander"]>details>summary p,
+.st-key-section-2>[data-testid="stExpander"]>details>summary p,
+.st-key-section-3>[data-testid="stExpander"]>details>summary p,
+.st-key-section-4>[data-testid="stExpander"]>details>summary p{
+font-size:1.5rem;font-weight:600;line-height:1.3}
+/* Review MCF-41: hidden section headings for screen readers. */
+.mcf-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;
+clip:rect(0,0,0,0);white-space:nowrap}

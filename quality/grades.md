@@ -683,3 +683,20 @@ Result: pass — no ❌.
 | 10 | Workflow steps followed | ✅ | Baseline before the change, tests first for the review findings, review before approval | — |
 
 Result: pass — no ❌.
+
+## Ticket MCF-47 — 2026-11-10 — grader: builder pre-check (judgement items also covered by the subagent reviews, D24)
+
+| # | Criterion | Grade | Evidence | Fix |
+|---|---|---|---|---|
+| 1 | In Progress before the first commit | ✅ | Jira In Progress and brief (PM option A) before ca75f2e | — |
+| 2 | Branch and commits start with the key; only this ticket's work | ✅ | Branch `MCF-47-web-content`; each commit "MCF-47: …"; no `app.py`, back-test, data or result change | — |
+| 3 | CI green on the PR | ✅ | 28f5f2d: 5 of 5 checks success (6623310 was red: D08 guard, fixed) | — |
+| 4 | PR adds tests | ✅ | `tests/test_web_golden.py` (golden made from d82d9b5 before the move, failed first; loader, wheel and colour tests); `test_web_redesign.py` reads the content files too (same assertion) | — |
+| 5 | Each decision ID in the PR is in the Decision Log | ✅ | D58 (refactor after closure); the D08 guard line for `colors.json` was approved by the PM (option A, fix order 1) | — |
+| 6 | AI ticket evaluation | n/a | No AI change | — |
+| 7 | Independent review with a verdict | ✅ | Attempt 1: Request changes (1 Critical: D08 guard; 2 Important: CSS loader checks, version in golden) → grade Major fix. Attempt 2 (new subagent): Approve; 4 Minor, can wait | — |
+| 8 | Each acceptance criterion met | ✅ | AC1: 53 page strings byte-identical (golden re-made from d82d9b5 by both reviewers), browser check 46 of 46; AC2: wheel test and 2 clean-install jobs; AC3: exact-wording tests unchanged and pass; AC4: CI green, review Approve | — |
+| 9 | README and rule pages match | ✅ | No user-facing change; Tech Debt Register TD-04 | Set TD-04 Closed at Done |
+| 10 | Workflow steps followed | ✅ | Baseline before the change, tests first, new reviewer for the re-check | — |
+
+Result: pass — no ❌. First-time grade: Major fix (rework 1 of 1 attempt).

@@ -52,6 +52,7 @@ METADATA_FILES = {
     ".devcontainer/devcontainer.json",  # editor settings, no data (PM, 5c90952 on main)
     "src/mcf/data/tawos_full_manifest.json",  # checksums and counts only (MCF-28)
     "results/metrics-full.json",  # summary numbers only (MCF-28)
+    "src/mcf/web/content/colors.json",  # page colour table, no data (MCF-47, PM)
 }
 REQUIRED_PYTHONS = ["3.11", "3.12"]
 

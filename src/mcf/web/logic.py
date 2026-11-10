@@ -12,12 +12,15 @@ import argparse
 import csv
 import html
 import io
+import json
 import logging
 import re
 import tempfile
 from dataclasses import dataclass
 from datetime import date, timedelta
+from importlib.resources import files
 from pathlib import Path
+from string import Template
 
 import numpy as np
 import pandas as pd
@@ -35,6 +38,19 @@ from mcf.result import ForecastFacts
 from mcf.web.backtest_facts import BACKTEST
 
 TRANSPORT: Transport = urllib_transport  # replaced by a fake in tests (NFR8)
+
+
+def _content(name: str) -> str:
+    """A page content file (MCF-47), without its final newline."""
+    text = files("mcf.web").joinpath("content", name).read_text(encoding="utf-8")
+    return text.removesuffix("\n")
+
+
+def _fill(name: str, **fields: object) -> str:
+    """A content file with its $name fields filled. A missing field is an error."""
+    return Template(_content(name)).substitute(fields)
+
+
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # also set in .streamlit/config.toml
 SAMPLE_FILE = Path(__file__).resolve().parents[3] / "examples" / "sample_team.csv"
 _TMP_NAME = "upload.csv"
@@ -188,34 +204,13 @@ def marker_table(facts: ForecastFacts) -> pd.DataFrame:
 
 # --- MCF-33 (D41): plain-language page text ------------------------------------------------
 
-# Text colours on white; each has 4.5:1 contrast or more (WCAG AA, tested).
-COLORS = {
-    "p50": "#2f6db5",
-    "p85": "#9a5a0c",
-    "p95": "#b8322f",
-    "velocity": "#1a7f37",
-    "muted": "#5f6370",
-    "ink": "#31333f",
-}
-# MCF-42 (D48.1): the dark colour of each light colour (approved design, canvas MainDark).
-DARK = {
-    "#f5f6f8": "#0f1115",  # page
-    "#ffffff": "#1a1d23",  # boxes and cards
-    "#31333f": "#e6e8ee",  # ink
-    "#5f6370": "#a3a9b6",  # muted text
-    "#2f6db5": "#79b0ff",
-    "#9a5a0c": "#f2b05e",
-    "#b8322f": "#ff8a80",
-    "#1a7f37": "#5bd47a",
-    "#fff8ee": "#2a2216",  # 85% card
-    "#f0faf3": "#16261b",  # velocity card
-    "#878c98": "#6b7280",  # inner borders
-    "#7d1d14": "#ffb4ab",  # error text
-    "#0054a3": "#8cc4ff",  # info text (Streamlit's light colour); was 4.30:1 in a dark box
-}
-# Altair draws the chart, so CSS cannot switch its colours: one set that passes 3:1 on
-# the light and the dark box (D48.1).
-CHART_COLORS = {"p50": "#3d7fcd", "p85": "#ab7119", "p95": "#d25350", "velocity": "#1d903e"}
+# The colour tables and their notes are in content/colors.json (MCF-47): text colours
+# (COLORS, 4.5:1 on white), the dark pair of each light colour (DARK, D48.1), and the
+# chart colours that pass 3:1 in both themes (CHART_COLORS).
+_PALETTE = json.loads(_content("colors.json"))
+COLORS: dict[str, str] = _PALETTE["COLORS"]
+DARK: dict[str, str] = _PALETTE["DARK"]
+CHART_COLORS: dict[str, str] = _PALETTE["CHART_COLORS"]
 
 
 def ld(light: str) -> str:
@@ -245,37 +240,7 @@ OPTION_HELP = {
     "seed": "Use the same number to get the same dates again.",
 }
 PHONE_HELP = "Help: tap » at the top left."
-SIDEBAR = """\
-### How to use this page
-
-#### You need
-A CSV file of your team's work items. A Jira export works with no changes.
-
-To export from Jira: Filters › Export › CSV (all fields). The tool skips open items. \
-The file can be up to 10 MB.
-
-#### Steps
-1. Choose the sample file (an example team) or upload your file.
-2. Enter how many work items are left (backlog). Do not count bugs or epics.
-3. Read the dates in the result.
-4. Copy the message to your sponsor.
-
-#### Which date to use
-- **50% chance of completion (P50):** use it to plan your own work.
-- **85% chance of completion (P85):** use it for the date you give a sponsor or client.
-- **95% chance of completion (P95):** use it when a late finish costs a lot.
-- **Velocity date:** use it to compare with your sprint plan. It uses your team's average \
-pace in story points. If you do not enter the story points left in More options, the tool \
-estimates them.
-
-#### Be careful
-The dates assume your team keeps its recent pace (throughput).
-
-The 85% date can be too early. See "How accurate is it?" on the page.
-
-#### Privacy
-The tool uses your file only for this forecast. It does not store the file or show issue keys.
-"""
+SIDEBAR = _content("sidebar.md")
 
 _MONTHS = (
     "Jan.", "Feb.", "March", "April", "May", "June",
@@ -424,43 +389,38 @@ def same_day_note(facts: ForecastFacts) -> str | None:
     return None
 
 
+def css_rules(text: str) -> str:
+    """CSS from a content file as one line (MCF-47): full-line comments are removed, and the
+    other lines are stripped and joined with no space. Any other comment, or a line that ends
+    inside a selector or a value, is a ValueError, because the join would change the CSS."""
+    kept = []
+    for n, line in enumerate(text.splitlines(), 1):
+        s = line.strip()
+        if s.startswith("/*") and s.endswith("*/") and s.count("/*") == s.count("*/") == 1:
+            continue
+        if "/*" in s or "*/" in s:
+            raise ValueError(f"page CSS line {n}: a comment must be a full line of its own")
+        if s and s[-1] not in ",{};":
+            raise ValueError(f"page CSS line {n}: a line must end with , {{ }} or ;")
+        kept.append(s)
+    return "".join(kept)
+
+
 def page_css() -> str:
-    """Grey page, white boxes (MCF-37); each colour has its dark pair (MCF-42). Fixed text only."""
-    muted = f"color:{ld('#5f6370')}"
-    border = f"border-color:{ld('#878c98')}"
-    return (
-        "<style>"
-        '[data-testid="stAppViewContainer"],[data-testid="stMain"],'
-        f'[data-testid="stHeader"]{{background:{ld("#f5f6f8")}}}'
-        # A bordered st.container is a stVerticalBlock inside a stLayoutWrapper (1.66).
-        '[data-testid="stLayoutWrapper"]>[data-testid="stVerticalBlock"],'
-        f'[data-testid="stExpander"] details{{background:{ld("#ffffff")}}}'
-        # Streamlit's caption is 60% opacity: 3.7:1 on white. This colour is 5.9:1.
-        f'[data-testid="stCaptionContainer"]{{{muted};opacity:1}}'
-        # Review MCF-39: Streamlit draws these at 60% too (3.5 to 3.7:1).
-        '[data-testid="stDateInputField"] [data-placeholder="true"],'
-        '[data-testid="stDateInputField"] [data-placeholder="true"] *,'
-        '[data-testid="stDateInputField"] [data-type="literal"],'
-        f'[data-testid="stDateInputField"] [data-type="literal"] *{{{muted}}}'
-        f'[data-testid="stFileChip"] div{{{muted}}}'
-        f'[data-testid="stFileUploaderDropzoneInstructions"] span{{{muted}}}'  # was 3.5:1
-        f'[data-testid="stAlertContentError"]{{color:{ld("#7d1d14")}}}'  # was 4.2:1
-        f'[data-testid="stAlertContentInfo"]{{color:{ld("#0054a3")}}}'
-        # MCF-42 canvas review: the inner expanders and the input boxes get a 3:1 border.
-        '[data-testid="stExpander"] [data-testid="stExpander"] details,'
-        '[data-testid="stTextInputRootElement"],[data-testid="stNumberInputContainer"],'
-        '[data-testid="stDateInputField"]'
-        f"{{{border};transition:none}}"  # the fade stopped midway after a theme switch
-        # MCF-41: the 4 section labels have heading size; inner expanders keep theirs.
-        + ",".join(
-            f'.st-key-section-{n}>[data-testid="stExpander"]>details>summary p' for n in range(1, 5)
-        )
-        + "{font-size:1.5rem;font-weight:600;line-height:1.3}"
-        # Review MCF-41: hidden section headings for screen readers.
-        ".mcf-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;"
-        "clip:rect(0,0,0,0);white-space:nowrap}"
-        "</style>"
+    """Grey page, white boxes (MCF-37); each colour has its dark pair (MCF-42). Fixed text only.
+
+    The rules are in content/page.css (MCF-47); css_rules() joins them.
+    """
+    text = _fill(
+        "page.css",
+        page=ld("#f5f6f8"),
+        box=ld("#ffffff"),
+        muted=ld("#5f6370"),
+        error=ld("#7d1d14"),
+        info=ld("#0054a3"),
+        border=ld("#878c98"),
     )
+    return f"<style>{css_rules(text)}</style>"
 
 
 def from_line(facts: ForecastFacts, *, as_of_given: bool) -> str:
@@ -528,36 +488,14 @@ def about_one_in(per_100: int) -> str:
 def how_it_works() -> list[Part]:
     """The 2 closed parts: how the dates are made, and how accurate they were."""
     later = about_one_in(later_than_85_of_100())
-    monte_carlo = (
-        "The tool does not use one average pace. It replays your team's real good days and "
-        "bad days many times.\n\n"
-        f"1. Count how many work items the team finished on each of the last {WINDOW_DAYS} "
-        "days.\n"
-        "2. Make one try: for each future day, pick one of those past days at random and use "
-        "its count.\n"
-        "3. Add the counts until all the work left is done. That day is the finish date of "
-        "this try.\n"
-        f"4. Do {RUNS:,} tries. Each try gives a different finish date.\n"
-        "5. Sort the finish dates. The 50% date (P50) is the day by which half of the tries "
-        "finish. The 85% (P85) and 95% (P95) dates work the same way. Give the 85% date (P85) "
-        "to your sponsor or client.\n\n"
-        "Story points are not needed for these dates. The velocity date uses story points, "
-        "for comparison."
-    )
-    backtest = (
-        f"We tested the tool on the history of {BACKTEST.projects} real open-source projects. "
-        "A forecast is one prediction of when the next 10, 25 or 50 work items (not bugs or "
-        "epics) will be done."
-        "\n\n"
-        "1. Pick a past date in a project. Use only the work done up to that date.\n"
-        "2. Make the forecast.\n"
-        "3. Compare it with the date the work was really done.\n\n"
-        f"- **{BACKTEST.cases:,}** past forecasts checked "
-        f"(**{BACKTEST.no_forecast:,}** more had too little history to forecast)\n"
-        f"- **{done_by_85_of_100()} of 100** done by the 85% date (target: 75 to 95 of 100)\n"
-        f"- **{later.capitalize()}** finished later than the 85% date\n\n"
-        "So the 85% date is often too early. Use the 95% date when a late finish costs a lot. "
-        "The result is published as it is, although it missed the target."
+    monte_carlo = _fill("how_dates_are_made.md", window_days=WINDOW_DAYS, runs=f"{RUNS:,}")
+    backtest = _fill(
+        "how_accurate.md",
+        projects=BACKTEST.projects,
+        cases=f"{BACKTEST.cases:,}",
+        no_forecast=f"{BACKTEST.no_forecast:,}",
+        done_85=done_by_85_of_100(),
+        later_cap=later.capitalize(),
     )
     return [
         Part("How the dates are made (Monte Carlo)", monte_carlo),
@@ -568,16 +506,7 @@ def how_it_works() -> list[Part]:
 
 
 def footer_markdown() -> str:
-    return (
-        "**About this project**\n\n"
-        "Built by Aswin Guruswamy with Claude. Python and Streamlit. Open source (Apache 2.0)."
-        "\n\n"
-        f"Test data: TAWOS, {BACKTEST.projects} open-source projects "
-        "(Tawosi et al., MSR 2022).\n\n"
-        f"[Source code on GitHub]({REPO_URL}) · "
-        f"[Full back-test report]({REPO_URL}/blob/main/docs/backtest-report.md)\n\n"
-        f"Version {__version__}"
-    )
+    return _fill("footer.md", projects=BACKTEST.projects, repo_url=REPO_URL, version=__version__)
 
 
 def no_points_line(facts: ForecastFacts) -> str | None:
