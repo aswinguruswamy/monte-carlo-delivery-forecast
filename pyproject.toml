@@ -27,7 +27,7 @@ dev = [
     "pyyaml>=6.0",
 ]
 web = [
-    "streamlit>=1.51",  # st.altair_chart(width=...) needs 1.51
+    "streamlit>=1.67.0",  # st.altair_chart(width=...) needs 1.51
 ]
 
 [tool.hatch.version]
