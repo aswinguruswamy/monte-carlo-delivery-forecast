@@ -155,7 +155,8 @@ def test_claude_rules_have_the_method_change_rule():
     # MCF v2 spec R9.1, AC22.
     rules = read("CLAUDE.md")
     assert "Before a change to the forecast method" in rules
-    assert "39-project" in rules and "before and after" in rules
+    for words in ("decision record", "re-run the 39-project test", "before and after"):
+        assert words in rules, words
 
 
 def test_claude_rules_say_how_v2_work_is_tracked():
@@ -163,3 +164,4 @@ def test_claude_rules_say_how_v2_work_is_tracked():
     rules = read("CLAUDE.md")
     assert "one pull request per task" in rules
     assert "No Jira or Confluence writes" in rules
+    assert "Never delete a decision" in rules
