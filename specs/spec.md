@@ -83,7 +83,7 @@ Example A: t = 2026-12-01; 84 days of history, exactly 1 item done each day. Eve
 | AC20 | R7.1 | Golden files | Test run | Updated files pass | golden |
 | AC21 | R8.1 | PR changes the sentence list | CI | Eval job runs; FAIL fails the check | CI run log |
 | AC22 | R9.1 | Repo CLAUDE.md | Docs test | Contains the method-change rule | unit |
-| AC23 | N2 | Sample file, 10,000 runs | Timed test | Under 3 s | timed unit test (marked slow) |
+| AC23 | N2 | Sample file, 10,000 runs | Timed test | Under 3 s | timed unit test (about 0.01 s; no slow marker needed) |
 | AC24 | R10.1 | No key set, sample file | Page | Saved explanation with the label; no API call made | unit (fake client asserts no call) |
 | AC25 | R11.1 | README | Docs test | A "Screenshots" section links the 3 images, and the files exist | unit |
 
@@ -140,4 +140,4 @@ Charter-date error text (R1.2) · chance rounded down (§4) · CI eval fails the
 | 1.0 | 2026-11-22 | Approved as is, including the §12 proposals | Aswin Guruswamy |
 | 1.1 | 2026-11-22 | Keyless demo with a saved AI example; video (requirements v1.3) | Aswin Guruswamy (SH-4.4) |
 | 1.2 | 2026-11-23 | R11.1, AC25: 3 README screenshots in place of a video (requirements v1.4) | Aswin Guruswamy (SH-5.5) |
-| 1.2.1 | 2026-11-23 | Audit text fixes, no scope change: source path, R1–R11 range, R3.1 wording matches the page, R8.1 note on the required checks, grade count | Claude (admin fix, CLAUDE.md §5) |
+| 1.2.1 | 2026-11-23 | Audit text fixes, no scope change: source path, R1–R11 range, R3.1 wording matches the page, R8.1 note on the required checks, grade count, AC23 test type | Claude (admin fix, CLAUDE.md §5) |
