@@ -1,6 +1,6 @@
 # Spec: MCF v2 – Charter-date chance, thin-history warning, SRG function
 
-Version: 1.1 | Status: **APPROVED by Aswin Guruswamy, 2026-11-22** (1.1 = demo decision) | Date: 2026-11-22
+Version: 1.2 | Status: **APPROVED by Aswin Guruswamy, 2026-11-22** (1.1 = demo decision; 1.2 = screenshots in place of a video, Aswin 2026-11-23) | Date: 2026-11-22
 Tool: MCF | MoSCoW: Must (R3: Should) | Source: `specs/MCF/requirements.md` v1.3, `clarify/MCF-clarify-log.md`, MCF v1.2.0 code (`forecast/montecarlo.py`, `forecast/throughput.py`, `result.py`, `cli.py`, `web/logic.py`, `web/content/how_accurate.md`, `docs/method.md`, ADR 0002, read 2026-11-22)
 
 Requirement IDs `MCF-Rn.m` belong to R1–R9 and N1–N7 on the requirements page (v1.2 numbering).
@@ -54,7 +54,7 @@ A PM must say when the work will be done, and often whether the team will make t
 | MCF-R8.1 | Event | When a pull request changes the prompt, the sentence list, the check or the model setting, CI shall run the AI evaluation (10 cases × 3 runs) and fail the check on FAIL. | R8, v1 (`eval.yml`, today manual) |
 | MCF-R9.1 | Ubiquitous | The contributing rules (CLAUDE.md of the repo) shall say: before a change to the forecast method, write a decision record, re-run the 39-project test, and publish before and after. | R9, v1 (ADR 0002 change rule) |
 | MCF-R10.1 | State | While the app runs with no `ANTHROPIC_API_KEY`, the MCF shall show a saved AI explanation of the sample file, labelled "Saved example – the live explanation needs an API key." | R10, SH-4.4 |
-| MCF-R11.1 | Ubiquitous | The README and the portfolio card shall link a video of 2 minutes or less that shows the charter-date chance, the warning and the AI explanation. | R11, SH-4.4 |
+| MCF-R11.1 | Ubiquitous | The README and the portfolio card shall show 3 screenshots of the page: the inputs with a charter date, the dates with the chance and the saved AI example, and the accuracy section. `scripts/take_screenshots.py` makes them again. | R11, SH-5.5 |
 
 ## 6. Acceptance criteria
 Example A: t = 2026-12-01; 84 days of history, exactly 1 item done each day. Every run then needs exactly N days. Dates are command-line text; the page shows the same dates in the v1 page format.
@@ -85,7 +85,7 @@ Example A: t = 2026-12-01; 84 days of history, exactly 1 item done each day. Eve
 | AC22 | R9.1 | Repo CLAUDE.md | Docs test | Contains the method-change rule | unit |
 | AC23 | N2 | Sample file, 10,000 runs | Timed test | Under 3 s | timed unit test (marked slow) |
 | AC24 | R10.1 | No key set, sample file | Page | Saved explanation with the label; no API call made | unit (fake client asserts no call) |
-| AC25 | R11.1 | README | Docs test | Contains a video link | unit |
+| AC25 | R11.1 | README | Docs test | A "Screenshots" section links the 3 images, and the files exist | unit |
 
 ## 7. Non-functional requirements
 | ID | Area | Requirement | Check |
@@ -139,3 +139,4 @@ Charter-date error text (R1.2) · chance rounded down (§4) · CI eval fails the
 | 0.2 | 2026-11-22 | Independent review fixes (12 findings) | – |
 | 0.3 | 2026-11-22 | Trimmed to requirements v1.2 (Aswin's cuts) | – |
 | 1.1 | 2026-11-22 | Keyless demo with a saved AI example; video (requirements v1.3) | Aswin Guruswamy (SH-4.4) |
+| 1.2 | 2026-11-23 | R11.1, AC25: 3 README screenshots in place of a video (requirements v1.4) | Aswin Guruswamy (SH-5.5) |
