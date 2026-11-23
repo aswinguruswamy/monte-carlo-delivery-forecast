@@ -13,7 +13,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "1.2.0"  # MCF-45
+VERSION = "2.0.0"  # MCF v2 (Done approved by Aswin 2026-11-23)
 
 
 def test_package_version_is_the_release_version():
@@ -167,9 +167,9 @@ def test_the_readme_ai_result_is_the_release_evaluation_and_dates_match():
     cff = yaml.safe_load((ROOT / "CITATION.cff").read_text())
     readme = (ROOT / "README.md").read_text()
     assert f"released {cff['date-released']}" in readme
-    assert "**AI evaluation (measure 3): PASS** on 2026-11-09" in readme
+    assert "**AI evaluation (measure 3): PASS** on 2026-11-23" in readme
     assert "prompt version 5" in readme
-    assert "PASS** on 2026-11-09" in _section(VERSION)
+    assert "PASS** on 2026-11-23" in _section(VERSION)
 
 
 def test_the_citation_and_readme_name_the_full_tawos_dataset():

@@ -2,6 +2,35 @@
 
 All notable changes are in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [2.0.0] - 2026-11-23
+
+MCF v2: one new answer – the chance to finish by the charter date – plus a warning when the history is thin, and the forecast function that SRG v2 calls. The forecast method (ADR 0002), the velocity rule and the AI prompt (version 5) are unchanged, so the published back-test results stay valid. Approved specs: `specs/` (requirements v1.4, spec v1.2).
+
+### Added
+- **Chance to finish by a charter date** (v2 spec R1): `--charter YYYY-MM-DD` and a page input; from the same 10,000 runs as the dates, rounded down ("100%" only when every run finishes; "under 1%" when some do). A charter date on or before day t is an error (#64, #65).
+- **Thin-history warning** (R2): "Only n items finished in the last 12 weeks. Treat the dates with care." above the dates when fewer than 30 value items are in the window (#64, #65).
+- **`mcf.forecast.api.forecast_from_counts`** (R6): the forecast from daily counts, used by SRG v2; the same dates as the command line for the same input and seed (#62).
+- **Model and prompt version** below every AI explanation (R4): "AI: claude-haiku-5-5 · prompt v5" (#67).
+- **Keyless demo with a saved AI example** (R10): the "Save AI example" workflow (run by hand) made one checked explanation of the sample forecast; the page shows it with the label "Saved example – the live explanation needs an API key." (#68, #69).
+- **README screenshots** in place of a video (R11; Aswin's decision): inputs, dates with the chance, accuracy section; `scripts/take_screenshots.py` (#72).
+
+### Changed
+- "How accurate is it?" shows both back-tests – latest (39 projects, 75 of 100, met the target) and first (29 projects, 69 of 100, missed the target); the title keeps the D46 warning (#66). The footer names both tests and both reports (#71).
+- README: "Known limits" is the first section and names the 12-week limit; shared CONTRIBUTING.md for MCF, SRG and RAID (#63).
+- CI: Python 3.11–3.14 (#61, #73); the AI evaluation also runs on a pull request that changes `src/mcf/explain/` (#61). Repo rules: method-change rule and GitHub-only tracking (#70).
+- Dependencies: pandas 3.1.1, click 8.5.1, ruff ≥ 0.17.4 (Dependabot #55, #58, #59).
+
+### Back-test results (unchanged, published as they are, R3)
+- v1, TAWOS extract: measure 1 **FAIL** (69.0%), measure 2 PASS. v2, full TAWOS data: measure 1 PASS at 75.0%, not robust (interval 73.0–77.1%). See 1.2.0 below for the details and limits.
+
+### AI evaluation (measure 3), prompt version 5 (unchanged)
+- **PASS** on 2026-11-23 (claude-haiku-5-5; the automatic run on PR #61): 10 cases × 3 runs; 30 of 30 valid replies; 0 wrong numbers or dates; 0 API errors; the injection case passed 3 of 3 runs.
+
+### Known limits
+- A team with less than 12 weeks of history gets dates that are too late (days before its first finished item count as 0); the thin-history warning shows when fewer than 30 items were finished.
+- The 85% date is at the low edge of the target on the full data (75.0%) and failed on the extract (69.0%).
+- All other known limits of 1.2.0 still apply, except "the page shows only the v1 result" (fixed in #66, #71).
+
 ## [1.2.0] - 2026-11-09
 
 A dark theme for the web page, and a second back-test on the full TAWOS data. The forecast method, the tool's velocity rule and the AI prompt are unchanged.
@@ -110,6 +139,7 @@ First public release.
 - The public demo has no API key, so the AI explanation is off there (D39).
 - The sample file on the web page needs a repository checkout (editable install).
 
+[2.0.0]: https://github.com/aswinguruswamy/monte-carlo-delivery-forecast/releases/tag/v2.0.0
 [1.2.0]: https://github.com/aswinguruswamy/monte-carlo-delivery-forecast/releases/tag/v1.2.0
 [1.1.0]: https://github.com/aswinguruswamy/monte-carlo-delivery-forecast/releases/tag/v1.1.0
 [1.0.0]: https://github.com/aswinguruswamy/monte-carlo-delivery-forecast/releases/tag/v1.0.0
