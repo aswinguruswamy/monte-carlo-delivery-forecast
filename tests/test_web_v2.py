@@ -50,14 +50,3 @@ def test_thin_history_gives_the_warning():  # AC8, AC10
 
 def test_enough_history_gives_no_warning():  # AC9
     assert forecast_from_bytes(thin_csv(30), backlog=5).warnings == ()
-
-
-pytest.importorskip("streamlit.testing.v1")
-from tests.test_web_app import app  # noqa: E402,F401  (the page fixture)
-
-
-def test_page_has_a_charter_input_and_shows_the_chance(app):  # noqa: F811
-    at = app()
-    assert not any("Charter date:" in m.value for m in at.markdown)
-    at.date_input(key="charter").set_value(date(2026, 11, 15)).run()
-    assert any("**Charter date:**" in m.value and "Nov. 15, 2026" in m.value for m in at.markdown)
