@@ -35,3 +35,5 @@ Python with Streamlit; Next.js on Vercel; an offline HTML file; command line onl
 - Same stack as KAN and SRG, so the PM can run it.
 - The MVP has 2 direct runtime dependencies (numpy, pandas). Streamlit and the anthropic SDK come in v1.
 - Branch protection is not enforced while the repository is private (D18). CI still runs on each pull request, and the PM approves each merge in chat.
+
+**Update 2026-11-23 (MCF v2, shared CI standard SH1):** CI also runs on Python 3.13. The libraries above stay; the constraints file pins the versions.
