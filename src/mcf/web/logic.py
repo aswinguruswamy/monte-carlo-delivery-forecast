@@ -35,7 +35,7 @@ from mcf.forecast.montecarlo import RUNS, SEED, MonteCarloError
 from mcf.forecast.throughput import WINDOW_DAYS, ThroughputError
 from mcf.forecast.velocity import VelocityError
 from mcf.result import ForecastFacts
-from mcf.web.backtest_facts import BACKTEST
+from mcf.web.backtest_facts import BACKTEST, BACKTEST_FULL
 
 TRANSPORT: Transport = urllib_transport  # replaced by a fake in tests (NFR8)
 
@@ -487,22 +487,33 @@ def about_one_in(per_100: int) -> str:
 
 def how_it_works() -> list[Part]:
     """The 2 closed parts: how the dates are made, and how accurate they were."""
-    later = about_one_in(later_than_85_of_100())
     monte_carlo = _fill("how_dates_are_made.md", window_days=WINDOW_DAYS, runs=f"{RUNS:,}")
+    full_done = round(BACKTEST_FULL.calibration_85 * 100)
     backtest = _fill(
         "how_accurate.md",
         projects=BACKTEST.projects,
         cases=f"{BACKTEST.cases:,}",
         no_forecast=f"{BACKTEST.no_forecast:,}",
         done_85=done_by_85_of_100(),
-        later_cap=later.capitalize(),
+        verdict=_verdict(BACKTEST.measure_1_pass),
+        full_projects=BACKTEST_FULL.projects,
+        full_cases=f"{BACKTEST_FULL.cases:,}",
+        full_no_forecast=f"{BACKTEST_FULL.no_forecast:,}",
+        full_done_85=full_done,
+        full_verdict=_verdict(BACKTEST_FULL.measure_1_pass),
     )
     return [
         Part("How the dates are made (Monte Carlo)", monte_carlo),
         Part(
-            f"How accurate is it? (back-test: the 85% date was too early {later} times)", backtest
+            "How accurate is it? (latest test: the 85% date was too early "
+            f"{about_one_in(100 - full_done)} times)",
+            backtest,
         ),
     ]
+
+
+def _verdict(passed: bool) -> str:
+    return "met the target" if passed else "missed the target"
 
 
 def footer_markdown() -> str:

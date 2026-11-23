@@ -15,7 +15,7 @@ import pytest
 
 import mcf
 from mcf.web import logic
-from mcf.web.backtest_facts import BACKTEST
+from mcf.web.backtest_facts import BACKTEST, BACKTEST_FULL
 
 ROOT = Path(__file__).resolve().parents[1]
 METRICS = json.loads((ROOT / "results" / "metrics.json").read_text(encoding="utf-8"))
@@ -57,17 +57,18 @@ def test_about_one_in(later, text):
 def test_the_section_has_2_parts_and_keeps_monte_carlo_and_the_backtest_apart():
     parts = logic.how_it_works()
     assert [p.title for p in parts][0] == "How the dates are made (Monte Carlo)"
-    assert parts[1].title.startswith("How accurate is it? (back-test")
+    assert parts[1].title.startswith("How accurate is it? (latest test")
     monte_carlo, backtest = parts[0].body, parts[1].body
     assert "10,000 tries" in monte_carlo and "back-test" not in monte_carlo.lower()
-    assert "29 real open-source projects" in backtest and "10,000 tries" not in backtest
+    assert "29 projects" in backtest and "39 projects" in backtest
+    assert "10,000 tries" not in backtest
 
 
 def test_the_backtest_title_shows_the_warning_without_opening_it():
     """D46 condition: the warning about the 85% date is visible on the page."""
     title = logic.how_it_works()[1].title
     assert title == (
-        "How accurate is it? (back-test: the 85% date was too early about 1 in 3 times)"
+        "How accurate is it? (latest test: the 85% date was too early about 1 in 4 times)"
     )
 
 
@@ -75,9 +76,10 @@ def test_the_backtest_part_says_what_a_forecast_is_and_the_figures():
     body = logic.how_it_works()[1].body
     assert "A forecast is one prediction of when the next 10, 25 or 50 work items" in body
     assert "**7,692** past forecasts checked" in body
-    assert "**69 of 100** done by the 85% date (target: 75 to 95 of 100)" in body
+    assert "**69 of 100** done by the 85% date: missed the target" in body
+    assert "The target: 75 to 95 of 100 forecasts are done by the 85% date." in body
     assert "Use the 95% date when a late finish costs a lot." in body
-    assert "published as it is, although it missed the target" in body
+    assert "Both results are published as they are" in body
 
 
 def test_the_monte_carlo_part_has_5_steps():
@@ -153,3 +155,20 @@ def test_the_backtest_steps_include_the_forecast_day():
     body = logic.how_it_works()[1].body
     assert "Use only the work done up to that date." in body
     assert "work items (not bugs or epics)" in body
+
+
+def test_full_data_facts_equal_the_published_metrics():  # MCF v2 spec R3.1
+    m = json.loads((ROOT / "results" / "metrics-full.json").read_text())["any"]["summary"]
+    assert BACKTEST_FULL.cases == m["cases"] == 22619
+    assert BACKTEST_FULL.no_forecast == m["no_forecast_cases"] == 536
+    assert BACKTEST_FULL.projects == m["projects"] == 39
+    assert BACKTEST_FULL.calibration_85 == round(m["calibration_85"], 3)
+    assert BACKTEST_FULL.measure_1_pass is m["measure_1_pass"] is True
+
+
+def test_the_accuracy_part_shows_both_tests_with_the_pass_rule():  # AC11
+    body = logic.how_it_works()[1].body
+    assert "Latest test – 39 projects" in body and "First test – 29 projects" in body
+    assert "**22,619**" in body and "**75 of 100**" in body and "met the target" in body
+    assert "**7,692**" in body and "**69 of 100**" in body and "missed the target" in body
+    assert body.count("75 to 95 of 100") == 1
