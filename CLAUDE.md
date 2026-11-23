@@ -9,7 +9,7 @@ Project documents: Confluence space MCF (Charter, Decision Log, RAID Log, Test P
 
 ## Tests
 1. Write or change the tests first, then the code.
-2. No test calls a real paid API. Use fakes.
+2. No test calls a real paid API. Use fakes. (The AI evaluation workflow is not a test: it runs by hand and on a pull request that changes `src/mcf/explain/`, MCF v2 spec R8.1.)
 3. Each bug becomes a regression test before the fix.
 4. Monte Carlo tests use a fixed random seed.
 5. The back-test never uses data after the forecast date.

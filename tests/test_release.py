@@ -67,10 +67,11 @@ def test_changelog_date_equals_the_citation_date():
     assert f"## [{VERSION}] - {cff['date-released']}" in text
 
 
-def test_clean_install_runs_on_both_pythons_with_a_time_limit():
+def test_clean_install_runs_on_each_supported_python_with_a_time_limit():
+    # Shared CI standard SH1: Python 3.11-3.13.
     ci = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text())
     job = ci["jobs"]["package"]
-    assert job["strategy"]["matrix"]["python-version"] == ["3.11", "3.12"]
+    assert job["strategy"]["matrix"]["python-version"] == ["3.11", "3.12", "3.13"]
     assert job["timeout-minutes"] <= 30
 
 

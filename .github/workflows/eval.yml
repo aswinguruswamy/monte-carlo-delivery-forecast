@@ -1,11 +1,16 @@
-name: AI evaluation (manual)
+name: AI evaluation
 
 # MCF-23, D35: the live AI evaluation set (10 cases x 3 runs) with real Claude calls.
-# It runs only when the PM starts it by hand. It never runs on push or pull request,
-# so CI and the tests never call the paid API (CLAUDE.md test rule 2).
+# It runs by hand, and on a pull request that changes the AI parts (MCF v2 spec R8.1):
+# the prompt, the sentence list, the check or the model setting (all in src/mcf/explain/).
+# The unit tests still never call the paid API (CLAUDE.md test rule 2).
 # The key comes from the repository secret ANTHROPIC_API_KEY. GitHub masks it in logs.
 
 on:
+  pull_request:
+    paths:
+      - "src/mcf/explain/**"
+      - ".github/workflows/eval.yml"
   workflow_dispatch:
     inputs:
       runs:
@@ -39,8 +44,8 @@ jobs:
       - name: Run the evaluation set
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          RUNS: ${{ inputs.runs }}
-          MODEL: ${{ inputs.model }}
+          RUNS: ${{ inputs.runs || '3' }}
+          MODEL: ${{ inputs.model || '' }}
         run: |
           set -o pipefail
           args=(--runs "$RUNS" --out eval-result.json)
