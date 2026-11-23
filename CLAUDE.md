@@ -1,11 +1,12 @@
 # Rules for Claude — Monte Carlo Delivery Forecast (MCF)
 
-Project documents: Confluence space MCF (Charter, Decision Log, RAID Log, Test Plan).
+Project documents: v1 – Confluence space MCF (Charter, Decision Log, RAID Log, Test Plan), read-only from v2. v2 – `specs/` in this repo.
 
 ## Method before results
 1. Write the back-test method in an ADR and get PM approval before the first back-test run (risk R2).
 2. Never change the method, the data selection, or the pass band (75–95%, D07) after seeing results. A change needs a new decision (Dxx.1) and the reason.
-3. Use all 29 TAWOS projects as recorded (D06). Remove only the 19 rows with no date.
+3. First test (v1): use all 29 TAWOS projects as recorded (D06); remove only the 19 rows with no date. The latest test uses the full TAWOS data, 39 projects (ADR 0003).
+4. Before a change to the forecast method (window, runs, percentiles, counted types): write a decision record (ADR), re-run the 39-project test on the full TAWOS data, and publish the result before and after. MCF v2 does not change the method (v2 spec R9.1).
 
 ## Tests
 1. Write or change the tests first, then the code.
@@ -25,8 +26,11 @@ Project documents: Confluence space MCF (Charter, Decision Log, RAID Log, Test P
 3. Never describe the 50% date as certain.
 
 ## Workflow
-1. Follow the pm-toolkit ticket workflow: In Progress before the first commit, one ticket per branch, independent review, PM approval before Done.
-2. Log each decision in the Decision Log. Never delete a decision; strike it through and add Dxx.1 below (D14).
+v2 (from 2026-11-23, Aswin's decision SH-5.3): **one pull request per task**, named with its task number (M1, M2, …) from `specs/` and the plan; an independent review of each PR; merge when CI passes; Aswin approves Done once, at release. Decisions go in the spec and plan with a version line. No Jira or Confluence writes.
+
+Never delete a decision (D14 still holds). In v2, change a decision with a new version line and a change-log row in the spec or plan; the old text stays in the change log and in git history.
+
+v1 (for history): the pm-toolkit ticket workflow with Jira, and the Confluence Decision Log.
 
 ## Shared rules (v2)
 The rules for MCF, SRG and RAID are in [CONTRIBUTING.md](CONTRIBUTING.md). The approved v2 specs are in `specs/`.
