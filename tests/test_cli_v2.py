@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+import pytest
 from tests.test_cli import T, run, steady, write
 
 
@@ -70,9 +71,20 @@ def test_no_warning_at_30_items(tmp_path, capsys):  # AC9
 
 
 def test_bad_charter_text_exits_2(tmp_path, capsys):
-    try:
+    with pytest.raises(SystemExit) as exc:
         run(capsys, "forecast", str(steady(tmp_path)), "--backlog", "5", "--charter", "15 Dec")
-    except SystemExit as exc:
-        assert exc.code == 2
-    else:  # pragma: no cover
-        raise AssertionError("expected exit code 2")
+    assert exc.value.code == 2
+
+
+def test_charter_before_day_t_is_an_error(tmp_path, capsys):
+    code, _, err = run(
+        capsys,
+        "forecast",
+        str(steady(tmp_path)),
+        "--backlog",
+        "50",
+        "--charter",
+        str(T - timedelta(days=1)),
+    )
+    assert code == 1
+    assert f"The charter date must be after {T}." in err
