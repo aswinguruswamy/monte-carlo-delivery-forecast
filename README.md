@@ -68,7 +68,7 @@ pip install -e ".[web]" -c constraints.txt
 streamlit run streamlit_app.py
 ```
 
-A public demo and a recorded video: [docs/demo.md](docs/demo.md).
+Public demo and how to deploy and check it: [docs/demo.md](docs/demo.md). The screenshots are above.
 
 Start it from the repository root: the settings in `.streamlit/config.toml` (uploads of 10 MB at most, no usage data sent to Streamlit, no Deploy button) apply only there.
 

@@ -1,9 +1,9 @@
 # Spec: MCF v2 – Charter-date chance, thin-history warning, SRG function
 
-Version: 1.2 | Status: **APPROVED by Aswin Guruswamy, 2026-11-22** (1.1 = demo decision; 1.2 = screenshots in place of a video, Aswin 2026-11-23) | Date: 2026-11-22
-Tool: MCF | MoSCoW: Must (R3: Should) | Source: `specs/MCF/requirements.md` v1.3, `clarify/MCF-clarify-log.md`, MCF v1.2.0 code (`forecast/montecarlo.py`, `forecast/throughput.py`, `result.py`, `cli.py`, `web/logic.py`, `web/content/how_accurate.md`, `docs/method.md`, ADR 0002, read 2026-11-22)
+Version: 1.2.1 | Status: **APPROVED by Aswin Guruswamy, 2026-11-22** (1.1 = demo decision; 1.2 = screenshots in place of a video, Aswin 2026-11-23; 1.2.1 = audit text fixes) | Date: 2026-11-22
+Tool: MCF | MoSCoW: Must (R3: Should) | Source: `specs/requirements.md` v1.4, `clarify/MCF-clarify-log.md`, MCF v1.2.0 code (`forecast/montecarlo.py`, `forecast/throughput.py`, `result.py`, `cli.py`, `web/logic.py`, `web/content/how_accurate.md`, `docs/method.md`, ADR 0002, read 2026-11-22)
 
-Requirement IDs `MCF-Rn.m` belong to R1–R9 and N1–N7 on the requirements page (v1.2 numbering).
+Requirement IDs `MCF-Rn.m` belong to R1–R11 and N1–N7 on the requirements page (v1.4 numbering).
 Sources: `R`/`N` = requirements page; `MCF-x.y` = MCF clarify log; `SH-x.y` = shared clarify log; `v1` = existing MCF code or ADR; `proposal` = Claude's proposal, confirmed only by approval of this spec.
 
 **v2 does not change the forecast method.** Window, runs, seed and percentiles stay as in v1 (ADR 0002).
@@ -42,7 +42,7 @@ A PM must say when the work will be done, and often whether the team will make t
 | MCF-R1.3 | Ubiquitous | The MCF shall compute the chance from the same 10,000 runs as the dates. | R1, N1 |
 | MCF-R2.1 | Unwanted | If fewer than 30 value items are done in the window, then the MCF shall warn above the dates: "Only <n> items finished in the last 12 weeks. Treat the dates with care." | R2 |
 | MCF-R2.2 | Ubiquitous | The MCF shall show the warning on the page, in the command-line output and in the function result. | R2, N3 |
-| MCF-R3.1 | Ubiquitous | The MCF shall show in "How accurate" both results: first test (29 projects, 69.0%, missed the target) and latest test (39 projects, 75.0%, met the target), each with the pass rule (75–95%). | R3, v1 `how_accurate.md` |
+| MCF-R3.1 | Ubiquitous | The MCF shall show in "How accurate" both results: first test (29 projects, 69.0%, missed the target) and latest test (39 projects, 75.0%, met the target), with the pass rule (75–95%, shown once); the page shows the shares as "69 of 100" and "75 of 100". | R3, v1 `how_accurate.md` |
 | MCF-R4.1 | Ubiquitous | The MCF shall show "AI: <model> · prompt v<n>" below every AI explanation. | R4 |
 | MCF-R5.1 | Ubiquitous | The README shall start with "Known limits", above "Install", and say that teams with less than 12 weeks of history get dates that are too late. | R5 |
 | MCF-R6.1 | Ubiquitous | The MCF shall give one public function. In: daily counts for consecutive days ending on day t, t, N, seed (default 20261028), optional charter date. Out: 50/85/95% dates, chance by the charter date, the warning (or none). | R6, SH-3.3 |
@@ -51,7 +51,7 @@ A PM must say when the work will be done, and often whether the team will make t
 | MCF-R6.4 | Unwanted | If N < 1, a count is below 0, or no count in the window is above 0, then the function shall raise an error with the v1 reason text, never a date. | R6, v1 |
 | MCF-R6.5 | Ubiquitous | The function shall not choose ticket types; the caller passes the counts. | R6 |
 | MCF-R7.1 | Ubiquitous | The existing tests and golden files shall stay; new tests cover the chance, the warning and the function, and property tests check: 50% ≤ 85% ≤ 95% date, N + 1 never gives an earlier date (same seed), same seed → same output. | R7, v1 |
-| MCF-R8.1 | Event | When a pull request changes the prompt, the sentence list, the check or the model setting, CI shall run the AI evaluation (10 cases × 3 runs) and fail the check on FAIL. | R8, v1 (`eval.yml`, today manual) |
+| MCF-R8.1 | Event | When a pull request changes the prompt, the sentence list, the check or the model setting, CI shall run the AI evaluation (10 cases × 3 runs) and fail the check on FAIL. The evaluation check is not a required branch check, because it runs only on AI changes; a FAIL shows on the PR and the PR is not merged. | R8, v1 (`eval.yml`, today manual) |
 | MCF-R9.1 | Ubiquitous | The contributing rules (CLAUDE.md of the repo) shall say: before a change to the forecast method, write a decision record, re-run the 39-project test, and publish before and after. | R9, v1 (ADR 0002 change rule) |
 | MCF-R10.1 | State | While the app runs with no `ANTHROPIC_API_KEY`, the MCF shall show a saved AI explanation of the sample file, labelled "Saved example – the live explanation needs an API key." | R10, SH-4.4 |
 | MCF-R11.1 | Ubiquitous | The README and the portfolio card shall show 3 screenshots of the page: the inputs with a charter date, the dates with the chance and the saved AI example, and the accuracy section. `scripts/take_screenshots.py` makes them again. | R11, SH-5.5 |
@@ -129,14 +129,15 @@ Charter-date error text (R1.2) · chance rounded down (§4) · CI eval fails the
 ## Grades
 - **Independent review of v0.1** (separate session): 1 blocker, 7 should-fix, 4 nits; all numbers correct. Fixed in v0.2.
 - **v0.3** applies Aswin's trims (requirements v1.2). Most v0.2 fixes were for parts that are now cut (young-team test, count method, gap and pace edges). The remaining fixes stay: function input (R6.1–R6.2), N < 1 (R6.4), chance rounding (§4), date text (§4), v1 error text (AC17), edge tests (AC8, AC9).
-- **Builder pre-check of v0.3:** Completeness ✅ (R1–R9, N1–N7 mapped) · Testability ✅ (AC per requirement; 22 of 23 in code) · Conflicts ✅ (no method change; SRG asks only after 12 weeks) · Traceability ✅.
+- **Builder pre-check of v0.3:** Completeness ✅ (R1–R9, N1–N7 mapped) · Testability ✅ (AC per requirement; 24 of 25 in code, AC21 by the live evaluation) · Conflicts ✅ (no method change; SRG asks only after 12 weeks) · Traceability ✅.
 
 ## 13. Change log
 | Version | Date | Change | Approved by |
 |---|---|---|---|
-| 1.0 | 2026-11-22 | Approved as is, including the §12 proposals | Aswin Guruswamy |
 | 0.1 | 2026-11-22 | First draft from requirements v1.1 and the v1 code | – |
 | 0.2 | 2026-11-22 | Independent review fixes (12 findings) | – |
 | 0.3 | 2026-11-22 | Trimmed to requirements v1.2 (Aswin's cuts) | – |
+| 1.0 | 2026-11-22 | Approved as is, including the §12 proposals | Aswin Guruswamy |
 | 1.1 | 2026-11-22 | Keyless demo with a saved AI example; video (requirements v1.3) | Aswin Guruswamy (SH-4.4) |
 | 1.2 | 2026-11-23 | R11.1, AC25: 3 README screenshots in place of a video (requirements v1.4) | Aswin Guruswamy (SH-5.5) |
+| 1.2.1 | 2026-11-23 | Audit text fixes, no scope change: source path, R1–R11 range, R3.1 wording matches the page, R8.1 note on the required checks, grade count | Claude (admin fix, CLAUDE.md §5) |

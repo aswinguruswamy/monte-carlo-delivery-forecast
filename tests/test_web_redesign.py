@@ -341,7 +341,8 @@ def test_the_demo_guide_names_the_current_ai_check():
     from pathlib import Path
 
     guide = (Path(__file__).resolve().parents[1] / "docs" / "demo.md").read_text()
-    assert "AI off without a key" not in guide and "no AI line without a key" in guide
+    # MCF v2 R10.1: the check is now "no live AI without a key" (the saved example may show).
+    assert "AI off without a key" not in guide and "no live AI without a key" in guide
 
 
 # --- MCF-40: the card notes move to the help ------------------------------------------------

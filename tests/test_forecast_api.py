@@ -167,3 +167,39 @@ def test_properties():  # AC19 (part)
 
 def test_counts_can_be_a_numpy_array():
     assert forecast_from_counts(np.ones(84, dtype=np.int64), T, 20).mc85 == date(2026, 12, 21)
+
+
+def test_ac23_a_sample_forecast_with_10000_runs_takes_under_3_seconds():  # N2
+    import time
+
+    args = argparse.Namespace(
+        file=str(ROOT / "examples" / "sample_team.csv"),
+        backlog=40,
+        as_of=None,
+        seed=20261028,
+        backlog_points=None,
+    )
+    start = time.perf_counter()
+    facts, _, days = cli.compute_full(args)
+    assert time.perf_counter() - start < 3
+    assert days.size == 10_000 and facts.runs == 10_000
+
+
+def test_ac10_twelve_items_give_the_same_warning_on_all_three_surfaces(tmp_path, capsys):
+    from mcf.web.logic import forecast_from_bytes
+
+    t = date(2020, 6, 30)
+    rows = [f"S-{d},Story,{t - timedelta(days=7 * d)} 10:00:00,1" for d in range(12)]
+    data = ("Issue_Key,Type,Resolution_Date,Story_Point\n" + "\n".join(rows) + "\n").encode()
+    path = tmp_path / "team.csv"
+    path.write_bytes(data)
+    warning = "Only 12 items finished in the last 12 weeks. Treat the dates with care."
+
+    counts = [0] * 84
+    for d in range(12):
+        counts[83 - 7 * d] = 1
+    assert forecast_from_counts(counts, t, 5).warnings == (warning,)  # function
+    assert cli.main(["forecast", str(path), "--backlog", "5"]) == 0  # command line
+    out = capsys.readouterr().out
+    assert f"Warning: {warning}" in out and out.index("Warning:") < out.index("Monte Carlo (")
+    assert forecast_from_bytes(data, backlog=5).warnings == (warning,)  # page
