@@ -55,6 +55,8 @@ def _fill(name: str, **fields: object) -> str:
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # also set in .streamlit/config.toml
 SAMPLE_FILE = Path(__file__).resolve().parents[3] / "examples" / "sample_team.csv"
+SAVED_FILE = Path(__file__).resolve().parents[3] / "examples" / "saved_explanation.json"
+SAVED_LABEL = "Saved example – the live explanation needs an API key."
 _TMP_NAME = "upload.csv"
 _KNOWN = (LoadError, IssueTypeError, ThroughputError, MonteCarloError, VelocityError)
 _UNKNOWN = (
@@ -95,6 +97,28 @@ CHARTER_HELP = (
     "The date in your project charter. The page shows the chance to finish all the work "
     "left by that date, from the same 10,000 runs as the dates."
 )
+
+
+def saved_explanation() -> dict | None:
+    """MCF v2 spec R10.1: the saved AI explanation of the sample forecast, or None."""
+    if not SAVED_FILE.is_file():
+        return None
+    return json.loads(SAVED_FILE.read_text(encoding="utf-8"))
+
+
+def saved_applies(
+    *, sample: bool, backlog: int, points_given: bool, as_of: object, seed: int
+) -> bool:
+    """The saved text fits only the page's default forecast of the sample file."""
+    saved = saved_explanation()
+    return bool(
+        saved
+        and sample
+        and backlog == saved["backlog"]
+        and not points_given
+        and as_of is None
+        and seed == SEED
+    )
 
 
 def sample_bytes() -> bytes | None:
