@@ -19,6 +19,17 @@ Forecast when the next N work items will be done, as dates at 50%, 85% and 95% c
 - 29 open-source projects; the result may not hold for other teams.
 - Monte Carlo assumes that the past 84 days are a fair sample of the next weeks.
 
+
+## Screenshots
+
+The public demo with the sample team, a backlog of 40 and a charter date of 15 Nov 2026 (no API key: the explanation is the saved example).
+
+![Inputs: sample file, backlog 40, charter date](docs/images/mcf-inputs.png)
+
+![The 50%, 85% and 95% dates, the 41% chance to finish by the charter date, and the saved AI explanation](docs/images/mcf-dates-and-chance.png)
+
+![How accurate is it: the latest test (39 projects) and the first test (29 projects)](docs/images/mcf-accuracy.png)
+
 ## Install
 
 Python 3.11, 3.12 or 3.13.

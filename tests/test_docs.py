@@ -165,3 +165,12 @@ def test_claude_rules_say_how_v2_work_is_tracked():
     assert "one pull request per task" in rules
     assert "No Jira or Confluence writes" in rules
     assert "Never delete a decision" in rules
+
+
+def test_readme_shows_the_three_screenshots():
+    # MCF v2 spec R11.1 (v1.2: screenshots in place of a video, Aswin 2026-11-23); AC25.
+    readme = read("README.md")
+    shots = readme.split("\n## Screenshots")[1].split("\n## ")[0]
+    for name in ("mcf-inputs.png", "mcf-dates-and-chance.png", "mcf-accuracy.png"):
+        assert f"(docs/images/{name})" in shots, name
+        assert (ROOT / "docs" / "images" / name).is_file(), name
