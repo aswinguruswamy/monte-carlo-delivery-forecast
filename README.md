@@ -32,7 +32,7 @@ The public demo with the sample team, a backlog of 40 and a charter date of 15 N
 
 ## Install
 
-Python 3.11, 3.12 or 3.13.
+Python 3.11, 3.12, 3.13 or 3.14.
 
 ```bash
 git clone https://github.com/aswinguruswamy/monte-carlo-delivery-forecast.git
@@ -140,7 +140,7 @@ See [CITATION.cff](CITATION.cff). If you use the data, cite:
 
 - **Rules for changes:** [CLAUDE.md](CLAUDE.md) (method before results, tests first, no data files, AI explanation rules).
 - **Decisions and risks:** Confluence space MCF (Decision Log, RAID Log, Test Plan). Each decision has an ID (Dxx); a changed decision keeps the old row, struck through (D14).
-- **Quality:** CI runs style, tests on Python 3.11, 3.12 and 3.13, a secret scan, a dependency scan and a licence scan on each pull request. Grades per ticket: `quality/grades.md`.
+- **Quality:** CI runs style, tests on Python 3.11, 3.12, 3.13 and 3.14, a secret scan, a dependency scan and a licence scan on each pull request. Grades per ticket: `quality/grades.md`.
 - **To change the back-test method:** write a new decision and a before-and-after report first (ADR 0002 Change rule). A test locks the ADR text.
 - Copy `.env.example` to `.env` for local secrets. Never commit `.env`.
 
