@@ -420,3 +420,14 @@ def test_the_saved_example_passes_the_v1_check():
     for sentence in sorted(BANK.values(), key=len, reverse=True):
         rest = rest.replace(sentence, "")
     assert rest.strip() == ""  # approved sentences only, nothing else
+
+
+def test_each_saved_sentence_still_applies_to_the_sample_forecast():
+    # Review of #69: a change to the sample file or the bank rules must not leave a false
+    # sentence in the saved example.
+    from mcf.explain.bank import BANK, applicable_ids
+
+    saved = logic.saved_explanation()
+    facts = forecast_from_bytes(SAMPLE.read_bytes(), backlog=saved["backlog"]).facts
+    used = [i for i, sentence in BANK.items() if sentence in saved["text"]]
+    assert used and set(used) <= set(applicable_ids(facts))
