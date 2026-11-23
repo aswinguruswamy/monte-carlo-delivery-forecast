@@ -348,3 +348,26 @@ def test_the_chart_has_no_background_of_its_own(app):
 
     result = forecast_from_bytes(SAMPLE.read_bytes(), backlog=40)
     assert page._chart(result).to_dict()["background"] == "transparent"
+
+
+# --- MCF v2 task M2: the charter-date chance (R1.1, R1.2) and the warning (R2.2) ---
+
+
+def test_page_has_a_charter_input_and_shows_the_chance(app):
+    at = app()
+    assert not any("Charter date:" in m.value for m in at.markdown)
+    at.date_input(key="charter").set_value(date(2026, 11, 15)).run()
+    assert any("**Charter date:**" in m.value and "Nov. 15, 2026" in m.value for m in at.markdown)
+
+
+def test_page_shows_the_charter_error(app):
+    at = app()
+    at.date_input(key="charter").set_value(date(2026, 9, 1)).run()  # before day t (2026-09-30)
+    expected = f"The charter date must be after {logic.long_date(date(2026, 9, 30))}."
+    assert any(expected in e.value for e in at.error)
+
+
+def test_page_shows_the_thin_history_warning(app, monkeypatch):
+    monkeypatch.setattr(logic, "thin_history_warning", lambda n: f"Only {n} items finished.")
+    at = app()
+    assert any(w.value.startswith("Only ") for w in at.warning)

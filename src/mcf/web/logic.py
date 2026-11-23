@@ -31,6 +31,7 @@ from mcf.data.load import LoadError, column_indexes
 from mcf.data.types import IssueTypeError
 from mcf.explain.check import explain_checked
 from mcf.explain.client import Transport, urllib_transport
+from mcf.forecast.api import chance_label, thin_history_warning
 from mcf.forecast.montecarlo import RUNS, SEED, MonteCarloError
 from mcf.forecast.throughput import WINDOW_DAYS, ThroughputError
 from mcf.forecast.velocity import VelocityError
@@ -85,6 +86,14 @@ class WebForecast:
     facts: ForecastFacts
     report: str
     finish_days: np.ndarray  # days after day t, one value per simulated run
+    chance: str | None = None  # MCF v2 R1.1: "<x>% chance to finish by <date>"
+    warnings: tuple[str, ...] = ()  # MCF v2 R2.2
+
+
+CHARTER_HELP = (
+    "The date in your project charter. The page shows the chance to finish all the work "
+    "left by that date, from the same 10,000 runs as the dates."
+)
 
 
 def sample_bytes() -> bytes | None:
@@ -127,6 +136,7 @@ def forecast_from_bytes(
     backlog_points: float | None = None,
     as_of: date | None = None,
     seed: int = SEED,
+    charter: date | None = None,
 ) -> WebForecast:
     if isinstance(backlog, bool) or not isinstance(backlog, int) or backlog < 1:
         raise WebError("The backlog must be a whole number of 1 or more.")
@@ -159,7 +169,20 @@ def forecast_from_bytes(
         except Exception:  # never show a stack trace or internal detail on the page
             _LOG.exception("unexpected error in the forecast")  # server log only
             raise WebError(_UNKNOWN) from None
-    return WebForecast(facts=facts, report=render(facts, args), finish_days=days)
+    chance = None
+    if charter is not None:  # MCF v2 R1: the same runs as the dates, rounded down
+        if charter <= facts.t:
+            raise WebError(f"The charter date must be after {long_date(facts.t)}.")
+        hits = int((days <= (charter - facts.t).days).sum())
+        chance = f"{chance_label(hits, int(days.size))} chance to finish by {long_date(charter)}"
+    warning = thin_history_warning(facts.items_done)
+    return WebForecast(
+        facts=facts,
+        report=render(facts, args),
+        finish_days=days,
+        chance=chance,
+        warnings=(warning,) if warning else (),
+    )
 
 
 def _last_day(result: WebForecast) -> int:
