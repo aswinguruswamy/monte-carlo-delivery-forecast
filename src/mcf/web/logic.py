@@ -565,7 +565,13 @@ def _verdict(passed: bool) -> str:
 
 
 def footer_markdown() -> str:
-    return _fill("footer.md", projects=BACKTEST.projects, repo_url=REPO_URL, version=__version__)
+    return _fill(
+        "footer.md",
+        projects=BACKTEST.projects,
+        full_projects=BACKTEST_FULL.projects,
+        repo_url=REPO_URL,
+        version=__version__,
+    )
 
 
 def no_points_line(facts: ForecastFacts) -> str | None:
