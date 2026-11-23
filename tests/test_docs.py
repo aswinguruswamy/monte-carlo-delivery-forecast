@@ -149,3 +149,17 @@ def test_contributing_rules_exist():
     text = read("CONTRIBUTING.md")
     for words in ("specs/", "test first", "bug", "CI"):
         assert words in text, words
+
+
+def test_claude_rules_have_the_method_change_rule():
+    # MCF v2 spec R9.1, AC22.
+    rules = read("CLAUDE.md")
+    assert "Before a change to the forecast method" in rules
+    assert "39-project" in rules and "before and after" in rules
+
+
+def test_claude_rules_say_how_v2_work_is_tracked():
+    # Aswin 2026-11-23 (SH-5.3): GitHub only, no Jira or Confluence writes.
+    rules = read("CLAUDE.md")
+    assert "one pull request per task" in rules
+    assert "No Jira or Confluence writes" in rules
