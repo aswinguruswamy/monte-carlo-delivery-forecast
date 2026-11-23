@@ -181,6 +181,18 @@ def main() -> None:
         st.markdown(logic.message_line(f))
         if logic.no_points_line(f):
             st.caption(logic.no_points_line(f))
+        if not os.environ.get("ANTHROPIC_API_KEY") and logic.saved_applies(
+            sample=source == SAMPLE,
+            backlog=backlog,
+            points_given=backlog_points is not None,
+            as_of=as_of,
+            seed=int(seed),
+        ):  # MCF v2 R10.1: keyless demo, no API call
+            saved = logic.saved_explanation()
+            st.markdown("#### Explanation")
+            st.markdown(saved["text"])
+            st.caption(logic.SAVED_LABEL)
+            st.caption(saved["ai_run"])
         if explain:
             try:
                 text = _explanation(f)

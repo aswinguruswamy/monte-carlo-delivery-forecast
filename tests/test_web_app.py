@@ -111,7 +111,10 @@ def test_page_with_the_sample_shows_the_3_dates_the_velocity_date_and_the_chart(
 def test_page_without_a_key_shows_no_ai_text_and_says_why(app):
     at = app()
     assert not [t for t in at.toggle if t.key == "explain"]
-    # PM 2026-11-04: no AI line of any wording without a key (review: "AI is off here." passed)
+    # PM 2026-11-04: no AI line of any wording without a key (review: "AI is off here." passed).
+    # Superseded only by MCF v2 spec R10.1 (approved 2026-11-22): the default sample forecast
+    # shows the saved example with its label. With other inputs, no AI wording at all.
+    at.text_input(key="backlog").set_value("41").run()
     shown = [e.value for g in (at.markdown, at.caption, at.info, at.warning) for e in g]
     assert not [v for v in shown if re.search(r"\bAI\b", v)]
     assert "ANTHROPIC_API_KEY" not in page_text(at)  # no server jargon on the page (#10)
@@ -379,3 +382,52 @@ def test_page_shows_the_ai_run_line_below_the_explanation(app, monkeypatch):  # 
     at = app()
     at.toggle(key="explain").set_value(True).run()
     assert any(c.value == logic.ai_run_line() for c in at.caption)
+
+
+# --- MCF v2 task M5 (spec R10.1): the keyless page shows the saved AI example ---
+
+SAVED_LABEL = logic.SAVED_LABEL
+
+
+def test_keyless_page_shows_the_saved_example_with_its_label(app, monkeypatch):  # AC24
+    calls: list = []
+    monkeypatch.setattr(logic, "TRANSPORT", fake_transport(calls=calls))
+    at = app()  # the fixture removes ANTHROPIC_API_KEY
+    saved = logic.saved_explanation()
+    assert saved is not None
+    assert any(saved["text"] in m.value for m in at.markdown)
+    captions = [c.value for c in at.caption]
+    assert SAVED_LABEL in captions and saved["ai_run"] in captions
+    assert calls == []  # no API call
+
+
+def test_saved_example_is_hidden_when_the_inputs_change(app):
+    at = app()
+    at.text_input(key="backlog").set_value("41").run()
+    assert SAVED_LABEL not in [c.value for c in at.caption]
+
+
+def test_saved_example_is_not_shown_when_a_key_is_set(app, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key-not-real")
+    at = app()
+    assert SAVED_LABEL not in [c.value for c in at.caption]
+
+
+def test_the_saved_example_passes_the_v1_check():
+    from mcf.explain.bank import BANK
+
+    rest = logic.saved_explanation()["text"]
+    for sentence in sorted(BANK.values(), key=len, reverse=True):
+        rest = rest.replace(sentence, "")
+    assert rest.strip() == ""  # approved sentences only, nothing else
+
+
+def test_each_saved_sentence_still_applies_to_the_sample_forecast():
+    # Review of #69: a change to the sample file or the bank rules must not leave a false
+    # sentence in the saved example.
+    from mcf.explain.bank import BANK, applicable_ids
+
+    saved = logic.saved_explanation()
+    facts = forecast_from_bytes(SAMPLE.read_bytes(), backlog=saved["backlog"]).facts
+    used = [i for i, sentence in BANK.items() if sentence in saved["text"]]
+    assert used and set(used) <= set(applicable_ids(facts))

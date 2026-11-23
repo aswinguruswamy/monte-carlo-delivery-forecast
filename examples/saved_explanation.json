@@ -1,0 +1,6 @@
+{
+  "text": "The 50% date is not certain: up to half of the simulated runs finish after it. The 50%, 85% and 95% dates come from many simulated runs of the team's recent daily pace. The 85% date is a safer date to share with a sponsor. The 95% date is near the 50% date, compared with the time to the 50% date. The velocity date uses an estimate of the backlog points.",
+  "ai_run": "AI: claude-haiku-5-5 · prompt v5",
+  "backlog": 40,
+  "made": "2026-11-23"
+}
