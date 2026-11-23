@@ -335,3 +335,38 @@ def test_cli_computes_the_forecast_once(capsys, monkeypatch):
     monkeypatch.setattr(cli, "compute_full", counting)
     run_cli(capsys, monkeypatch, transport(good_reply(MANDATORY, "share_85", "use_95")))
     assert len(calls) == 1
+
+
+# --- MCF v2 task M4 (spec R4.1): the model and prompt version show below the AI text ---
+
+
+def test_ai_run_line_names_the_default_model_and_prompt_version(monkeypatch):
+    from mcf.explain.client import DEFAULT_MODEL
+    from mcf.explain.prompt import PROMPT_VERSION
+    from mcf.web.logic import ai_run_line
+
+    monkeypatch.delenv("MCF_MODEL", raising=False)
+    assert ai_run_line() == f"AI: {DEFAULT_MODEL} · prompt v{PROMPT_VERSION}"
+
+
+def test_ai_run_line_follows_the_model_setting(monkeypatch):
+    from mcf.web.logic import ai_run_line
+
+    monkeypatch.setenv("MCF_MODEL", "claude-test-model")
+    assert ai_run_line().startswith("AI: claude-test-model · prompt v")
+
+
+def test_cli_prints_the_ai_run_line_below_the_explanation(capsys, monkeypatch):
+    from mcf.web.logic import ai_run_line
+
+    code, out = run_cli(capsys, monkeypatch, transport(good_reply(MANDATORY, "share_85", "use_95")))
+    assert code == 0
+    lines = out.rstrip("\n").splitlines()
+    assert lines[-1] == ai_run_line()
+    assert "Explanation (AI-selected, approved sentences):" in out
+
+
+def test_cli_prints_no_ai_run_line_when_the_text_is_dropped(capsys, monkeypatch):
+    code, out = run_cli(capsys, monkeypatch, transport("It will be done by 2020-07-20."))
+    assert code == 0
+    assert "AI: " not in out

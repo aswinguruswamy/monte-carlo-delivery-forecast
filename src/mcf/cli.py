@@ -13,6 +13,7 @@ from datetime import date, timedelta
 
 import numpy as np
 
+from mcf.ai_run import ai_run_line
 from mcf.data.load import LoadError, LoadReport, load_issues
 from mcf.data.types import (
     BUG,
@@ -318,6 +319,7 @@ def main(argv: list[str] | None = None) -> int:
             text, reason = explain_checked(facts, transport=TRANSPORT)
             if text is not None:
                 print(f"\nExplanation (AI-selected, approved sentences):\n{text}")
+                print(ai_run_line())  # MCF v2 R4.1
             else:
                 print(f"\nAI explanation not shown: {reason}")
     except (

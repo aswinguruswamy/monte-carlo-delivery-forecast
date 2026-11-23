@@ -26,6 +26,7 @@ import numpy as np
 import pandas as pd
 
 from mcf import __version__
+from mcf.ai_run import ai_run_line  # noqa: F401  (used by the page)
 from mcf.cli import compute_full, render
 from mcf.data.load import LoadError, column_indexes
 from mcf.data.types import IssueTypeError

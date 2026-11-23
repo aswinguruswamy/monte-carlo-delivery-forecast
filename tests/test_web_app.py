@@ -371,3 +371,11 @@ def test_page_shows_the_thin_history_warning(app, monkeypatch):
     monkeypatch.setattr(logic, "thin_history_warning", lambda n: f"Only {n} items finished.")
     at = app()
     assert any(w.value.startswith("Only ") for w in at.warning)
+
+
+def test_page_shows_the_ai_run_line_below_the_explanation(app, monkeypatch):  # MCF v2 R4.1
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key-not-real")
+    monkeypatch.setattr(logic, "TRANSPORT", fake_transport())
+    at = app()
+    at.toggle(key="explain").set_value(True).run()
+    assert any(c.value == logic.ai_run_line() for c in at.caption)
