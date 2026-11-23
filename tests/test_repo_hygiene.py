@@ -54,7 +54,7 @@ METADATA_FILES = {
     "results/metrics-full.json",  # summary numbers only (MCF-28)
     "src/mcf/web/content/colors.json",  # page colour table, no data (MCF-47, PM)
 }
-REQUIRED_PYTHONS = ["3.11", "3.12"]
+REQUIRED_PYTHONS = ["3.11", "3.12", "3.13"]  # shared CI standard SH1
 
 
 def tracked_files() -> list[str]:

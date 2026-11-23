@@ -240,9 +240,15 @@ def _workflow(path: Path) -> dict:
     return data
 
 
-def test_the_eval_workflow_runs_only_by_hand():
+def test_the_eval_workflow_runs_by_hand_or_on_a_change_to_the_ai_parts():
+    # MCF v2 spec R8.1: a pull request that changes the prompt, the sentence list,
+    # the check or the model setting runs the evaluation. Nothing else triggers it.
     wf = _workflow(EVAL_WORKFLOW)
-    assert set(wf["on"]) == {"workflow_dispatch"}
+    assert set(wf["on"]) == {"workflow_dispatch", "pull_request"}
+    assert wf["on"]["pull_request"]["paths"] == [
+        "src/mcf/explain/**",
+        ".github/workflows/eval.yml",
+    ]
 
 
 def test_the_eval_workflow_reads_only_and_takes_the_key_from_a_secret():

@@ -8,7 +8,7 @@ Forecast when the next N work items will be done, as dates at 50%, 85% and 95% c
 
 ## Install
 
-Python 3.11 or 3.12.
+Python 3.11, 3.12 or 3.13.
 
 ```bash
 git clone https://github.com/aswinguruswamy/monte-carlo-delivery-forecast.git
@@ -32,7 +32,7 @@ The CSV needs the columns `Issue_Key`, `Type`, `Resolution_Date` and `Story_Poin
 - `--seed S`: random seed, default 20261028. The same file and seed give the same dates.
 - `--explain`: add a short explanation. Claude picks sentences from a PM-approved list that fit this forecast (needs `ANTHROPIC_API_KEY`; model from `MCF_MODEL`, D32, D33.1). The sentences hold no numbers or dates; code writes those. If the reply is not a valid choice, or the call fails, only the plain report shows.
 
-**AI evaluation (MCF-23, D35):** the live evaluation runs only by hand in GitHub Actions: Actions → "AI evaluation (manual)" → Run workflow (on `main`). It uses the repository secret `ANTHROPIC_API_KEY` and calls the paid API. It sends 10 fixed cases (one with an instruction hidden in the file name and issue keys) 3 times each to Claude. **PASS** needs all of these: every answered reply is a valid choice of approved sentences, the shown text has no wrong number or date, the hidden instruction never reaches the prompt, and no API call fails after one retry. If calls fail but nothing else fails, the result is **INCONCLUSIVE**: run it again. The result is in the job summary and the `eval-result` artifact. The tests use fakes only; the script (`python -m mcf.explain.eval`) is not for local live runs (D35).
+**AI evaluation (MCF-23, D35):** the live evaluation runs in GitHub Actions on each pull request that changes `src/mcf/explain/` (MCF v2), or by hand: Actions → "AI evaluation" → Run workflow. It uses the repository secret `ANTHROPIC_API_KEY` and calls the paid API. It sends 10 fixed cases (one with an instruction hidden in the file name and issue keys) 3 times each to Claude. **PASS** needs all of these: every answered reply is a valid choice of approved sentences, the shown text has no wrong number or date, the hidden instruction never reaches the prompt, and no API call fails after one retry. If calls fail but nothing else fails, the result is **INCONCLUSIVE**: run it again. The result is in the job summary and the `eval-result` artifact. The tests use fakes only; the script (`python -m mcf.explain.eval`) is not for local live runs (D35).
 
 Run `mcf forecast --help` for details. The output gives the Monte Carlo 50%, 85% and 95% dates and the velocity date. **The 50% date is not certain: half of the runs finish later.**
 
@@ -127,7 +127,7 @@ See [CITATION.cff](CITATION.cff). If you use the data, cite:
 
 - **Rules for changes:** [CLAUDE.md](CLAUDE.md) (method before results, tests first, no data files, AI explanation rules).
 - **Decisions and risks:** Confluence space MCF (Decision Log, RAID Log, Test Plan). Each decision has an ID (Dxx); a changed decision keeps the old row, struck through (D14).
-- **Quality:** CI runs style, tests on Python 3.11 and 3.12, a secret scan, a dependency scan and a licence scan on each pull request. Grades per ticket: `quality/grades.md`.
+- **Quality:** CI runs style, tests on Python 3.11, 3.12 and 3.13, a secret scan, a dependency scan and a licence scan on each pull request. Grades per ticket: `quality/grades.md`.
 - **To change the back-test method:** write a new decision and a before-and-after report first (ADR 0002 Change rule). A test locks the ADR text.
 - Copy `.env.example` to `.env` for local secrets. Never commit `.env`.
 
