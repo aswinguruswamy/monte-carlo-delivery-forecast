@@ -1,0 +1,36 @@
+name: Save AI example
+
+# MCF v2 spec R10.1 (decision MD2): one live AI explanation of the sample forecast, for
+# the keyless public demo. It runs only by hand. The key comes from the repository secret
+# ANTHROPIC_API_KEY; GitHub masks it in logs. The result is an artifact that a person
+# commits to examples/saved_explanation.json.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  save:
+    name: Save one AI explanation of the sample file
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install -e ".[web]" -c constraints.txt
+      - name: Make and check the explanation
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/save_example.py saved_explanation.json
+      - name: Upload the result
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: saved-explanation
+          path: saved_explanation.json
