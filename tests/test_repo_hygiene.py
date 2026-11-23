@@ -54,7 +54,7 @@ METADATA_FILES = {
     "results/metrics-full.json",  # summary numbers only (MCF-28)
     "src/mcf/web/content/colors.json",  # page colour table, no data (MCF-47, PM)
 }
-REQUIRED_PYTHONS = ["3.11", "3.12", "3.13", "3.14"]  # SH1; 3.14 = Streamlit Cloud (2026-11-23)
+REQUIRED_PYTHONS = ["3.11", "3.12", "3.13", "3.14"]  # SH1; 3.14 = the newest Python (2026-11-23)
 
 
 def tracked_files() -> list[str]:

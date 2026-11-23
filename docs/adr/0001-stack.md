@@ -38,4 +38,4 @@ Python with Streamlit; Next.js on Vercel; an offline HTML file; command line onl
 
 **Update 2026-11-23 (MCF v2, shared CI standard SH1):** CI also runs on Python 3.13. The libraries above stay; the constraints file pins the versions.
 
-**Update 2026-11-23:** CI also runs on Python 3.14, the version Streamlit Community Cloud uses for the demo.
+**Update 2026-11-23:** CI also runs on Python 3.14, the newest Python. The public demo runs on Python 3.12, which CI also tests.
