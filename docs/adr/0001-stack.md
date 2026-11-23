@@ -37,3 +37,5 @@ Python with Streamlit; Next.js on Vercel; an offline HTML file; command line onl
 - Branch protection is not enforced while the repository is private (D18). CI still runs on each pull request, and the PM approves each merge in chat.
 
 **Update 2026-11-23 (MCF v2, shared CI standard SH1):** CI also runs on Python 3.13. The libraries above stay; the constraints file pins the versions.
+
+**Update 2026-11-23:** CI also runs on Python 3.14, the version Streamlit Community Cloud uses for the demo.
