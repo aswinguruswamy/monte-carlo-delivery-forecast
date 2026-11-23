@@ -119,6 +119,8 @@ def main() -> None:
             "How many work items are left? (backlog)", value="40", key="backlog"
         )
         st.caption(logic.BACKLOG_HELP)
+        charter = st.date_input("Charter date (optional)", value=None, key="charter")
+        st.caption(logic.CHARTER_HELP)
         with st.expander("More options"):
             points_given = st.toggle("I know the story points left", key="points_given")
             st.caption(logic.OPTION_HELP["backlog_points"])
@@ -159,6 +161,7 @@ def main() -> None:
             backlog_points=None if backlog_points is None else float(backlog_points),
             as_of=as_of,
             seed=int(seed),
+            charter=charter,
         )
     except logic.WebError as exc:
         st.error(logic.plain(str(exc)))  # text from the file shows as plain text
@@ -169,8 +172,12 @@ def main() -> None:
     with _section(result_section, 2):
         st.caption(logic.from_line(f, as_of_given=as_of is not None))
         st.caption(logic.history_line(f))
+        for warning in result.warnings:  # MCF v2 R2.2: above the dates
+            st.warning(warning)
         st.markdown(logic.cards_html(f), unsafe_allow_html=True)  # code-made text only
         st.markdown(f"**{logic.NOT_CERTAIN}**")
+        if result.chance:  # MCF v2 R1.1
+            st.markdown(f"**Charter date:** {result.chance}")
         st.markdown(logic.message_line(f))
         if logic.no_points_line(f):
             st.caption(logic.no_points_line(f))
