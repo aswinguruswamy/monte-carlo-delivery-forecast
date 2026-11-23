@@ -190,6 +190,7 @@ def main() -> None:
                 st.markdown("#### Explanation")
                 st.markdown(text)
                 st.caption("AI-selected, approved sentences (D33.1). Code wrote every date above.")
+                st.caption(logic.ai_run_line())  # MCF v2 R4.1
 
     with _section(chart_section, 3):
         st.altair_chart(_chart(result), width="stretch")
