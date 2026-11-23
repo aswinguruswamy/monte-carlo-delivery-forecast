@@ -23,3 +23,9 @@ class BacktestFacts:
 BACKTEST = BacktestFacts(
     cases=7692, no_forecast=903, projects=29, calibration_85=0.690, measure_1_pass=False
 )
+
+# MCF v2 spec R3.1: the latest test, on the full TAWOS data (results/metrics-full.json,
+# "any" summary; ADR 0003). A test checks these values against the file.
+BACKTEST_FULL = BacktestFacts(
+    cases=22619, no_forecast=536, projects=39, calibration_85=0.750, measure_1_pass=True
+)

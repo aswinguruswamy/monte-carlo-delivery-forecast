@@ -339,7 +339,7 @@ def test_page_shows_how_it_works_and_the_footer(app):
     assert "4. How this forecast works" in section_labels(at)
     text = page_text(at)
     assert "Built by Aswin Guruswamy with Claude." in text
-    assert "1 in 3 times" in " ".join(e.label for e in at.expander)
+    assert "too early about 1 in 4 times" in " ".join(e.label for e in at.expander)
 
 
 def test_the_chart_has_no_background_of_its_own(app):
