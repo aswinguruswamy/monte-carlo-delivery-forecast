@@ -105,6 +105,27 @@ def test_function_equals_the_command_line_for_the_sample_file():  # AC14
     assert f.items_done == facts.items_done
 
 
+def test_function_chance_equals_the_command_line(capsys):  # AC14, R6.3 (chance too)
+    sample = str(ROOT / "examples" / "sample_team.csv")
+    assert cli.main(["forecast", sample, "--backlog", "40", "--charter", "2026-11-15"]) == 0
+    out = capsys.readouterr().out
+    args = argparse.Namespace(
+        file=sample, backlog=40, as_of=None, seed=20261028, backlog_points=None
+    )
+    facts, load, _ = cli.compute_full(args)
+    from mcf.data.load import load_issues
+    from mcf.data.types import sort_types
+    from mcf.forecast.throughput import counts_from_ordinals, done_ordinals
+
+    issues, _ = load_issues(sample, open_items=True)
+    issues, _ = sort_types(issues, load.file, points_required=False)
+    counts = counts_from_ordinals(done_ordinals(issues), facts.t - timedelta(days=200), facts.t)
+    f = forecast_from_counts(counts, facts.t, 40, charter=date(2026, 11, 15))
+    assert chance_text(f) in out
+    assert f.warnings == ()  # 70 items: no warning in either
+    assert "Warning:" not in out
+
+
 def test_only_the_last_84_days_are_used():  # AC15
     long = [3] * 16 + [1] * 84
     assert forecast_from_counts(long, T, 30) == forecast_from_counts([1] * 84, T, 30)

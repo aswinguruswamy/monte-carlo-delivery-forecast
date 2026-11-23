@@ -25,6 +25,7 @@ from mcf.data.types import (
 )
 from mcf.explain.check import explain_checked
 from mcf.explain.client import urllib_transport
+from mcf.forecast.api import chance_label, thin_history_warning
 from mcf.forecast.montecarlo import (
     RUNS,
     SEED,
@@ -121,6 +122,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=SEED,
         metavar="S",
         help=f"random seed, for repeatable dates (default: {SEED})",
+    )
+    fc.add_argument(
+        "--charter",
+        type=_day,
+        metavar="YYYY-MM-DD",
+        help="charter (planned) date: also print the chance to finish by it (MCF v2)",
     )
     fc.add_argument(
         "--explain",
@@ -241,8 +248,19 @@ def compute_full(
     )
 
 
+def charter_line(f: ForecastFacts, days: np.ndarray, charter: date | None) -> str | None:
+    """The chance to finish by the charter date, from the same runs as the dates (R1.3)."""
+    if charter is None:
+        return None
+    if charter <= f.t:
+        raise MonteCarloError(f"The charter date must be after {f.t}.")
+    hits = int((days <= (charter - f.t).days).sum())
+    return f"  Charter date: {chance_label(hits, int(days.size))} chance to finish by {charter}"
+
+
 def forecast(args: argparse.Namespace) -> str:
-    return render(_compute_with_load(args)[0], args)
+    facts, _, days = compute_full(args)
+    return render(facts, args, charter_line(facts, days, getattr(args, "charter", None)))
 
 
 NO_VELOCITY = "Not available: needs story points"
@@ -258,7 +276,7 @@ def _velocity_line(f: ForecastFacts, points_note: str, points_given: bool) -> st
     )
 
 
-def render(f: ForecastFacts, args: argparse.Namespace) -> str:
+def render(f: ForecastFacts, args: argparse.Namespace, chance: str | None = None) -> str:
     t_note = "--as-of" if args.as_of is not None else "last done day in the file"
     points_note = "estimated" if f.points_estimated else "given"
     share = f"{f.bug_share_percent}%" if f.bug_share_percent is not None else "n/a"
@@ -266,10 +284,12 @@ def render(f: ForecastFacts, args: argparse.Namespace) -> str:
         f"Forecast: the next {f.backlog} value items",
         f"From {f.t} ({t_note})",
         f"History: {f.window_start} to {f.window_end} (84 days), {_items(f.items_done)} done",
+        *([f"Warning: {w}"] if (w := thin_history_warning(f.items_done)) else []),
         "",
         f"Monte Carlo ({f.runs:,} runs, seed {args.seed}):",
         *(f"  {p}%: {d}" for p, d in ((50, f.mc50), (85, f.mc85), (95, f.mc95))),
         "  The 50% date is not certain: half of the runs finish later.",
+        *([chance] if chance else []),
         "",
         _velocity_line(f, points_note, getattr(args, "backlog_points", None) is not None),
         *(
@@ -291,8 +311,9 @@ def render(f: ForecastFacts, args: argparse.Namespace) -> str:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        facts = _compute_with_load(args)[0]
-        print(render(facts, args))
+        facts, _, days = compute_full(args)
+        chance = charter_line(facts, days, getattr(args, "charter", None))
+        print(render(facts, args, chance))
         if getattr(args, "explain", False):
             text, reason = explain_checked(facts, transport=TRANSPORT)
             if text is not None:

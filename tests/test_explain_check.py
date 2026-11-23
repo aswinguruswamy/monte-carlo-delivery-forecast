@@ -326,12 +326,12 @@ def test_cli_computes_the_forecast_once(capsys, monkeypatch):
     import mcf.cli as cli
 
     calls = []
-    real = cli._compute_with_load
+    real = cli.compute_full
 
     def counting(args):
         calls.append(1)
         return real(args)
 
-    monkeypatch.setattr(cli, "_compute_with_load", counting)
+    monkeypatch.setattr(cli, "compute_full", counting)
     run_cli(capsys, monkeypatch, transport(good_reply(MANDATORY, "share_85", "use_95")))
     assert len(calls) == 1
