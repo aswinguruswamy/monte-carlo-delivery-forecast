@@ -40,7 +40,7 @@ def test_readme_has_the_required_sections():
         "## Use",
         "## How it works",
         "## Results",
-        "## Limits",
+        "## Known limits",
         "## Data",
         "## Cite",
         "## Handover",
@@ -87,7 +87,7 @@ def test_readme_results_equal_the_published_metrics():
 
 
 def test_readme_limits_match_the_report():
-    limits = read("README.md").split("\n## Limits")[1].split("\n## ")[0]
+    limits = read("README.md").split("\n## Known limits")[1].split("\n## ")[0]
     for words in (
         "resolved as completed",
         "whatever its status",
@@ -133,3 +133,19 @@ def test_docs_do_not_overclaim():
         text = read(name).lower()
         for word in ("proves", "proven", "guarantee", "always correct", "will happen"):
             assert word not in text, (name, word)
+
+
+def test_known_limits_is_the_first_section_and_names_the_12_week_limit():
+    # MCF v2 spec R5.1 (shared item SH5); AC13.
+    readme = read("README.md")
+    first = [line for line in readme.splitlines() if line.startswith("## ")][0]
+    assert first == "## Known limits"
+    limits = readme.split("\n## Known limits")[1].split("\n## ")[0]
+    assert "less than 12 weeks" in limits
+
+
+def test_contributing_rules_exist():
+    # Shared rules for MCF, SRG and RAID (constitution P9, P12; SH4).
+    text = read("CONTRIBUTING.md")
+    for words in ("specs/", "test first", "bug", "CI"):
+        assert words in text, words
