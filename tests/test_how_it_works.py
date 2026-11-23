@@ -112,7 +112,11 @@ def test_footer_text_and_links():
         "Built by Aswin Guruswamy with Claude. Python and Streamlit. Open source (Apache 2.0)."
         in foot
     )
-    assert "TAWOS, 29 open-source projects (Tawosi et al., MSR 2022)" in foot
+    assert (
+        "TAWOS: 29 open-source projects (first test) and 39 (latest test) "
+        "(Tawosi et al., MSR 2022)" in foot
+    )
+    assert "docs/backtest-report-full.md)" in foot  # Aswin 2026-11-23: name both tests
     assert "(https://github.com/aswinguruswamy/monte-carlo-delivery-forecast)" in foot
     assert "docs/backtest-report.md)" in foot
     assert f"Version {mcf.__version__}" in foot
