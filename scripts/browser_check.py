@@ -322,8 +322,14 @@ def main() -> int:
                     expect(page.get_by_text("The 50% date is not certain").first).to_be_visible()
 
                 def ai_off(page=page):
+                    # MCF v2 R10.1: no live AI toggle without a key; any AI text is the saved
+                    # example, shown with its label.
                     main_text = page.locator("[data-testid='stMain']").inner_text()
-                    assert not re.search(r"\bAI\b", main_text), "an AI line shows without a key"
+                    assert "Add an AI explanation" not in main_text, "a live AI toggle shows"
+                    if re.search(r"\bAI\b", main_text):
+                        assert (
+                            "Saved example – the live explanation needs an API key." in main_text
+                        ), "AI text without the saved-example label"
 
                 def no_keys(main_area=main_area):
                     assert "SAMPLE-" not in main_area.inner_text()
@@ -444,7 +450,7 @@ def main() -> int:
                 check(f"{label}: white boxes on a grey page, readable captions", boxes_and_captions)
                 check(f"{label}: chart is drawn", chart)
                 check(f"{label}: the 50% date is not certain", not_certain)
-                check(f"{label}: no AI line without a key", ai_off)
+                check(f"{label}: no live AI without a key", ai_off)
                 check(f"{label}: no issue keys on the page", no_keys)
                 check(f"{label}: no horizontal scroll", no_horizontal_scroll)
                 if shots:

@@ -106,7 +106,7 @@ M = Must, S = Should.
 |---|---|---|
 | 0.1 | 2026-11-22 | First draft, from the MCF analysis, the v1 README (v1.2.0), the v1 code and the SRG decisions |
 | 1.0 | 2026-11-22 | Approved as is by Aswin. |
-| 1.1 | 2026-11-22 | Fact fix: the v1 app already shows the 29-project test; R4 adds the 39-project result. |
+| 1.1 | 2026-11-22 | Fact fix: the v1 app already shows the 29-project test; R3 adds the 39-project result (renumbered from R4 in v1.2). |
 | 1.2 | 2026-11-22 | Aswin's trims: cut "how many by a date", gap and pace warnings, young-team rule, accuracy test at every release (now: only before a method change). 11 → 9 requirements, all small. Requirements renumbered. |
 | 1.3 | 2026-11-22 | Aswin: AI key only for the build (GitHub secret); public demo keyless with a saved AI example; a recorded video. R10, R11 added. |
 | 1.4 | 2026-11-23 | Aswin: screenshots in place of the video (R11). |

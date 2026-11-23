@@ -137,3 +137,21 @@ def test_the_record_script_shows_the_whole_footer():
     """Review MCF-44: the version line was cut at the bottom edge of the video."""
     source = (ROOT / "scripts" / "record_demo.py").read_text()
     assert "scrollIntoView({block: 'center'})" in source  # not at the bottom edge
+
+
+def test_demo_doc_is_current_for_v2():
+    # Audit 2026-11-23: the keyless demo shows the saved AI example (R10.1); screenshots
+    # replace the video (R11.1); reboot the app after a code change.
+    doc = DEMO_DOC.read_text()
+    assert "saved AI example" in doc
+    assert "**v2.0.0:** no video" in doc and "screenshots" in doc
+    assert "Reboot app" in doc
+    assert "becomes public at the release" not in doc
+    assert "AI explanation is off" not in doc
+    assert "recorded video" not in (ROOT / "README.md").read_text()
+
+
+def test_browser_check_allows_only_the_saved_ai_example_without_a_key():
+    source = (ROOT / "scripts" / "browser_check.py").read_text()
+    assert "Saved example – the live explanation needs an API key." in source
+    assert "Add an AI explanation" in source  # no live AI toggle without a key
