@@ -6,6 +6,19 @@ Forecast when the next N work items will be done, as dates at 50%, 85% and 95% c
 
 **Status:** version 1.2.0, released 2026-11-09: a dark theme and a second back-test on the full TAWOS data. Changes: [CHANGELOG.md](CHANGELOG.md).
 
+## Known limits
+
+- **A team with less than 12 weeks of history gets dates that are too late:** the days before its first finished item count as days with 0 items. From v2, the forecast warns when fewer than 30 items were finished in the last 12 weeks.
+- The data holds only issues with story points, and only issues resolved as completed. Teams with many unestimated items may behave differently.
+- Every resolved item counts as done on its resolution day, whatever its status. Every Resolution value is a completed value, but some value items have another status: Won't Fix (853), Invalid (335), In Progress (1), Accepted (1).
+- Case selection: a forecast date exists only when at least N value items were done after it, so the set of cases uses knowledge of the future (by design).
+- When several items were done on the same day as the N-th item, velocity uses the mean points of that day's items (D29).
+- Velocity uses 2-week periods counted from day t, not the teams' real sprints.
+- In the back-test, velocity uses the real points of the next N items, which a team would not know exactly. This helps velocity.
+- The back-test cases overlap (dates 14 days apart share most of their history).
+- 29 open-source projects; the result may not hold for other teams.
+- Monte Carlo assumes that the past 84 days are a fair sample of the next weeks.
+
 ## Install
 
 Python 3.11, 3.12 or 3.13.
@@ -82,18 +95,6 @@ The same method on the full TAWOS Issue table (39 projects, 458,232 issues, also
 | 2. Median error, Monte Carlo 50% vs velocity | 34 d vs 36 d **PASS** | 14 d vs 90 d **PASS** |
 
 Measure 1 passes on the full data only just: its bootstrap 95% interval (73.0% to 77.1%) crosses the 75% edge, so the pass is not robust. With "done = completed only" (information), it is 73.5% (FAIL). Measure 2 uses the 12,632 cases with a velocity date. **The v2 velocity rule (ADR 0003) takes the pace from the pointed items only but counts all N items as work, so its date is late when few items have points; the tool divides by all items (D44). Most of the measure 2 margin comes from this rule, so it does not test the velocity rule that users run.** On the 524 fully pointed cases with a velocity date the medians are 8 d vs 10 d. Side-by-side report: [docs/backtest-report-full.md](docs/backtest-report-full.md).
-
-## Limits
-
-- The data holds only issues with story points, and only issues resolved as completed. Teams with many unestimated items may behave differently.
-- Every resolved item counts as done on its resolution day, whatever its status. Every Resolution value is a completed value, but some value items have another status: Won't Fix (853), Invalid (335), In Progress (1), Accepted (1).
-- Case selection: a forecast date exists only when at least N value items were done after it, so the set of cases uses knowledge of the future (by design).
-- When several items were done on the same day as the N-th item, velocity uses the mean points of that day's items (D29).
-- Velocity uses 2-week periods counted from day t, not the teams' real sprints.
-- In the back-test, velocity uses the real points of the next N items, which a team would not know exactly. This helps velocity.
-- The back-test cases overlap (dates 14 days apart share most of their history).
-- 29 open-source projects; the result may not hold for other teams.
-- Monte Carlo assumes that the past 84 days are a fair sample of the next weeks.
 
 ## Data
 

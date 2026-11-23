@@ -27,3 +27,6 @@ Project documents: Confluence space MCF (Charter, Decision Log, RAID Log, Test P
 ## Workflow
 1. Follow the pm-toolkit ticket workflow: In Progress before the first commit, one ticket per branch, independent review, PM approval before Done.
 2. Log each decision in the Decision Log. Never delete a decision; strike it through and add Dxx.1 below (D14).
+
+## Shared rules (v2)
+The rules for MCF, SRG and RAID are in [CONTRIBUTING.md](CONTRIBUTING.md). The approved v2 specs are in `specs/`.
